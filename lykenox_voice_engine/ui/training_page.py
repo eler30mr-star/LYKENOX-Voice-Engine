@@ -1,55 +1,43 @@
-"""Training page."""
+"""Training readiness page."""
 
-from PySide6.QtWidgets import QGridLayout, QGroupBox, QHBoxLayout, QLabel, QPushButton, QTextEdit, QVBoxLayout, QWidget
+from __future__ import annotations
 
-from lykenox_voice_engine.engines.audit_only import AuditOnlyEngine
+from PySide6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
+
+from lykenox_voice_engine.core.training_service import TrainingService
 
 
 class TrainingPage(QWidget):
-    """Training controls with mandatory microtest gate."""
+    """Show safe training controls without launching Phase 1 training."""
 
     def __init__(self) -> None:
-        """Create training page."""
         super().__init__()
-        self.engine = AuditOnlyEngine()
-        layout = QVBoxLayout(self)
-        layout.addWidget(self._summary())
-        row = QHBoxLayout()
-        for text, handler in [("Comprobar", self.check), ("Microtest", self.microtest), ("Entrenar", self.train), ("Continuar", self.resume), ("Detener", self.stop)]:
+        self._service = TrainingService()
+        self._status = QLabel("Perfil: lykenox | Engine: no seleccionado | Device: CPU | RAM: pendiente")
+        layout = QVBoxLayout()
+        layout.addWidget(self._status)
+        for text, handler, enabled in [
+            ("Comprobar", self._check, True),
+            ("Microtest", self._microtest, True),
+            ("Entrenar", None, False),
+            ("Continuar", None, False),
+            ("Detener", None, False),
+        ]:
             button = QPushButton(text)
-            button.clicked.connect(handler)
-            row.addWidget(button)
-        row.addStretch()
-        self.log = QTextEdit()
-        self.log.setReadOnly(True)
-        layout.addLayout(row)
-        layout.addWidget(self.log, 1)
+            button.setEnabled(enabled)
+            if handler:
+                button.clicked.connect(handler)
+            layout.addWidget(button)
+        self.setLayout(layout)
 
-    def _summary(self) -> QGroupBox:
-        """Create training summary."""
-        box = QGroupBox("Entrenar")
-        grid = QGridLayout(box)
-        for row, (key, value) in enumerate([("Perfil", "LYKENOX Voice"), ("Motor", "pendiente"), ("Device", "cpu"), ("Checkpoint", "-")]):
-            grid.addWidget(QLabel(key), row, 0)
-            grid.addWidget(QLabel(value), row, 1)
-        return box
+    def _check(self) -> None:
+        """Display backend readiness."""
 
-    def check(self) -> None:
-        """Show backend availability."""
-        self.log.append(str(self.engine.check_available()))
+        result = self._service.check()
+        self._status.setText(f"Comprobar: {result['status']} | {result['reason']}")
 
-    def microtest(self) -> None:
-        """Require backend selection before real microtraining."""
-        self.log.append("Microtest pendiente: primero elegir backend SVS real.")
+    def _microtest(self) -> None:
+        """Display microtest status."""
 
-    def train(self) -> None:
-        """Block long training in scaffold phase."""
-        self.log.append("No se entrena: falta auditoría y microtest.")
-
-    def resume(self) -> None:
-        """Show resume placeholder."""
-        self.log.append("Continuar requiere checkpoint real del backend elegido.")
-
-    def stop(self) -> None:
-        """Stop placeholder."""
-        self.log.append("No hay proceso activo.")
+        result = self._service.microtest()
+        self._status.setText(f"Microtest: {result['status']} | {result['reason']}")

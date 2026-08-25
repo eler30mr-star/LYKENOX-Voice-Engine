@@ -1,16 +1,25 @@
 # Singing Voice Synthesis Engine Audit
 
-| Motor | Licencia | Singing synthesis | Speaker identity | Fine-tuning | CPU training | CPU inference | Windows | Input musical | RAM/tamaño | Estado |
-|---|---|---|---|---|---|---|---|---|---|---|
-| DiffSinger / OpenVPI ecosystem | MIT for original code; vocoders/voicebanks vary | Yes | Voicebank/model identity | Yes, but dataset labeling/training toolchain required | Not practical | Possible for rendering, often via OpenUtau CPU/DirectML | Community Windows workflows exist | phoneme/lyrics + pitch/duration, often via UST/OpenUtau/MIDI-like score | Vocoder + acoustic models; training expects GPU | Most aligned, but training on CPU laptop is risky |
-| NNSVS | BSD-style project ecosystem | Yes | Singer-specific models | Yes via recipes | Possible in theory, GPU strongly recommended | Yes | Windows tested, Linux preferred for development | score labels, pitch, timings | Smaller research stack, compiler needed | Technically clean but more engineering-heavy |
-| ESPnet/Muskits SVS | Apache-2.0 | Yes | Multi-speaker/singer embeddings | Yes, research recipes | Not practical | Possible but heavy | Windows not the primary path | score lyrics + duration + pitch | Large toolkit | Strong research toolkit, too heavy for phase 1 |
-| Coqui/XTTS-style TTS | MPL/varies | No, TTS not SVS | Speaker cloning | Yes/limited | CPU training not practical | Yes for speech | Windows possible | text only, no score-to-singing | Moderate-large | Not suitable as primary singing engine |
+Hardware target: Intel Core i7-1255U, Intel Iris Xe, 12 GB RAM, Windows, no CUDA, no verified XPU.
+
+| Candidate | License | Windows | CPU | Training | Inference | Speaker identity | Input | Output | CUDA need | Maintenance |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| NNSVS / ENUNU | MIT | Possible, setup can be strict | Possible but slow | Own voicebank training possible | Local | Own singer model | score labels / phonemes / pitch / durations | waveform via vocoder | Not mandatory for tiny tests; useful for real training | Stable research/community |
+| DiffSinger / OpenVPI ecosystem | MIT-style code; weights vary | Possible but setup-heavy | Slow | Training is GPU-oriented | Local | Voice model training/fine-tuning | lyrics plus MIDI/F0/timing | waveform via vocoder | Strongly recommended | Active community |
+| OpenUtau + ENUNU/DiffSinger | MIT | Yes | Backend-dependent | Delegates to backend | Local editor/render shell | Voicebank-dependent | UST/MIDI-style notes/lyrics | rendered audio | Backend-dependent | Active |
+| ESPnet / MUSKIT SVS | Apache-2.0 | Possible, Linux-like tooling preferred | Slow | Research training recipes | Local | Multi-speaker recipes exist | score/phoneme/duration/F0 | waveform | Expected for training | Active research |
 
 ## Recommendation
 
-Recommended first backend target: NNSVS for a strict local score-to-singing architecture, or DiffSinger/OpenVPI if the priority is compatibility with existing singer voicebank workflows. For this laptop, training a high-quality identity model locally on CPU is not realistic. Inference/rendering is more realistic than training.
+Recommended Phase 2 candidate: NNSVS/ENUNU-class backend for the first local microtest.
 
-## Next step
+Reason: it is a true score-to-singing path, supports creating your own voicebank, maps naturally
+to lyrics plus notes plus timing, and has the most plausible CPU-only microtest path. The tradeoff
+is quality. DiffSinger/OpenVPI is the higher-quality route, but on this machine training should be
+treated as GPU-required unless an isolated XPU runtime is proven.
 
-Prototype the engine adapter against NNSVS install/import and a tiny synthetic score fixture, without training a real voice model yet.
+## Training vs Inference
+
+- Training: possible only as microtests on CPU. Full-quality training is not practical on this hardware.
+- Inference: possible locally if a compatible trained model and vocoder exist, but CPU latency may be high.
+- Phase 1 installs no backend and produces no fake vocals.

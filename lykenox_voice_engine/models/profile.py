@@ -1,33 +1,31 @@
-"""Profile metadata models."""
+"""Voice profile metadata models."""
 
-from dataclasses import asdict, dataclass, field
-from datetime import datetime
-from typing import Any
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
 
 
-@dataclass
+@dataclass(frozen=True)
 class VoiceProfile:
-    """Persisted singing voice identity profile."""
+    """Persistent vocal identity profile metadata."""
 
-    id: str = "lykenox"
-    name: str = "LYKENOX Voice"
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
-    dataset_duration: float = 0.0
-    clips: int = 0
-    model_type: str = "unselected"
-    sample_rate: int = 0
-    training_steps: int = 0
-    training_epochs: int = 0
-    checkpoint: str = ""
-    speaker_embedding: str = ""
-    status: str = "auditing"
-
-    def to_dict(self) -> dict[str, Any]:
-        """Serialize profile to JSON-compatible data."""
-        return asdict(self)
+    id: str
+    name: str
+    dataset_duration: float
+    clips: int
+    model_type: str
+    sample_rate: int
+    training_steps: int
+    training_epochs: int
+    checkpoint: str | None
+    speaker_embedding: str | None
+    status: str
 
     @classmethod
-    def from_dict(cls, values: dict[str, Any]) -> "VoiceProfile":
-        """Build a profile from persisted JSON data."""
-        allowed = cls.__dataclass_fields__.keys()
-        return cls(**{key: values[key] for key in allowed if key in values})
+    def load(cls, path: Path) -> "VoiceProfile":
+        """Load a profile from profile.json."""
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return cls(**{key: data.get(key) for key in cls.__dataclass_fields__.keys()})

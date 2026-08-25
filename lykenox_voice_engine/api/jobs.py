@@ -1,46 +1,39 @@
-"""In-process asynchronous job registry for local API calls."""
+"""In-memory local job registry for Phase 1 API calls."""
 
-from dataclasses import asdict, dataclass, field
-from datetime import datetime
-from uuid import uuid4
+from __future__ import annotations
 
+import uuid
+from threading import Lock
 
-@dataclass
-class Job:
-    """Represent one local synthesis job."""
-
-    id: str
-    status: str = "queued"
-    progress: float = 0.0
-    output_path: str = ""
-    error: str = ""
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat(timespec="seconds"))
-
-    def to_dict(self) -> dict[str, object]:
-        """Serialize job for API output."""
-        return asdict(self)
+from lykenox_voice_engine.models.job import JobStatus, VoiceJob
 
 
-class JobStore:
-    """Keep local job state for the API process."""
+class JobRegistry:
+    """Store synthesis job state for the local FastAPI service."""
 
     def __init__(self) -> None:
-        """Create an empty job registry."""
-        self.jobs: dict[str, Job] = {}
+        self._jobs: dict[str, VoiceJob] = {}
+        self._lock = Lock()
 
-    def create(self) -> Job:
-        """Create a queued job."""
-        job = Job(id=str(uuid4()))
-        self.jobs[job.id] = job
+    def create(self) -> VoiceJob:
+        """Create a queued job and return it."""
+
+        job = VoiceJob(id=str(uuid.uuid4()), status=JobStatus.QUEUED)
+        with self._lock:
+            self._jobs[job.id] = job
         return job
 
-    def get(self, job_id: str) -> Job | None:
-        """Return one job or None."""
-        return self.jobs.get(job_id)
+    def get(self, job_id: str) -> VoiceJob | None:
+        """Return a job by id, if known."""
 
-    def cancel(self, job_id: str) -> Job | None:
-        """Mark a queued/running job as cancelled."""
-        job = self.get(job_id)
-        if job and job.status in {"queued", "running"}:
-            job.status = "cancelled"
-        return job
+        with self._lock:
+            return self._jobs.get(job_id)
+
+    def cancel(self, job_id: str) -> VoiceJob | None:
+        """Mark a queued or running job as cancelled."""
+
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if job and job.status in {JobStatus.QUEUED, JobStatus.RUNNING}:
+                job.status = JobStatus.CANCELLED
+            return job

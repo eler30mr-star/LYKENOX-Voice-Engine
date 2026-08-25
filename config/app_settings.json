@@ -1,0 +1,9 @@
+{
+  "api_host": "127.0.0.1",
+  "api_port": 8765,
+  "models_dir": "models",
+  "profiles_dir": "profiles",
+  "datasets_dir": "datasets",
+  "outputs_dir": "outputs",
+  "device": "cpu"
+}

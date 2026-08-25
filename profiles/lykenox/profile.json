@@ -1,14 +1,14 @@
 {
   "id": "lykenox",
   "name": "LYKENOX Voice",
-  "created_at": "2026-08-25T00:00:00",
+  "created_at": "2026-08-25T00:00:00-05:00",
   "dataset_duration": 0.0,
   "clips": 0,
-  "model_type": "unselected",
-  "sample_rate": 0,
+  "model_type": "unselected_singing_voice_synthesis",
+  "sample_rate": 44100,
   "training_steps": 0,
   "training_epochs": 0,
-  "checkpoint": "",
-  "speaker_embedding": "",
-  "status": "auditing"
+  "checkpoint": null,
+  "speaker_embedding": null,
+  "status": "phase_1_scaffold"
 }

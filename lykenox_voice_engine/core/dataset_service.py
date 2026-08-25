@@ -1,61 +1,42 @@
-"""Dataset import and inspection service."""
+"""Dataset import and validation service."""
+
+from __future__ import annotations
 
 import shutil
-from dataclasses import dataclass
 from pathlib import Path
 
-from lykenox_voice_engine.config.settings import PROJECT_ROOT
-
-AUDIO_EXTENSIONS = {".wav", ".m4a", ".mp3", ".flac", ".ogg", ".opus"}
-
-
-@dataclass(frozen=True)
-class DatasetItem:
-    """Visible dataset row."""
-
-    path: Path
-    duration: float = 0.0
-    sample_rate: int = 0
-    channels: int = 0
-    peak: float = 0.0
-    status: str = "raw"
+from lykenox_voice_engine.audio.analysis import SUPPORTED_AUDIO_EXTENSIONS, AudioInfo, inspect_audio
 
 
 class DatasetService:
-    """Manage authorized singing datasets without destructive edits."""
+    """Manage raw and prepared audio clips for one voice profile."""
 
-    def __init__(self, profile_id: str = "lykenox") -> None:
-        """Create dataset folders for one profile."""
-        self.root = PROJECT_ROOT / "datasets" / profile_id
-        self.raw_dir = self.root / "raw"
-        self.clean_dir = self.root / "clean"
-        self.processed_dir = self.root / "processed"
-        self.metadata_dir = self.root / "metadata"
-        for path in [self.raw_dir, self.clean_dir, self.processed_dir, self.metadata_dir]:
-            path.mkdir(parents=True, exist_ok=True)
+    def __init__(self, datasets_dir: Path) -> None:
+        self.datasets_dir = datasets_dir
 
-    def import_files(self, files: list[str]) -> tuple[int, list[str]]:
-        """Copy accepted audio files into raw without deleting originals."""
-        copied = 0
-        rejected: list[str] = []
-        for value in files:
-            source = Path(value)
-            if not source.is_file() or source.suffix.lower() not in AUDIO_EXTENSIONS:
-                rejected.append(str(source))
+    def raw_dir(self, profile_id: str) -> Path:
+        """Return the raw dataset directory for a profile."""
+
+        path = self.datasets_dir / profile_id / "raw"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def import_files(self, profile_id: str, paths: list[Path]) -> list[AudioInfo]:
+        """Copy supported audio files into raw dataset storage and inspect them."""
+
+        imported = []
+        target_dir = self.raw_dir(profile_id)
+        for source in paths:
+            if source.suffix.lower() not in SUPPORTED_AUDIO_EXTENSIONS:
+                imported.append(inspect_audio(source))
                 continue
-            shutil.copy2(source, self.raw_dir / self._unique_name(source.name))
-            copied += 1
-        return copied, rejected
+            target = target_dir / source.name
+            if source.resolve() != target.resolve():
+                shutil.copy2(source, target)
+            imported.append(inspect_audio(target))
+        return imported
 
-    def list_items(self) -> list[DatasetItem]:
-        """List raw dataset files."""
-        return [DatasetItem(path=p) for p in sorted(self.raw_dir.iterdir()) if p.is_file()]
+    def list_raw(self, profile_id: str) -> list[AudioInfo]:
+        """Inspect all raw files for a profile."""
 
-    def _unique_name(self, name: str) -> str:
-        """Return a non-conflicting raw file name."""
-        candidate = Path(name)
-        index = 1
-        while (self.raw_dir / candidate.name).exists():
-            candidate = Path(f"{Path(name).stem}_{index}{Path(name).suffix}")
-            index += 1
-        return candidate.name
+        return [inspect_audio(path) for path in sorted(self.raw_dir(profile_id).iterdir()) if path.is_file()]

@@ -1,39 +1,28 @@
-"""Singing voice engine abstraction."""
+"""Singing synthesis backend interface."""
+
+from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
-from lykenox_voice_engine.models.notes import NoteEvent
+from lykenox_voice_engine.models.note import NoteSequence
 
 
-class SingingVoiceEngine(ABC):
-    """Backend interface for score-to-singing synthesis engines."""
+@dataclass(frozen=True)
+class SynthesisRequest:
+    """Backend-neutral singing synthesis request."""
 
-    @abstractmethod
-    def check_available(self) -> dict[str, Any]:
-        """Return runtime availability and limitations."""
+    profile_id: str
+    lyrics: str
+    notes: NoteSequence
+    output_format: str
+    pitch_transpose: int = 0
 
-    @abstractmethod
-    def prepare_dataset(self, profile: str) -> dict[str, Any]:
-        """Prepare a dataset for this backend."""
 
-    @abstractmethod
-    def train(self, profile: str) -> dict[str, Any]:
-        """Start or run training for the selected profile."""
+class SingingEngine(ABC):
+    """Abstract score-to-singing backend."""
 
     @abstractmethod
-    def resume_training(self, profile: str, checkpoint: str) -> dict[str, Any]:
-        """Resume training from a backend checkpoint."""
-
-    @abstractmethod
-    def synthesize(self, profile: str, lyrics: str, notes: list[NoteEvent], tempo: int) -> Path:
-        """Synthesize singing from lyrics, notes, and tempo."""
-
-    @abstractmethod
-    def cancel(self, job_id: str) -> None:
-        """Cancel a running job if supported."""
-
-    @abstractmethod
-    def get_model_info(self) -> dict[str, Any]:
-        """Return backend model metadata."""
+    def synthesize(self, request: SynthesisRequest, output_dir: Path) -> Path:
+        """Synthesize a vocal waveform and return the output path."""
