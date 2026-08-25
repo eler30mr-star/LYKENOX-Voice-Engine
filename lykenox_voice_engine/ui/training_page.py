@@ -8,20 +8,20 @@ from lykenox_voice_engine.core.training_service import TrainingService
 
 
 class TrainingPage(QWidget):
-    """Show safe training controls without launching Phase 1 training."""
+    """Show NNSVS microtest controls without enabling full training."""
 
     def __init__(self) -> None:
         super().__init__()
         self._service = TrainingService()
-        self._status = QLabel("Perfil: lykenox | Engine: no seleccionado | Device: CPU | RAM: pendiente")
+        self._status = QLabel("NNSVS: pendiente | Device: CPU | Entrenamiento completo desactivado")
         layout = QVBoxLayout()
         layout.addWidget(self._status)
         for text, handler, enabled in [
-            ("Comprobar", self._check, True),
-            ("Microtest", self._microtest, True),
-            ("Entrenar", None, False),
-            ("Continuar", None, False),
-            ("Detener", None, False),
+            ("Comprobar NNSVS", self._check, True),
+            ("Preparar microtest", self._prepare, True),
+            ("Ejecutar microtest", self._microtest, True),
+            ("Detener", self._stop, True),
+            ("Entrenamiento completo", None, False),
         ]:
             button = QPushButton(text)
             button.setEnabled(enabled)
@@ -31,13 +31,25 @@ class TrainingPage(QWidget):
         self.setLayout(layout)
 
     def _check(self) -> None:
-        """Display backend readiness."""
+        """Display NNSVS backend readiness."""
 
         result = self._service.check()
-        self._status.setText(f"Comprobar: {result['status']} | {result['reason']}")
+        self._status.setText(f"NNSVS disponible: {result.get('available')} | CPU | {result.get('reason', '')}")
+
+    def _prepare(self) -> None:
+        """Prepare the microtest dataset and show status."""
+
+        result = self._service.prepare_microtest()
+        self._status.setText(f"Preparacion: {result.get('ok')} | {result.get('status')}")
 
     def _microtest(self) -> None:
-        """Display microtest status."""
+        """Run the safe NNSVS microtraining gate."""
 
         result = self._service.microtest()
-        self._status.setText(f"Microtest: {result['status']} | {result['reason']}")
+        self._status.setText(f"Microtest: {result.get('ok')} | {result.get('reason')}")
+
+    def _stop(self) -> None:
+        """Cancel backend jobs."""
+
+        result = self._service.stop()
+        self._status.setText(f"Stop: {result['status']}")

@@ -1,0 +1,48 @@
+{
+  "tempo": 120,
+  "lyrics": "baila conmigo",
+  "notes": [
+    {
+      "syllable": "bai",
+      "midi": 60,
+      "start": 0.0,
+      "duration": 0.5
+    },
+    {
+      "syllable": "la",
+      "midi": 62,
+      "start": 0.5,
+      "duration": 0.5
+    },
+    {
+      "syllable": "con",
+      "midi": 64,
+      "start": 1.0,
+      "duration": 0.5
+    },
+    {
+      "syllable": "mi",
+      "midi": 62,
+      "start": 1.5,
+      "duration": 0.5
+    },
+    {
+      "syllable": "go",
+      "midi": 60,
+      "start": 2.0,
+      "duration": 0.75
+    }
+  ],
+  "spanish_phonemes_required": [
+    "b",
+    "a",
+    "i",
+    "l",
+    "k",
+    "o",
+    "n",
+    "m",
+    "g"
+  ],
+  "nnsvs_required_label_format": "HTS full-context labels generated from MusicXML or UST"
+}
