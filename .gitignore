@@ -24,3 +24,6 @@ profiles/*/exports/*
 !profiles/lykenox/model/.gitkeep
 !profiles/lykenox/config/.gitkeep
 !profiles/lykenox/exports/.gitkeep
+
+tools/nnsvs_env/.venv/
+tools/nnsvs_env/nnsvs_source/

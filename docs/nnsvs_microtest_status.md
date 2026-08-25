@@ -1,25 +1,46 @@
-# NNSVS CPU Microtest Status
+# NNSVS CPU Runtime Status
 
-## Runtime
+## Runtime result
 
 - Isolated env: `tools/nnsvs_env/.venv`
-- Python: 3.12.14
-- Official PyPI candidate: `nnsvs==0.1.1`
-- Install attempt: timed out after 244 seconds; `nnsvs` was not installed.
+- Python: `3.11.16` x64
+- Compiler: MSVC x64 available through `vcvars64.bat`; `cl` reports version `19.44.35223`
+- PyTorch CPU: `2.13.0+cpu`
+- CUDA: `False`
+- NNSVS: `0.1.1`
+- `nnmnkwii`: `0.1.3`
+- `pyworld`: `0.3.5`
+- `pysinsy`: `0.0.5`
+- `librosa`: `0.11.0`
+- `h5py`: required because `import nnsvs` failed without it
 
-## NNSVS format requirements
+## Official recipe
 
-NNSVS recipes require score data and aligned audio. The documented stage 0 converts
-MusicXML or UST to HTS-style full-context labels, segments singing data, and splits
-train/dev/test. Stage 1 extracts acoustic, duration, time-lag, and pitch-related
-features from aligned labels plus WAV.
+Recipe checked: `recipes/nit-song070/dev-48k-world` from the official NNSVS repository.
+The current upstream checkout does not contain a folder named `dev-test`; the official NIT recipe folders are
+`dev-48k-world` and `test-48k-world`.
 
-For Spanish, no supported Spanish frontend is confirmed in this environment. The app
-therefore records the required phoneme inventory and micro-score, but does not invent
-HTS labels.
+- Stage `-1` with original HTTP URL: failed because `http://hts.sp.nitech.ac.jp` was unreachable.
+- Dataset download by HTTPS: OK from the same official host.
+- Stage `0` data preparation: OK.
+- Stage `1` feature generation: FAIL.
 
-## Decision
+Exact stage 1 error:
 
-The backend integration is implemented as a hard gate. Training and synthesis remain
-blocked until NNSVS imports successfully and a real MusicXML/UST-to-HTS Spanish path is
-validated.
+```text
+ModuleNotFoundError: No module named 'parallel_wavegan'
+```
+
+NNSVS imports `parallel_wavegan.bin.preprocess.logmelfilterbank` from `prepare_features.py` even when the
+selected synthesis/vocoder path is WORLD. Because this phase explicitly says not to install ParallelWaveGAN yet,
+stage 1 is intentionally stopped here.
+
+## Spanish status
+
+Spanish labels are not started. The runtime problem is separated from Spanish frontend work:
+
+1. Runtime NNSVS: OK.
+2. Official data prep: OK.
+3. Official feature generation: blocked by `parallel_wavegan` package.
+4. Spanish HTS full-context labels: not attempted yet.
+5. LYKENOX dataset: not touched.
