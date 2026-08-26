@@ -1,0 +1,586 @@
+{
+  "voicebank": "D:\\Proyectos\\LYKENOX-Voice-Engine\\profiles\\lykenox\\voicebank",
+  "measured_from": "D:\\Proyectos\\LYKENOX-Voice-Engine\\profiles\\lykenox\\voicebank\\wav",
+  "summary": {
+    "measured_count": 91,
+    "median_hz": 122.44,
+    "mean_hz": 126.49,
+    "min_hz": 92.88,
+    "max_hz": 308.24,
+    "median_midi": 46.85,
+    "centers": [
+      {
+        "layer": "Low",
+        "midi": 47,
+        "note": "B2",
+        "hz": 123.47,
+        "range_min_midi": -99,
+        "range_max_midi": 49
+      },
+      {
+        "layer": "Mid",
+        "midi": 52,
+        "note": "E3",
+        "hz": 164.81,
+        "range_min_midi": 50,
+        "range_max_midi": 54
+      },
+      {
+        "layer": "High",
+        "midi": 57,
+        "note": "A3",
+        "hz": 220.0,
+        "range_min_midi": 55,
+        "range_max_midi": 127
+      }
+    ]
+  },
+  "measurements": [
+    {
+      "alias": "- a",
+      "file": "- a.wav",
+      "duration_sec": 2.17,
+      "mean_f0_hz": 112.57
+    },
+    {
+      "alias": "- e",
+      "file": "- e.wav",
+      "duration_sec": 1.88,
+      "mean_f0_hz": 153.23
+    },
+    {
+      "alias": "- i",
+      "file": "- i.wav",
+      "duration_sec": 1.99,
+      "mean_f0_hz": 236.9
+    },
+    {
+      "alias": "- o",
+      "file": "- o.wav",
+      "duration_sec": 2.35,
+      "mean_f0_hz": 146.18
+    },
+    {
+      "alias": "- u",
+      "file": "- u.wav",
+      "duration_sec": 2.39,
+      "mean_f0_hz": 130.32
+    },
+    {
+      "alias": "a",
+      "file": "a.wav",
+      "duration_sec": 5.86,
+      "mean_f0_hz": 119.85
+    },
+    {
+      "alias": "ba",
+      "file": "ba.wav",
+      "duration_sec": 3.73,
+      "mean_f0_hz": 175.3
+    },
+    {
+      "alias": "bai",
+      "file": "bai.wav",
+      "duration_sec": 4.96,
+      "mean_f0_hz": 109.76
+    },
+    {
+      "alias": "be",
+      "file": "be.wav",
+      "duration_sec": 4.25,
+      "mean_f0_hz": 105.25
+    },
+    {
+      "alias": "bi",
+      "file": "bi.wav",
+      "duration_sec": 3.38,
+      "mean_f0_hz": 108.13
+    },
+    {
+      "alias": "bo",
+      "file": "bo.wav",
+      "duration_sec": 5.14,
+      "mean_f0_hz": 106.74
+    },
+    {
+      "alias": "bu",
+      "file": "bu.wav",
+      "duration_sec": 3.67,
+      "mean_f0_hz": 108.9
+    },
+    {
+      "alias": "cha",
+      "file": "cha.wav",
+      "duration_sec": 2.18,
+      "mean_f0_hz": 121.23
+    },
+    {
+      "alias": "che",
+      "file": "che.wav",
+      "duration_sec": 1.75,
+      "mean_f0_hz": 119.63
+    },
+    {
+      "alias": "chi",
+      "file": "chi.wav",
+      "duration_sec": 1.69,
+      "mean_f0_hz": 122.44
+    },
+    {
+      "alias": "cho",
+      "file": "cho.wav",
+      "duration_sec": 1.76,
+      "mean_f0_hz": 123.26
+    },
+    {
+      "alias": "chu",
+      "file": "chu.wav",
+      "duration_sec": 1.58,
+      "mean_f0_hz": 125.34
+    },
+    {
+      "alias": "con",
+      "file": "con.wav",
+      "duration_sec": 2.04,
+      "mean_f0_hz": 124.05
+    },
+    {
+      "alias": "da",
+      "file": "da.wav",
+      "duration_sec": 3.9,
+      "mean_f0_hz": 100.78
+    },
+    {
+      "alias": "de",
+      "file": "de.wav",
+      "duration_sec": 2.84,
+      "mean_f0_hz": 103.71
+    },
+    {
+      "alias": "di",
+      "file": "di.wav",
+      "duration_sec": 3.0,
+      "mean_f0_hz": 107.2
+    },
+    {
+      "alias": "do",
+      "file": "do.wav",
+      "duration_sec": 3.19,
+      "mean_f0_hz": 110.13
+    },
+    {
+      "alias": "du",
+      "file": "du.wav",
+      "duration_sec": 2.75,
+      "mean_f0_hz": 112.05
+    },
+    {
+      "alias": "e",
+      "file": "e.wav",
+      "duration_sec": 6.26,
+      "mean_f0_hz": 137.06
+    },
+    {
+      "alias": "fa",
+      "file": "fa.wav",
+      "duration_sec": 1.9,
+      "mean_f0_hz": 126.33
+    },
+    {
+      "alias": "fe",
+      "file": "fe.wav",
+      "duration_sec": 1.78,
+      "mean_f0_hz": 126.24
+    },
+    {
+      "alias": "fi",
+      "file": "fi.wav",
+      "duration_sec": 1.68,
+      "mean_f0_hz": 126.86
+    },
+    {
+      "alias": "fo",
+      "file": "fo.wav",
+      "duration_sec": 1.76,
+      "mean_f0_hz": 129.22
+    },
+    {
+      "alias": "fu",
+      "file": "fu.wav",
+      "duration_sec": 1.86,
+      "mean_f0_hz": 133.46
+    },
+    {
+      "alias": "ga",
+      "file": "ga.wav",
+      "duration_sec": 2.99,
+      "mean_f0_hz": 113.73
+    },
+    {
+      "alias": "ge",
+      "file": "ge.wav",
+      "duration_sec": 2.59,
+      "mean_f0_hz": 125.27
+    },
+    {
+      "alias": "go",
+      "file": "go.wav",
+      "duration_sec": 2.44,
+      "mean_f0_hz": 119.8
+    },
+    {
+      "alias": "gu",
+      "file": "gu.wav",
+      "duration_sec": 2.57,
+      "mean_f0_hz": 131.3
+    },
+    {
+      "alias": "i",
+      "file": "i.wav",
+      "duration_sec": 5.11,
+      "mean_f0_hz": 134.93
+    },
+    {
+      "alias": "ka",
+      "file": "ka.wav",
+      "duration_sec": 1.86,
+      "mean_f0_hz": 122.98
+    },
+    {
+      "alias": "ke",
+      "file": "ke.wav",
+      "duration_sec": 1.84,
+      "mean_f0_hz": 126.55
+    },
+    {
+      "alias": "ki",
+      "file": "ki.wav",
+      "duration_sec": 1.93,
+      "mean_f0_hz": 128.84
+    },
+    {
+      "alias": "ko",
+      "file": "ko.wav",
+      "duration_sec": 1.82,
+      "mean_f0_hz": 127.58
+    },
+    {
+      "alias": "ku",
+      "file": "ku.wav",
+      "duration_sec": 1.99,
+      "mean_f0_hz": 129.62
+    },
+    {
+      "alias": "la",
+      "file": "la.wav",
+      "duration_sec": 1.9,
+      "mean_f0_hz": 121.48
+    },
+    {
+      "alias": "le",
+      "file": "le.wav",
+      "duration_sec": 1.8,
+      "mean_f0_hz": 129.22
+    },
+    {
+      "alias": "li",
+      "file": "li.wav",
+      "duration_sec": 2.13,
+      "mean_f0_hz": 177.64
+    },
+    {
+      "alias": "lo",
+      "file": "lo.wav",
+      "duration_sec": 1.52,
+      "mean_f0_hz": 120.32
+    },
+    {
+      "alias": "lu",
+      "file": "lu.wav",
+      "duration_sec": 2.01,
+      "mean_f0_hz": 118.11
+    },
+    {
+      "alias": "ma",
+      "file": "ma.wav",
+      "duration_sec": 2.25,
+      "mean_f0_hz": 118.13
+    },
+    {
+      "alias": "me",
+      "file": "me.wav",
+      "duration_sec": 1.85,
+      "mean_f0_hz": 122.14
+    },
+    {
+      "alias": "mi",
+      "file": "mi.wav",
+      "duration_sec": 1.88,
+      "mean_f0_hz": 126.35
+    },
+    {
+      "alias": "mo",
+      "file": "mo.wav",
+      "duration_sec": 1.82,
+      "mean_f0_hz": 135.56
+    },
+    {
+      "alias": "mu",
+      "file": "mu.wav",
+      "duration_sec": 2.15,
+      "mean_f0_hz": 160.22
+    },
+    {
+      "alias": "na",
+      "file": "na.wav",
+      "duration_sec": 1.68,
+      "mean_f0_hz": 102.78
+    },
+    {
+      "alias": "ne",
+      "file": "ne.wav",
+      "duration_sec": 1.86,
+      "mean_f0_hz": 109.37
+    },
+    {
+      "alias": "ni",
+      "file": "ni.wav",
+      "duration_sec": 1.88,
+      "mean_f0_hz": 113.82
+    },
+    {
+      "alias": "no",
+      "file": "no.wav",
+      "duration_sec": 2.01,
+      "mean_f0_hz": 112.7
+    },
+    {
+      "alias": "nu",
+      "file": "nu.wav",
+      "duration_sec": 2.1,
+      "mean_f0_hz": 113.12
+    },
+    {
+      "alias": "o",
+      "file": "o.wav",
+      "duration_sec": 5.47,
+      "mean_f0_hz": 128.8
+    },
+    {
+      "alias": "pa",
+      "file": "pa.wav",
+      "duration_sec": 2.21,
+      "mean_f0_hz": 114.71
+    },
+    {
+      "alias": "pe",
+      "file": "pe.wav",
+      "duration_sec": 2.71,
+      "mean_f0_hz": 117.06
+    },
+    {
+      "alias": "pi",
+      "file": "pi.wav",
+      "duration_sec": 2.09,
+      "mean_f0_hz": 125.25
+    },
+    {
+      "alias": "po",
+      "file": "po.wav",
+      "duration_sec": 1.92,
+      "mean_f0_hz": 126.1
+    },
+    {
+      "alias": "pu",
+      "file": "pu.wav",
+      "duration_sec": 2.06,
+      "mean_f0_hz": 133.66
+    },
+    {
+      "alias": "ra",
+      "file": "ra.wav",
+      "duration_sec": 1.71,
+      "mean_f0_hz": 116.06
+    },
+    {
+      "alias": "re",
+      "file": "re.wav",
+      "duration_sec": 1.71,
+      "mean_f0_hz": 120.47
+    },
+    {
+      "alias": "ri",
+      "file": "ri.wav",
+      "duration_sec": 1.61,
+      "mean_f0_hz": 92.88
+    },
+    {
+      "alias": "ro",
+      "file": "ro.wav",
+      "duration_sec": 1.33,
+      "mean_f0_hz": 308.24
+    },
+    {
+      "alias": "rra",
+      "file": "rra.wav",
+      "duration_sec": 2.09,
+      "mean_f0_hz": 127.07
+    },
+    {
+      "alias": "rre",
+      "file": "rre.wav",
+      "duration_sec": 1.61,
+      "mean_f0_hz": 119.14
+    },
+    {
+      "alias": "rri",
+      "file": "rri.wav",
+      "duration_sec": 2.07,
+      "mean_f0_hz": 121.38
+    },
+    {
+      "alias": "rro",
+      "file": "rro.wav",
+      "duration_sec": 2.01,
+      "mean_f0_hz": 120.81
+    },
+    {
+      "alias": "rru",
+      "file": "rru.wav",
+      "duration_sec": 1.81,
+      "mean_f0_hz": 121.07
+    },
+    {
+      "alias": "ru",
+      "file": "ru.wav",
+      "duration_sec": 1.53,
+      "mean_f0_hz": 128.37
+    },
+    {
+      "alias": "sa",
+      "file": "sa.wav",
+      "duration_sec": 1.48,
+      "mean_f0_hz": 121.36
+    },
+    {
+      "alias": "se",
+      "file": "se.wav",
+      "duration_sec": 1.92,
+      "mean_f0_hz": 125.0
+    },
+    {
+      "alias": "si",
+      "file": "si.wav",
+      "duration_sec": 1.48,
+      "mean_f0_hz": 121.39
+    },
+    {
+      "alias": "so",
+      "file": "so.wav",
+      "duration_sec": 1.81,
+      "mean_f0_hz": 127.99
+    },
+    {
+      "alias": "su",
+      "file": "su.wav",
+      "duration_sec": 2.02,
+      "mean_f0_hz": 126.89
+    },
+    {
+      "alias": "ta",
+      "file": "ta.wav",
+      "duration_sec": 2.13,
+      "mean_f0_hz": 119.57
+    },
+    {
+      "alias": "te",
+      "file": "te.wav",
+      "duration_sec": 2.17,
+      "mean_f0_hz": 123.89
+    },
+    {
+      "alias": "ti",
+      "file": "ti.wav",
+      "duration_sec": 2.08,
+      "mean_f0_hz": 126.45
+    },
+    {
+      "alias": "to",
+      "file": "to.wav",
+      "duration_sec": 2.53,
+      "mean_f0_hz": 123.64
+    },
+    {
+      "alias": "tu",
+      "file": "tu.wav",
+      "duration_sec": 2.21,
+      "mean_f0_hz": 131.29
+    },
+    {
+      "alias": "u",
+      "file": "u.wav",
+      "duration_sec": 5.47,
+      "mean_f0_hz": 131.61
+    },
+    {
+      "alias": "ya",
+      "file": "ya.wav",
+      "duration_sec": 1.9,
+      "mean_f0_hz": 112.16
+    },
+    {
+      "alias": "ye",
+      "file": "ye.wav",
+      "duration_sec": 1.5,
+      "mean_f0_hz": 116.36
+    },
+    {
+      "alias": "yi",
+      "file": "yi.wav",
+      "duration_sec": 1.62,
+      "mean_f0_hz": 117.16
+    },
+    {
+      "alias": "yo",
+      "file": "yo.wav",
+      "duration_sec": 1.52,
+      "mean_f0_hz": 126.45
+    },
+    {
+      "alias": "yu",
+      "file": "yu.wav",
+      "duration_sec": 1.54,
+      "mean_f0_hz": 114.67
+    },
+    {
+      "alias": "ña",
+      "file": "ña.wav",
+      "duration_sec": 1.97,
+      "mean_f0_hz": 153.24
+    },
+    {
+      "alias": "ñe",
+      "file": "ñe.wav",
+      "duration_sec": 1.62,
+      "mean_f0_hz": 107.61
+    },
+    {
+      "alias": "ñi",
+      "file": "ñi.wav",
+      "duration_sec": 1.74,
+      "mean_f0_hz": 127.89
+    },
+    {
+      "alias": "ño",
+      "file": "ño.wav",
+      "duration_sec": 2.03,
+      "mean_f0_hz": 117.83
+    },
+    {
+      "alias": "ñu",
+      "file": "ñu.wav",
+      "duration_sec": 1.98,
+      "mean_f0_hz": 113.24
+    }
+  ]
+}

@@ -137,7 +137,7 @@ class OpenUtauPhraseAdapter:
     def _build_phones(self, notes: list[NoteEvent]) -> list[OpenUtauPhone]:
         raw = []
         for note in notes:
-            aliases = self.alias_resolver(note.lyric.strip().lower())
+            aliases = _resolve_aliases(self.alias_resolver, note.lyric.strip().lower(), note.midi)
             if not aliases:
                 continue
             duration = note.duration / len(aliases)
@@ -333,3 +333,16 @@ def _tone_to_hz(tone: float) -> float:
     """Convert OpenUtau tone value to Hz."""
 
     return 440.0 * (2.0 ** ((tone - 69.0) / 12.0))
+
+
+def _resolve_aliases(
+    alias_resolver: Callable[..., list[str]],
+    lyric: str,
+    midi: int,
+) -> list[str]:
+    """Resolve aliases with optional MIDI-aware multipitch selection."""
+
+    try:
+        return alias_resolver(lyric, midi)
+    except TypeError:
+        return alias_resolver(lyric)

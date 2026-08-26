@@ -1,0 +1,1906 @@
+{
+  "schema": 1,
+  "selection": "minimum_abs_cents_distance_per_alias",
+  "samples": [
+    {
+      "alias": "- a",
+      "layer": "Low",
+      "sample_alias": "- a_low",
+      "wav": "- a.wav",
+      "measured_f0_hz": 112.57,
+      "measured_midi": 45.4,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.17,
+      "rms": 4199,
+      "peak": 31257,
+      "oto": {
+        "offset": 105.0,
+        "consonant": 40.0,
+        "cutoff": 345.0,
+        "preutterance": 135.0,
+        "overlap": 20.0
+      }
+    },
+    {
+      "alias": "- e",
+      "layer": "Low",
+      "sample_alias": "- e_low",
+      "wav": "- e.wav",
+      "measured_f0_hz": 153.23,
+      "measured_midi": 50.74,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.88,
+      "rms": 3615,
+      "peak": 19209,
+      "oto": {
+        "offset": 205.0,
+        "consonant": 40.0,
+        "cutoff": 75.0,
+        "preutterance": 235.0,
+        "overlap": 20.0
+      }
+    },
+    {
+      "alias": "- i",
+      "layer": "Low",
+      "sample_alias": "- i_low",
+      "wav": "- i.wav",
+      "measured_f0_hz": 236.9,
+      "measured_midi": 58.28,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.99,
+      "rms": 3750,
+      "peak": 13190,
+      "oto": {
+        "offset": 1770.0,
+        "consonant": 20.0,
+        "cutoff": 0.0,
+        "preutterance": 1770.0,
+        "overlap": 20.0
+      }
+    },
+    {
+      "alias": "- o",
+      "layer": "Low",
+      "sample_alias": "- o_low",
+      "wav": "- o.wav",
+      "measured_f0_hz": 146.18,
+      "measured_midi": 49.92,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.35,
+      "rms": 5176,
+      "peak": 20101,
+      "oto": {
+        "offset": 755.0,
+        "consonant": 25.0,
+        "cutoff": 250.0,
+        "preutterance": 773.75,
+        "overlap": 20.0
+      }
+    },
+    {
+      "alias": "- u",
+      "layer": "Low",
+      "sample_alias": "- u_low",
+      "wav": "- u.wav",
+      "measured_f0_hz": 130.32,
+      "measured_midi": 47.94,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.39,
+      "rms": 2935,
+      "peak": 9789,
+      "oto": {
+        "offset": 690.0,
+        "consonant": 40.0,
+        "cutoff": 125.0,
+        "preutterance": 720.0,
+        "overlap": 20.0
+      }
+    },
+    {
+      "alias": "a",
+      "layer": "Low",
+      "sample_alias": "a_low",
+      "wav": "a.wav",
+      "measured_f0_hz": 119.85,
+      "measured_midi": 46.48,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 5.86,
+      "rms": 2772,
+      "peak": 19014,
+      "oto": {
+        "offset": 1540.0,
+        "consonant": 40.0,
+        "cutoff": 795.0,
+        "preutterance": 1570.0,
+        "overlap": 20.0
+      }
+    },
+    {
+      "alias": "ba",
+      "layer": "Low",
+      "sample_alias": "ba_low",
+      "wav": "ba.wav",
+      "measured_f0_hz": 175.3,
+      "measured_midi": 53.07,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 3.73,
+      "rms": 3008,
+      "peak": 27910,
+      "oto": {
+        "offset": 950.0,
+        "consonant": 180.0,
+        "cutoff": 1055.0,
+        "preutterance": 1085.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "bai",
+      "layer": "Low",
+      "sample_alias": "bai_low",
+      "wav": "bai.wav",
+      "measured_f0_hz": 109.76,
+      "measured_midi": 44.96,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 4.96,
+      "rms": 2144,
+      "peak": 31619,
+      "oto": {
+        "offset": 815.0,
+        "consonant": 60.0,
+        "cutoff": 3410.0,
+        "preutterance": 855.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "be",
+      "layer": "Low",
+      "sample_alias": "be_low",
+      "wav": "be.wav",
+      "measured_f0_hz": 105.25,
+      "measured_midi": 44.24,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 4.25,
+      "rms": 2762,
+      "peak": 14441,
+      "oto": {
+        "offset": 690.0,
+        "consonant": 180.0,
+        "cutoff": 210.0,
+        "preutterance": 825.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "bi",
+      "layer": "Low",
+      "sample_alias": "bi_low",
+      "wav": "bi.wav",
+      "measured_f0_hz": 108.13,
+      "measured_midi": 44.7,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 3.38,
+      "rms": 2396,
+      "peak": 12000,
+      "oto": {
+        "offset": 815.0,
+        "consonant": 70.0,
+        "cutoff": 275.0,
+        "preutterance": 867.5,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "bo",
+      "layer": "Low",
+      "sample_alias": "bo_low",
+      "wav": "bo.wav",
+      "measured_f0_hz": 106.74,
+      "measured_midi": 44.48,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 5.14,
+      "rms": 2418,
+      "peak": 14648,
+      "oto": {
+        "offset": 1125.0,
+        "consonant": 180.0,
+        "cutoff": 310.0,
+        "preutterance": 1260.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "bu",
+      "layer": "Low",
+      "sample_alias": "bu_low",
+      "wav": "bu.wav",
+      "measured_f0_hz": 108.9,
+      "measured_midi": 44.83,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 3.67,
+      "rms": 2674,
+      "peak": 14262,
+      "oto": {
+        "offset": 1115.0,
+        "consonant": 60.0,
+        "cutoff": 2055.0,
+        "preutterance": 1115.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "cha",
+      "layer": "Low",
+      "sample_alias": "cha_low",
+      "wav": "cha.wav",
+      "measured_f0_hz": 121.23,
+      "measured_midi": 46.68,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.18,
+      "rms": 1502,
+      "peak": 17627,
+      "oto": {
+        "offset": 1005.0,
+        "consonant": 60.0,
+        "cutoff": 555.0,
+        "preutterance": 1010.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "che",
+      "layer": "Low",
+      "sample_alias": "che_low",
+      "wav": "che.wav",
+      "measured_f0_hz": 119.63,
+      "measured_midi": 46.45,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.75,
+      "rms": 1491,
+      "peak": 14789,
+      "oto": {
+        "offset": 840.0,
+        "consonant": 60.0,
+        "cutoff": 15.0,
+        "preutterance": 850.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "chi",
+      "layer": "Low",
+      "sample_alias": "chi_low",
+      "wav": "chi.wav",
+      "measured_f0_hz": 122.44,
+      "measured_midi": 46.86,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.69,
+      "rms": 1482,
+      "peak": 13498,
+      "oto": {
+        "offset": 540.0,
+        "consonant": 60.0,
+        "cutoff": 5.0,
+        "preutterance": 545.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "cho",
+      "layer": "Low",
+      "sample_alias": "cho_low",
+      "wav": "cho.wav",
+      "measured_f0_hz": 123.26,
+      "measured_midi": 46.97,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.76,
+      "rms": 1562,
+      "peak": 15833,
+      "oto": {
+        "offset": 520.0,
+        "consonant": 60.0,
+        "cutoff": 5.0,
+        "preutterance": 530.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "chu",
+      "layer": "Low",
+      "sample_alias": "chu_low",
+      "wav": "chu.wav",
+      "measured_f0_hz": 125.34,
+      "measured_midi": 47.26,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.58,
+      "rms": 1941,
+      "peak": 10795,
+      "oto": {
+        "offset": 505.0,
+        "consonant": 60.0,
+        "cutoff": 85.0,
+        "preutterance": 525.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "con",
+      "layer": "Low",
+      "sample_alias": "con_low",
+      "wav": "con.wav",
+      "measured_f0_hz": 124.05,
+      "measured_midi": 47.08,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.04,
+      "rms": 3731,
+      "peak": 29810,
+      "oto": {
+        "offset": 795.0,
+        "consonant": 60.0,
+        "cutoff": 745.0,
+        "preutterance": 800.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "da",
+      "layer": "Low",
+      "sample_alias": "da_low",
+      "wav": "da.wav",
+      "measured_f0_hz": 100.78,
+      "measured_midi": 43.48,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 3.9,
+      "rms": 3013,
+      "peak": 27542,
+      "oto": {
+        "offset": 145.0,
+        "consonant": 180.0,
+        "cutoff": 5.0,
+        "preutterance": 280.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "de",
+      "layer": "Low",
+      "sample_alias": "de_low",
+      "wav": "de.wav",
+      "measured_f0_hz": 103.71,
+      "measured_midi": 43.98,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.84,
+      "rms": 2520,
+      "peak": 14709,
+      "oto": {
+        "offset": 1005.0,
+        "consonant": 60.0,
+        "cutoff": 10.0,
+        "preutterance": 1030.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "di",
+      "layer": "Low",
+      "sample_alias": "di_low",
+      "wav": "di.wav",
+      "measured_f0_hz": 107.2,
+      "measured_midi": 44.55,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 3.0,
+      "rms": 2113,
+      "peak": 10282,
+      "oto": {
+        "offset": 190.0,
+        "consonant": 180.0,
+        "cutoff": 200.0,
+        "preutterance": 325.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "do",
+      "layer": "Low",
+      "sample_alias": "do_low",
+      "wav": "do.wav",
+      "measured_f0_hz": 110.13,
+      "measured_midi": 45.02,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 3.19,
+      "rms": 4566,
+      "peak": 23638,
+      "oto": {
+        "offset": 730.0,
+        "consonant": 60.0,
+        "cutoff": 390.0,
+        "preutterance": 760.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "du",
+      "layer": "Low",
+      "sample_alias": "du_low",
+      "wav": "du.wav",
+      "measured_f0_hz": 112.05,
+      "measured_midi": 45.32,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.75,
+      "rms": 2337,
+      "peak": 11500,
+      "oto": {
+        "offset": 910.0,
+        "consonant": 60.0,
+        "cutoff": 5.0,
+        "preutterance": 920.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "e",
+      "layer": "Low",
+      "sample_alias": "e_low",
+      "wav": "e.wav",
+      "measured_f0_hz": 137.06,
+      "measured_midi": 48.81,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 6.26,
+      "rms": 2522,
+      "peak": 9095,
+      "oto": {
+        "offset": 1775.0,
+        "consonant": 20.0,
+        "cutoff": 5.0,
+        "preutterance": 1790.0,
+        "overlap": 20.0
+      }
+    },
+    {
+      "alias": "fa",
+      "layer": "Low",
+      "sample_alias": "fa_low",
+      "wav": "fa.wav",
+      "measured_f0_hz": 126.33,
+      "measured_midi": 47.4,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.9,
+      "rms": 3427,
+      "peak": 30436,
+      "oto": {
+        "offset": 450.0,
+        "consonant": 60.0,
+        "cutoff": 20.0,
+        "preutterance": 455.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "fe",
+      "layer": "Low",
+      "sample_alias": "fe_low",
+      "wav": "fe.wav",
+      "measured_f0_hz": 126.24,
+      "measured_midi": 47.38,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.78,
+      "rms": 2515,
+      "peak": 15557,
+      "oto": {
+        "offset": 295.0,
+        "consonant": 60.0,
+        "cutoff": 510.0,
+        "preutterance": 300.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "fi",
+      "layer": "Low",
+      "sample_alias": "fi_low",
+      "wav": "fi.wav",
+      "measured_f0_hz": 126.86,
+      "measured_midi": 47.47,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.68,
+      "rms": 2046,
+      "peak": 8826,
+      "oto": {
+        "offset": 535.0,
+        "consonant": 60.0,
+        "cutoff": 160.0,
+        "preutterance": 535.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "fo",
+      "layer": "Low",
+      "sample_alias": "fo_low",
+      "wav": "fo.wav",
+      "measured_f0_hz": 129.22,
+      "measured_midi": 47.79,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.76,
+      "rms": 3334,
+      "peak": 26470,
+      "oto": {
+        "offset": 530.0,
+        "consonant": 60.0,
+        "cutoff": 5.0,
+        "preutterance": 550.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "fu",
+      "layer": "Low",
+      "sample_alias": "fu_low",
+      "wav": "fu.wav",
+      "measured_f0_hz": 133.46,
+      "measured_midi": 48.35,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.86,
+      "rms": 2664,
+      "peak": 13257,
+      "oto": {
+        "offset": 625.0,
+        "consonant": 60.0,
+        "cutoff": 245.0,
+        "preutterance": 625.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ga",
+      "layer": "Low",
+      "sample_alias": "ga_low",
+      "wav": "ga.wav",
+      "measured_f0_hz": 113.73,
+      "measured_midi": 45.58,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.99,
+      "rms": 3706,
+      "peak": 31501,
+      "oto": {
+        "offset": 900.0,
+        "consonant": 60.0,
+        "cutoff": 325.0,
+        "preutterance": 945.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ge",
+      "layer": "Low",
+      "sample_alias": "ge_low",
+      "wav": "ge.wav",
+      "measured_f0_hz": 125.27,
+      "measured_midi": 47.25,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.59,
+      "rms": 2830,
+      "peak": 17538,
+      "oto": {
+        "offset": 175.0,
+        "consonant": 180.0,
+        "cutoff": 230.0,
+        "preutterance": 310.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "gi",
+      "layer": "Low",
+      "sample_alias": "gi_low",
+      "wav": "gi.wav",
+      "measured_f0_hz": 0.0,
+      "measured_midi": 0.0,
+      "voiced_ratio": 0.0,
+      "f0_std": 0.0,
+      "duration": 2.65,
+      "rms": 2145,
+      "peak": 9917,
+      "oto": {
+        "offset": 890.0,
+        "consonant": 60.0,
+        "cutoff": 1260.0,
+        "preutterance": 890.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "go",
+      "layer": "Low",
+      "sample_alias": "go_low",
+      "wav": "go.wav",
+      "measured_f0_hz": 119.8,
+      "measured_midi": 46.48,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.44,
+      "rms": 4140,
+      "peak": 21725,
+      "oto": {
+        "offset": 730.0,
+        "consonant": 120.0,
+        "cutoff": 525.0,
+        "preutterance": 820.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "gu",
+      "layer": "Low",
+      "sample_alias": "gu_low",
+      "wav": "gu.wav",
+      "measured_f0_hz": 131.3,
+      "measured_midi": 48.06,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.57,
+      "rms": 2467,
+      "peak": 10954,
+      "oto": {
+        "offset": 195.0,
+        "consonant": 180.0,
+        "cutoff": 250.0,
+        "preutterance": 330.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "i",
+      "layer": "Low",
+      "sample_alias": "i_low",
+      "wav": "i.wav",
+      "measured_f0_hz": 134.93,
+      "measured_midi": 48.54,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 5.11,
+      "rms": 2032,
+      "peak": 10334,
+      "oto": {
+        "offset": 1505.0,
+        "consonant": 20.0,
+        "cutoff": 115.0,
+        "preutterance": 1510.0,
+        "overlap": 20.0
+      }
+    },
+    {
+      "alias": "ka",
+      "layer": "Low",
+      "sample_alias": "ka_low",
+      "wav": "ka.wav",
+      "measured_f0_hz": 122.98,
+      "measured_midi": 46.93,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.86,
+      "rms": 2244,
+      "peak": 12949,
+      "oto": {
+        "offset": 430.0,
+        "consonant": 60.0,
+        "cutoff": 625.0,
+        "preutterance": 460.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ke",
+      "layer": "Low",
+      "sample_alias": "ke_low",
+      "wav": "ke.wav",
+      "measured_f0_hz": 126.55,
+      "measured_midi": 47.43,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.84,
+      "rms": 2756,
+      "peak": 14591,
+      "oto": {
+        "offset": 265.0,
+        "consonant": 60.0,
+        "cutoff": 240.0,
+        "preutterance": 300.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ki",
+      "layer": "Low",
+      "sample_alias": "ki_low",
+      "wav": "ki.wav",
+      "measured_f0_hz": 128.84,
+      "measured_midi": 47.74,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.93,
+      "rms": 1747,
+      "peak": 7199,
+      "oto": {
+        "offset": 195.0,
+        "consonant": 60.0,
+        "cutoff": 770.0,
+        "preutterance": 200.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ko",
+      "layer": "Low",
+      "sample_alias": "ko_low",
+      "wav": "ko.wav",
+      "measured_f0_hz": 127.58,
+      "measured_midi": 47.57,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.82,
+      "rms": 3497,
+      "peak": 20622,
+      "oto": {
+        "offset": 415.0,
+        "consonant": 60.0,
+        "cutoff": 220.0,
+        "preutterance": 460.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ku",
+      "layer": "Low",
+      "sample_alias": "ku_low",
+      "wav": "ku.wav",
+      "measured_f0_hz": 129.62,
+      "measured_midi": 47.84,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.99,
+      "rms": 2409,
+      "peak": 8899,
+      "oto": {
+        "offset": 230.0,
+        "consonant": 180.0,
+        "cutoff": 230.0,
+        "preutterance": 365.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "la",
+      "layer": "Low",
+      "sample_alias": "la_low",
+      "wav": "la.wav",
+      "measured_f0_hz": 121.48,
+      "measured_midi": 46.72,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.9,
+      "rms": 2395,
+      "peak": 16247,
+      "oto": {
+        "offset": 440.0,
+        "consonant": 80.0,
+        "cutoff": 290.0,
+        "preutterance": 500.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "le",
+      "layer": "Low",
+      "sample_alias": "le_low",
+      "wav": "le.wav",
+      "measured_f0_hz": 129.22,
+      "measured_midi": 47.79,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.8,
+      "rms": 3373,
+      "peak": 15508,
+      "oto": {
+        "offset": 600.0,
+        "consonant": 180.0,
+        "cutoff": 15.0,
+        "preutterance": 735.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "li",
+      "layer": "Low",
+      "sample_alias": "li_low",
+      "wav": "li.wav",
+      "measured_f0_hz": 177.64,
+      "measured_midi": 53.3,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.13,
+      "rms": 1863,
+      "peak": 9454,
+      "oto": {
+        "offset": 940.0,
+        "consonant": 60.0,
+        "cutoff": 690.0,
+        "preutterance": 940.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "lo",
+      "layer": "Low",
+      "sample_alias": "lo_low",
+      "wav": "lo.wav",
+      "measured_f0_hz": 120.32,
+      "measured_midi": 46.55,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.52,
+      "rms": 3172,
+      "peak": 15564,
+      "oto": {
+        "offset": 350.0,
+        "consonant": 115.0,
+        "cutoff": 350.0,
+        "preutterance": 436.25,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "lu",
+      "layer": "Low",
+      "sample_alias": "lu_low",
+      "wav": "lu.wav",
+      "measured_f0_hz": 118.11,
+      "measured_midi": 46.23,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.01,
+      "rms": 1677,
+      "peak": 8126,
+      "oto": {
+        "offset": 435.0,
+        "consonant": 95.0,
+        "cutoff": 805.0,
+        "preutterance": 506.25,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ma",
+      "layer": "Low",
+      "sample_alias": "ma_low",
+      "wav": "ma.wav",
+      "measured_f0_hz": 118.13,
+      "measured_midi": 46.23,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.25,
+      "rms": 1752,
+      "peak": 10879,
+      "oto": {
+        "offset": 705.0,
+        "consonant": 125.0,
+        "cutoff": 640.0,
+        "preutterance": 798.75,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "me",
+      "layer": "Low",
+      "sample_alias": "me_low",
+      "wav": "me.wav",
+      "measured_f0_hz": 122.14,
+      "measured_midi": 46.81,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.85,
+      "rms": 2293,
+      "peak": 10180,
+      "oto": {
+        "offset": 470.0,
+        "consonant": 60.0,
+        "cutoff": 235.0,
+        "preutterance": 485.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "mi",
+      "layer": "Low",
+      "sample_alias": "mi_low",
+      "wav": "mi.wav",
+      "measured_f0_hz": 126.35,
+      "measured_midi": 47.4,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.88,
+      "rms": 1941,
+      "peak": 8290,
+      "oto": {
+        "offset": 505.0,
+        "consonant": 60.0,
+        "cutoff": 200.0,
+        "preutterance": 550.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "mo",
+      "layer": "Low",
+      "sample_alias": "mo_low",
+      "wav": "mo.wav",
+      "measured_f0_hz": 135.56,
+      "measured_midi": 48.62,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.82,
+      "rms": 1750,
+      "peak": 7611,
+      "oto": {
+        "offset": 220.0,
+        "consonant": 60.0,
+        "cutoff": 395.0,
+        "preutterance": 220.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "mu",
+      "layer": "Low",
+      "sample_alias": "mu_low",
+      "wav": "mu.wav",
+      "measured_f0_hz": 160.22,
+      "measured_midi": 51.51,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.15,
+      "rms": 3198,
+      "peak": 19740,
+      "oto": {
+        "offset": 815.0,
+        "consonant": 125.0,
+        "cutoff": 365.0,
+        "preutterance": 908.75,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "na",
+      "layer": "Low",
+      "sample_alias": "na_low",
+      "wav": "na.wav",
+      "measured_f0_hz": 102.78,
+      "measured_midi": 43.83,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.68,
+      "rms": 3168,
+      "peak": 19087,
+      "oto": {
+        "offset": 570.0,
+        "consonant": 155.0,
+        "cutoff": 215.0,
+        "preutterance": 686.25,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ne",
+      "layer": "Low",
+      "sample_alias": "ne_low",
+      "wav": "ne.wav",
+      "measured_f0_hz": 109.37,
+      "measured_midi": 44.9,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.86,
+      "rms": 2166,
+      "peak": 10044,
+      "oto": {
+        "offset": 600.0,
+        "consonant": 65.0,
+        "cutoff": 270.0,
+        "preutterance": 648.75,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ni",
+      "layer": "Low",
+      "sample_alias": "ni_low",
+      "wav": "ni.wav",
+      "measured_f0_hz": 113.82,
+      "measured_midi": 45.59,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.88,
+      "rms": 2000,
+      "peak": 9476,
+      "oto": {
+        "offset": 535.0,
+        "consonant": 60.0,
+        "cutoff": 220.0,
+        "preutterance": 580.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "no",
+      "layer": "Low",
+      "sample_alias": "no_low",
+      "wav": "no.wav",
+      "measured_f0_hz": 112.7,
+      "measured_midi": 45.42,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.01,
+      "rms": 2241,
+      "peak": 15808,
+      "oto": {
+        "offset": 520.0,
+        "consonant": 60.0,
+        "cutoff": 240.0,
+        "preutterance": 565.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "nu",
+      "layer": "Low",
+      "sample_alias": "nu_low",
+      "wav": "nu.wav",
+      "measured_f0_hz": 113.12,
+      "measured_midi": 45.48,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.1,
+      "rms": 1997,
+      "peak": 15447,
+      "oto": {
+        "offset": 755.0,
+        "consonant": 60.0,
+        "cutoff": 240.0,
+        "preutterance": 795.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "o",
+      "layer": "Low",
+      "sample_alias": "o_low",
+      "wav": "o.wav",
+      "measured_f0_hz": 128.8,
+      "measured_midi": 47.73,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 5.47,
+      "rms": 4073,
+      "peak": 18965,
+      "oto": {
+        "offset": 1065.0,
+        "consonant": 40.0,
+        "cutoff": 235.0,
+        "preutterance": 1095.0,
+        "overlap": 20.0
+      }
+    },
+    {
+      "alias": "pa",
+      "layer": "Low",
+      "sample_alias": "pa_low",
+      "wav": "pa.wav",
+      "measured_f0_hz": 114.71,
+      "measured_midi": 45.73,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.21,
+      "rms": 2203,
+      "peak": 22688,
+      "oto": {
+        "offset": 940.0,
+        "consonant": 60.0,
+        "cutoff": 400.0,
+        "preutterance": 940.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "pe",
+      "layer": "Low",
+      "sample_alias": "pe_low",
+      "wav": "pe.wav",
+      "measured_f0_hz": 117.06,
+      "measured_midi": 46.08,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.71,
+      "rms": 2038,
+      "peak": 12716,
+      "oto": {
+        "offset": 955.0,
+        "consonant": 60.0,
+        "cutoff": 480.0,
+        "preutterance": 955.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "pi",
+      "layer": "Low",
+      "sample_alias": "pi_low",
+      "wav": "pi.wav",
+      "measured_f0_hz": 125.25,
+      "measured_midi": 47.25,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.09,
+      "rms": 1905,
+      "peak": 12153,
+      "oto": {
+        "offset": 585.0,
+        "consonant": 60.0,
+        "cutoff": 505.0,
+        "preutterance": 590.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "po",
+      "layer": "Low",
+      "sample_alias": "po_low",
+      "wav": "po.wav",
+      "measured_f0_hz": 126.1,
+      "measured_midi": 47.36,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.92,
+      "rms": 4081,
+      "peak": 17818,
+      "oto": {
+        "offset": 480.0,
+        "consonant": 60.0,
+        "cutoff": 345.0,
+        "preutterance": 485.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "pu",
+      "layer": "Low",
+      "sample_alias": "pu_low",
+      "wav": "pu.wav",
+      "measured_f0_hz": 133.66,
+      "measured_midi": 48.37,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.06,
+      "rms": 2743,
+      "peak": 12129,
+      "oto": {
+        "offset": 605.0,
+        "consonant": 60.0,
+        "cutoff": 240.0,
+        "preutterance": 610.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ra",
+      "layer": "Low",
+      "sample_alias": "ra_low",
+      "wav": "ra.wav",
+      "measured_f0_hz": 116.06,
+      "measured_midi": 45.93,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.71,
+      "rms": 2775,
+      "peak": 19827,
+      "oto": {
+        "offset": 255.0,
+        "consonant": 60.0,
+        "cutoff": 955.0,
+        "preutterance": 275.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "re",
+      "layer": "Low",
+      "sample_alias": "re_low",
+      "wav": "re.wav",
+      "measured_f0_hz": 120.47,
+      "measured_midi": 46.57,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.71,
+      "rms": 2421,
+      "peak": 20497,
+      "oto": {
+        "offset": 415.0,
+        "consonant": 150.0,
+        "cutoff": 90.0,
+        "preutterance": 527.5,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ri",
+      "layer": "Low",
+      "sample_alias": "ri_low",
+      "wav": "ri.wav",
+      "measured_f0_hz": 92.88,
+      "measured_midi": 42.07,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.61,
+      "rms": 1956,
+      "peak": 9293,
+      "oto": {
+        "offset": 450.0,
+        "consonant": 60.0,
+        "cutoff": 545.0,
+        "preutterance": 450.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ro",
+      "layer": "Low",
+      "sample_alias": "ro_low",
+      "wav": "ro.wav",
+      "measured_f0_hz": 308.24,
+      "measured_midi": 62.84,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.33,
+      "rms": 3844,
+      "peak": 24158,
+      "oto": {
+        "offset": 355.0,
+        "consonant": 175.0,
+        "cutoff": 460.0,
+        "preutterance": 486.25,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "rra",
+      "layer": "Low",
+      "sample_alias": "rra_low",
+      "wav": "rra.wav",
+      "measured_f0_hz": 127.07,
+      "measured_midi": 47.5,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.09,
+      "rms": 2284,
+      "peak": 23891,
+      "oto": {
+        "offset": 595.0,
+        "consonant": 60.0,
+        "cutoff": 715.0,
+        "preutterance": 625.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "rre",
+      "layer": "Low",
+      "sample_alias": "rre_low",
+      "wav": "rre.wav",
+      "measured_f0_hz": 119.14,
+      "measured_midi": 46.38,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.61,
+      "rms": 1981,
+      "peak": 16558,
+      "oto": {
+        "offset": 565.0,
+        "consonant": 60.0,
+        "cutoff": 190.0,
+        "preutterance": 595.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "rri",
+      "layer": "Low",
+      "sample_alias": "rri_low",
+      "wav": "rri.wav",
+      "measured_f0_hz": 121.38,
+      "measured_midi": 46.7,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.07,
+      "rms": 1351,
+      "peak": 14265,
+      "oto": {
+        "offset": 385.0,
+        "consonant": 60.0,
+        "cutoff": 120.0,
+        "preutterance": 415.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "rro",
+      "layer": "Low",
+      "sample_alias": "rro_low",
+      "wav": "rro.wav",
+      "measured_f0_hz": 120.81,
+      "measured_midi": 46.62,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.01,
+      "rms": 2440,
+      "peak": 22126,
+      "oto": {
+        "offset": 760.0,
+        "consonant": 100.0,
+        "cutoff": 20.0,
+        "preutterance": 835.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "rru",
+      "layer": "Low",
+      "sample_alias": "rru_low",
+      "wav": "rru.wav",
+      "measured_f0_hz": 121.07,
+      "measured_midi": 46.66,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.81,
+      "rms": 1663,
+      "peak": 15307,
+      "oto": {
+        "offset": 455.0,
+        "consonant": 180.0,
+        "cutoff": 5.0,
+        "preutterance": 590.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ru",
+      "layer": "Low",
+      "sample_alias": "ru_low",
+      "wav": "ru.wav",
+      "measured_f0_hz": 128.37,
+      "measured_midi": 47.67,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.53,
+      "rms": 3126,
+      "peak": 19022,
+      "oto": {
+        "offset": 565.0,
+        "consonant": 60.0,
+        "cutoff": 465.0,
+        "preutterance": 565.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "sa",
+      "layer": "Low",
+      "sample_alias": "sa_low",
+      "wav": "sa.wav",
+      "measured_f0_hz": 121.36,
+      "measured_midi": 46.7,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.48,
+      "rms": 2303,
+      "peak": 19275,
+      "oto": {
+        "offset": 105.0,
+        "consonant": 60.0,
+        "cutoff": 225.0,
+        "preutterance": 130.0,
+        "overlap": 45.5
+      }
+    },
+    {
+      "alias": "se",
+      "layer": "Low",
+      "sample_alias": "se_low",
+      "wav": "se.wav",
+      "measured_f0_hz": 125.0,
+      "measured_midi": 47.21,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.92,
+      "rms": 2461,
+      "peak": 10926,
+      "oto": {
+        "offset": 515.0,
+        "consonant": 65.0,
+        "cutoff": 315.0,
+        "preutterance": 563.75,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "si",
+      "layer": "Low",
+      "sample_alias": "si_low",
+      "wav": "si.wav",
+      "measured_f0_hz": 121.39,
+      "measured_midi": 46.71,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.48,
+      "rms": 2096,
+      "peak": 12547,
+      "oto": {
+        "offset": 320.0,
+        "consonant": 60.0,
+        "cutoff": 65.0,
+        "preutterance": 350.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "so",
+      "layer": "Low",
+      "sample_alias": "so_low",
+      "wav": "so.wav",
+      "measured_f0_hz": 127.99,
+      "measured_midi": 47.62,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.81,
+      "rms": 2598,
+      "peak": 19735,
+      "oto": {
+        "offset": 550.0,
+        "consonant": 90.0,
+        "cutoff": 315.0,
+        "preutterance": 617.5,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "su",
+      "layer": "Low",
+      "sample_alias": "su_low",
+      "wav": "su.wav",
+      "measured_f0_hz": 126.89,
+      "measured_midi": 47.47,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.02,
+      "rms": 2277,
+      "peak": 10777,
+      "oto": {
+        "offset": 620.0,
+        "consonant": 65.0,
+        "cutoff": 280.0,
+        "preutterance": 668.75,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ta",
+      "layer": "Low",
+      "sample_alias": "ta_low",
+      "wav": "ta.wav",
+      "measured_f0_hz": 119.57,
+      "measured_midi": 46.44,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.13,
+      "rms": 3081,
+      "peak": 21628,
+      "oto": {
+        "offset": 485.0,
+        "consonant": 60.0,
+        "cutoff": 35.0,
+        "preutterance": 485.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "te",
+      "layer": "Low",
+      "sample_alias": "te_low",
+      "wav": "te.wav",
+      "measured_f0_hz": 123.89,
+      "measured_midi": 47.06,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.17,
+      "rms": 3355,
+      "peak": 15129,
+      "oto": {
+        "offset": 735.0,
+        "consonant": 60.0,
+        "cutoff": 320.0,
+        "preutterance": 740.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ti",
+      "layer": "Low",
+      "sample_alias": "ti_low",
+      "wav": "ti.wav",
+      "measured_f0_hz": 126.45,
+      "measured_midi": 47.41,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.08,
+      "rms": 2236,
+      "peak": 9322,
+      "oto": {
+        "offset": 570.0,
+        "consonant": 60.0,
+        "cutoff": 30.0,
+        "preutterance": 615.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "to",
+      "layer": "Low",
+      "sample_alias": "to_low",
+      "wav": "to.wav",
+      "measured_f0_hz": 123.64,
+      "measured_midi": 47.02,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.53,
+      "rms": 2000,
+      "peak": 10104,
+      "oto": {
+        "offset": 600.0,
+        "consonant": 60.0,
+        "cutoff": 35.0,
+        "preutterance": 605.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "tu",
+      "layer": "Low",
+      "sample_alias": "tu_low",
+      "wav": "tu.wav",
+      "measured_f0_hz": 131.29,
+      "measured_midi": 48.06,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.21,
+      "rms": 2345,
+      "peak": 8954,
+      "oto": {
+        "offset": 15.0,
+        "consonant": 180.0,
+        "cutoff": 470.0,
+        "preutterance": 150.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "u",
+      "layer": "Low",
+      "sample_alias": "u_low",
+      "wav": "u.wav",
+      "measured_f0_hz": 131.61,
+      "measured_midi": 48.11,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 5.47,
+      "rms": 3996,
+      "peak": 15252,
+      "oto": {
+        "offset": 975.0,
+        "consonant": 20.0,
+        "cutoff": 250.0,
+        "preutterance": 985.0,
+        "overlap": 20.0
+      }
+    },
+    {
+      "alias": "ya",
+      "layer": "Low",
+      "sample_alias": "ya_low",
+      "wav": "ya.wav",
+      "measured_f0_hz": 112.16,
+      "measured_midi": 45.34,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.9,
+      "rms": 2540,
+      "peak": 19533,
+      "oto": {
+        "offset": 580.0,
+        "consonant": 60.0,
+        "cutoff": 495.0,
+        "preutterance": 595.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ye",
+      "layer": "Low",
+      "sample_alias": "ye_low",
+      "wav": "ye.wav",
+      "measured_f0_hz": 116.36,
+      "measured_midi": 45.97,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.5,
+      "rms": 2823,
+      "peak": 15636,
+      "oto": {
+        "offset": 80.0,
+        "consonant": 170.0,
+        "cutoff": 650.0,
+        "preutterance": 207.5,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "yi",
+      "layer": "Low",
+      "sample_alias": "yi_low",
+      "wav": "yi.wav",
+      "measured_f0_hz": 117.16,
+      "measured_midi": 46.09,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.62,
+      "rms": 1822,
+      "peak": 9265,
+      "oto": {
+        "offset": 440.0,
+        "consonant": 60.0,
+        "cutoff": 515.0,
+        "preutterance": 465.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "yo",
+      "layer": "Low",
+      "sample_alias": "yo_low",
+      "wav": "yo.wav",
+      "measured_f0_hz": 126.45,
+      "measured_midi": 47.41,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.52,
+      "rms": 2072,
+      "peak": 9792,
+      "oto": {
+        "offset": 180.0,
+        "consonant": 75.0,
+        "cutoff": 680.0,
+        "preutterance": 236.25,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "yu",
+      "layer": "Low",
+      "sample_alias": "yu_low",
+      "wav": "yu.wav",
+      "measured_f0_hz": 114.67,
+      "measured_midi": 45.72,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.54,
+      "rms": 1847,
+      "peak": 8093,
+      "oto": {
+        "offset": 135.0,
+        "consonant": 180.0,
+        "cutoff": 245.0,
+        "preutterance": 270.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ña",
+      "layer": "Low",
+      "sample_alias": "ña_low",
+      "wav": "ña.wav",
+      "measured_f0_hz": 153.24,
+      "measured_midi": 50.74,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.97,
+      "rms": 2487,
+      "peak": 21163,
+      "oto": {
+        "offset": 530.0,
+        "consonant": 70.0,
+        "cutoff": 225.0,
+        "preutterance": 582.5,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ñe",
+      "layer": "Low",
+      "sample_alias": "ñe_low",
+      "wav": "ñe.wav",
+      "measured_f0_hz": 107.61,
+      "measured_midi": 44.62,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.62,
+      "rms": 2438,
+      "peak": 13601,
+      "oto": {
+        "offset": 175.0,
+        "consonant": 60.0,
+        "cutoff": 140.0,
+        "preutterance": 220.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ñi",
+      "layer": "Low",
+      "sample_alias": "ñi_low",
+      "wav": "ñi.wav",
+      "measured_f0_hz": 127.89,
+      "measured_midi": 47.61,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.74,
+      "rms": 2259,
+      "peak": 10163,
+      "oto": {
+        "offset": 160.0,
+        "consonant": 60.0,
+        "cutoff": 390.0,
+        "preutterance": 205.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ño",
+      "layer": "Low",
+      "sample_alias": "ño_low",
+      "wav": "ño.wav",
+      "measured_f0_hz": 117.83,
+      "measured_midi": 46.19,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 2.03,
+      "rms": 1902,
+      "peak": 12383,
+      "oto": {
+        "offset": 415.0,
+        "consonant": 60.0,
+        "cutoff": 285.0,
+        "preutterance": 450.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "ñu",
+      "layer": "Low",
+      "sample_alias": "ñu_low",
+      "wav": "ñu.wav",
+      "measured_f0_hz": 113.24,
+      "measured_midi": 45.5,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 1.98,
+      "rms": 2446,
+      "peak": 11122,
+      "oto": {
+        "offset": 400.0,
+        "consonant": 60.0,
+        "cutoff": 40.0,
+        "preutterance": 445.0,
+        "overlap": 50.0
+      }
+    },
+    {
+      "alias": "a",
+      "layer": "High",
+      "sample_alias": "a_high",
+      "wav": "a_High.wav",
+      "measured_f0_hz": 142.73,
+      "measured_midi": 49.51,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 5.94,
+      "rms": 3148,
+      "peak": 12973,
+      "oto": {
+        "offset": 0.0,
+        "consonant": 40.0,
+        "cutoff": 220.0,
+        "preutterance": 30.0,
+        "overlap": 10.5
+      }
+    },
+    {
+      "alias": "bai",
+      "layer": "High",
+      "sample_alias": "bai_high",
+      "wav": "bai_High.wav",
+      "measured_f0_hz": 134.42,
+      "measured_midi": 48.47,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 3.08,
+      "rms": 4176,
+      "peak": 10823,
+      "oto": {
+        "offset": 0.0,
+        "consonant": 180.0,
+        "cutoff": 5.0,
+        "preutterance": 135.0,
+        "overlap": 47.25
+      }
+    },
+    {
+      "alias": "la",
+      "layer": "High",
+      "sample_alias": "la_high",
+      "wav": "la_High.wav",
+      "measured_f0_hz": 102.65,
+      "measured_midi": 43.8,
+      "voiced_ratio": 1.0,
+      "f0_std": 0.0,
+      "duration": 5.64,
+      "rms": 2161,
+      "peak": 10932,
+      "oto": {
+        "offset": 0.0,
+        "consonant": 180.0,
+        "cutoff": 5.0,
+        "preutterance": 135.0,
+        "overlap": 47.25
+      }
+    }
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "microtest_aliases": [
+    "a",
+    "bai",
+    "la",
+    "con",
+    "mi",
+    "go"
+  ],
+  "calibration": {
+    "note": "Valores guia por registro comodo; no son requisitos rigidos de aceptacion.",
+    "measured_count": 91,
+    "median_hz": 122.44,
+    "mean_hz": 126.49,
+    "min_hz": 92.88,
+    "max_hz": 308.24,
+    "median_midi": 46.86,
+    "centers": [
+      {
+        "layer": "Low",
+        "midi": 47,
+        "note": "B2",
+        "hz": 123.47,
+        "range_min_midi": -99,
+        "range_max_midi": 49
+      },
+      {
+        "layer": "Mid",
+        "midi": 52,
+        "note": "E3",
+        "hz": 164.81,
+        "range_min_midi": 50,
+        "range_max_midi": 54
+      },
+      {
+        "layer": "High",
+        "midi": 57,
+        "note": "A3",
+        "hz": 220.0,
+        "range_min_midi": 55,
+        "range_max_midi": 127
+      }
+    ]
+  },
+  "recording_layers": [
+    "Low",
+    "Mid",
+    "High"
+  ],
+  "layer_instructions": {
+    "Low": "Graba con tu registro grave comodo. No persigas una nota exacta.",
+    "Mid": "Graba con tu registro medio comodo. Mantén tu timbre natural.",
+    "High": "Graba con tu registro agudo comodo. No imites otra voz ni fuerces afinacion."
+  },
+  "raw_dirs": {
+    "Low": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\voicebank_raw\\Low",
+    "Mid": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\voicebank_raw\\Mid",
+    "High": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\voicebank_raw\\High"
+  },
+  "voicebank_wav_dir": "D:\\Proyectos\\LYKENOX-Voice-Engine\\profiles\\lykenox\\voicebank\\wav",
+  "prefix_map": "D:\\Proyectos\\LYKENOX-Voice-Engine\\profiles\\lykenox\\voicebank\\prefix.map",
+  "oto_multipitch": "D:\\Proyectos\\LYKENOX-Voice-Engine\\profiles\\lykenox\\voicebank\\oto_multipitch.ini",
+  "metadata": "D:\\Proyectos\\LYKENOX-Voice-Engine\\profiles\\lykenox\\voicebank\\adaptive_multipitch_metadata.json",
+  "layer_status": {
+    "Low": {
+      "present": [
+        "- a",
+        "- e",
+        "- i",
+        "- o",
+        "- u",
+        "a",
+        "ba",
+        "bai",
+        "be",
+        "bi",
+        "bo",
+        "bu",
+        "cha",
+        "che",
+        "chi",
+        "cho",
+        "chu",
+        "con",
+        "da",
+        "de",
+        "di",
+        "do",
+        "du",
+        "e",
+        "fa",
+        "fe",
+        "fi",
+        "fo",
+        "fu",
+        "ga",
+        "ge",
+        "gi",
+        "go",
+        "gu",
+        "i",
+        "ka",
+        "ke",
+        "ki",
+        "ko",
+        "ku",
+        "la",
+        "le",
+        "li",
+        "lo",
+        "lu",
+        "ma",
+        "me",
+        "mi",
+        "mo",
+        "mu",
+        "na",
+        "ne",
+        "ni",
+        "no",
+        "nu",
+        "o",
+        "pa",
+        "pe",
+        "pi",
+        "po",
+        "pu",
+        "ra",
+        "re",
+        "ri",
+        "ro",
+        "rra",
+        "rre",
+        "rri",
+        "rro",
+        "rru",
+        "ru",
+        "sa",
+        "se",
+        "si",
+        "so",
+        "su",
+        "ta",
+        "te",
+        "ti",
+        "to",
+        "tu",
+        "u",
+        "ya",
+        "ye",
+        "yi",
+        "yo",
+        "yu",
+        "ña",
+        "ñe",
+        "ñi",
+        "ño",
+        "ñu"
+      ],
+      "missing": []
+    },
+    "Mid": {
+      "present": [],
+      "missing": [
+        "a",
+        "bai",
+        "la",
+        "con",
+        "mi",
+        "go"
+      ]
+    },
+    "High": {
+      "present": [
+        "a",
+        "bai",
+        "la"
+      ],
+      "missing": [
+        "con",
+        "mi",
+        "go"
+      ]
+    }
+  },
+  "ready_for_multipitch_microtest": false
+}

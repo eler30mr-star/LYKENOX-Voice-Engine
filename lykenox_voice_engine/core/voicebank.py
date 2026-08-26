@@ -162,6 +162,27 @@ class VoicebankManager:
             return set()
         return {path.stem.lower() for path in self.raw_dir.glob("*.wav") if not path.name.startswith("temp_")}
 
+    def recorded_aliases_for_layer(self, layer: str) -> set[str]:
+        """Return aliases recorded for one multipitch layer."""
+
+        if layer == "Low":
+            base = self.recorded_aliases()
+            layered = self.raw_dir / layer
+            if layered.exists():
+                base.update(path.stem.lower() for path in layered.glob("*.wav"))
+            return base
+        layer_dir = self.raw_dir / layer
+        if not layer_dir.exists():
+            return set()
+        return {path.stem.lower() for path in layer_dir.glob("*.wav") if not path.name.startswith("temp_")}
+
+    def raw_path_for_layer(self, alias: str, layer: str) -> Path:
+        """Return the saved raw WAV path for one alias/layer."""
+
+        if layer == "Low":
+            return self.raw_dir / f"{alias}.wav"
+        return self.raw_dir / layer / f"{alias}.wav"
+
     def render_to_path(self, lyrics: str, notes: list[NoteEvent], tempo: int, output_path: Path, renderer_type: str = "internal") -> dict[str, Any]:
         """Render notes using UTAU-style timing and selected renderer."""
 
