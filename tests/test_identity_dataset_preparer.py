@@ -32,6 +32,18 @@ class TestIdentityDatasetPreparer(unittest.TestCase):
             self.assertGreater(report["train_count"], report["val_count"])
             self.assertTrue(Path(report["manifest"]).exists())
             self.assertFalse(report["ready_for_training"])
+            manifest_rows = [
+                json.loads(line)
+                for line in Path(report["manifest"]).read_text(encoding="utf-8").splitlines()
+            ]
+            self.assertEqual(
+                len(manifest_rows),
+                report["accepted_speech_count"],
+            )
+            self.assertEqual(
+                {row["split"] for row in manifest_rows},
+                {"train", "val"},
+            )
 
     def test_blocks_long_audio_with_short_repeated_transcript(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

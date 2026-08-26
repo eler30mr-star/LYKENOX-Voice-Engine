@@ -70,6 +70,9 @@ def apply_transcripts(
             missing_count += 1
         updated_rows.append(row)
 
+    train_ids = _read_split_ids(prepared_dir / "train.csv")
+    val_ids = _read_split_ids(prepared_dir / "val.csv")
+    updated_rows = [_with_split(row, train_ids, val_ids) for row in updated_rows]
     train_rows, val_rows = _split_by_manifest(updated_rows)
     output_manifest = prepared_dir / f"manifest.{suffix}.jsonl"
     output_train = prepared_dir / f"train.{suffix}.csv"
@@ -122,6 +125,27 @@ def _split_by_manifest(rows: list[dict[str, object]]) -> tuple[list[dict[str, ob
     train = [row for row in rows if row.get("split") == "train"]
     val = [row for row in rows if row.get("split") == "val"]
     return train, val
+
+
+def _read_split_ids(path: Path) -> set[str]:
+    if not path.exists():
+        return set()
+    with path.open("r", encoding="utf-8") as input_file:
+        return {row["utterance_id"] for row in csv.DictReader(input_file) if row.get("utterance_id")}
+
+
+def _with_split(
+    row: dict[str, object],
+    train_ids: set[str],
+    val_ids: set[str],
+) -> dict[str, object]:
+    row = dict(row)
+    utterance_id = str(row["utterance_id"])
+    if utterance_id in train_ids:
+        row["split"] = "train"
+    elif utterance_id in val_ids:
+        row["split"] = "val"
+    return row
 
 
 def _write_manifest(path: Path, rows: list[dict[str, object]]) -> None:

@@ -50,6 +50,7 @@ class IdentityDatasetPreparer:
         takes = self.service.takes("speech", "accepted")
         rows = [self._prepare_take(index, take, takes) for index, take in enumerate(takes, start=1)]
         train, val = _split(rows)
+        rows = train + val
         self._write_jsonl(rows)
         self._write_csv(self.train_path, train)
         self._write_csv(self.val_path, val)

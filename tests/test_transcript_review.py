@@ -33,6 +33,8 @@ class TestTranscriptReview(unittest.TestCase):
                 + "\n",
                 encoding="utf-8",
             )
+            _write_split_csv(prepared_dir / "train.csv", ["speech_0001"])
+            _write_split_csv(prepared_dir / "val.csv", [])
             review_path = prepared_dir / "review.csv"
             with review_path.open("w", encoding="utf-8", newline="") as output:
                 writer = csv.DictWriter(output, fieldnames=["utterance_id", "corrected_text"])
@@ -53,6 +55,7 @@ class TestTranscriptReview(unittest.TestCase):
             self.assertEqual(original["text"], "Texto corto.")
             self.assertEqual(updated["text"], "Texto real leido por el usuario.")
             self.assertEqual(updated["original_text"], "Texto corto.")
+            self.assertEqual(updated["split"], "train")
             self.assertFalse(updated["needs_transcript_review"])
 
     def test_reports_missing_corrections_for_flagged_rows(self) -> None:
@@ -73,6 +76,8 @@ class TestTranscriptReview(unittest.TestCase):
                 + "\n",
                 encoding="utf-8",
             )
+            _write_split_csv(prepared_dir / "train.csv", [])
+            _write_split_csv(prepared_dir / "val.csv", ["speech_0001"])
             review_path = prepared_dir / "review.csv"
             with review_path.open("w", encoding="utf-8", newline="") as output:
                 writer = csv.DictWriter(output, fieldnames=["utterance_id", "corrected_text"])
@@ -82,6 +87,14 @@ class TestTranscriptReview(unittest.TestCase):
 
             self.assertEqual(result.missing_count, 1)
             self.assertFalse(result.ready_for_trial_training)
+
+
+def _write_split_csv(path: Path, utterance_ids: list[str]) -> None:
+    with path.open("w", encoding="utf-8", newline="") as output:
+        writer = csv.DictWriter(output, fieldnames=["utterance_id", "wav_path", "text"])
+        writer.writeheader()
+        for utterance_id in utterance_ids:
+            writer.writerow({"utterance_id": utterance_id, "wav_path": "take.wav", "text": "x"})
 
 
 if __name__ == "__main__":
