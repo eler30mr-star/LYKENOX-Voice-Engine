@@ -1,10 +1,20 @@
 # LYKENOX Voice Engine
 
-Native local singing voice synthesis scaffold for the LYKENOX workflow.
+Personal LYKENOX identity voice engine for direct Spanish speech and singing synthesis.
 
-This project is intentionally separate from ACE-Step. Phase 1 provides the desktop UI,
-local API contract, profile storage, dataset manager, backend interfaces, and technical
-audit. It does not download large AI models and does not train a singing model yet.
+Final objective:
+
+```text
+text -> LYKENOX identity model -> speech.wav
+lyrics + melody -> LYKENOX identity model -> singing.wav
+```
+
+The main architecture is not RVC, SVC, or post-conversion of another voice. The target is
+an original voice model trained/adapted from the owner's recordings. WORLDLINE-R and the
+UTAU-style voicebank are kept as local baselines and fallback research tools, not as the
+final neural model.
+
+See `docs/LYKENOX_IDENTITY_VOICE_ARCHITECTURE.md`.
 
 ## Run
 
@@ -20,3 +30,9 @@ API only:
 ```
 
 Default API: `http://127.0.0.1:8765`.
+
+Target API:
+
+- `POST /speak`: direct text-to-speech with the trained LYKENOX identity model.
+- `POST /sing`: direct text-to-singing with lyrics and notes.
+- `POST /synthesize`: legacy WORLDLINE/voicebank compatibility endpoint.

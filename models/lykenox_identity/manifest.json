@@ -1,0 +1,11 @@
+{
+  "profile": "lykenox",
+  "owner_identity": "LYKENOX original voice",
+  "language": "es",
+  "status": "not_trained",
+  "supports_speech": false,
+  "supports_singing": false,
+  "uses_source_singer": false,
+  "uses_voice_conversion": false,
+  "training_dataset": "datasets/lykenox/identity_voice"
+}

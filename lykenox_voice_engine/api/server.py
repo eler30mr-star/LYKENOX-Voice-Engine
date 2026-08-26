@@ -7,11 +7,25 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException
 
 from lykenox_voice_engine.api.jobs import JobRegistry
-from lykenox_voice_engine.api.schemas import JobResponse, SynthesizeMidiRequest, SynthesizeRequest
+from lykenox_voice_engine.api.schemas import (
+    JobResponse,
+    SingRequest,
+    SpeakRequest,
+    SynthesizeMidiRequest,
+    SynthesizeRequest,
+)
 from lykenox_voice_engine.config.settings import load_settings
+from lykenox_voice_engine.core.midi import parse_midi
+from lykenox_voice_engine.core.neural_voice_contract import SingingSynthesisRequest, SpeechSynthesisRequest
 from lykenox_voice_engine.core.profile_manager import ProfileManager
-from lykenox_voice_engine.engines.nnsvs_engine import NnsvsEngine
+from lykenox_voice_engine.engines.identity_voice_engine import (
+    IdentityModelUnavailableError,
+    IdentityVoiceEngine,
+)
+from lykenox_voice_engine.engines.utau_engine import UtauSampleEngine
+from lykenox_voice_engine.models.job import JobStatus
 from lykenox_voice_engine.models.note import NoteSequence
+from lykenox_voice_engine.models.notes import NoteEvent
 
 
 def create_app(root: Path | None = None) -> FastAPI:
@@ -20,19 +34,25 @@ def create_app(root: Path | None = None) -> FastAPI:
     app_root = root or Path(__file__).resolve().parents[2]
     settings = load_settings(app_root)
     profiles = ProfileManager(settings.profiles_dir)
-    engine = NnsvsEngine(app_root)
+    engine = UtauSampleEngine(app_root)
+    identity_engine = IdentityVoiceEngine(app_root)
     jobs = JobRegistry()
-    app = FastAPI(title="LYKENOX Voice Engine", version="0.2.0")
+    app = FastAPI(title="LYKENOX Voice Engine", version="0.3.0")
 
     @app.get("/health")
     def health() -> dict[str, object]:
         backend = engine.check_available()
         return {
             "ok": True,
-            "device": settings.device,
-            "backend": "nnsvs",
+            "device": "cpu",
+            "backend": "identity_voice_target",
             "backend_available": bool(backend.get("available")),
-            "training_device": "cpu",
+            "identity_model": identity_engine.status(),
+            "legacy_backend": "utau_worldline_fallback",
+            "voicebank_available": bool(backend.get("voicebank_available")),
+            "voicebank_coverage": backend.get("voicebank_coverage", 0.0),
+            "renderer_available": bool(backend.get("renderer_available")),
+            "nnsvs": "experimental_not_recommended",
             "runtime": backend,
         }
 
@@ -49,23 +69,82 @@ def create_app(root: Path | None = None) -> FastAPI:
 
     @app.post("/synthesize", response_model=JobResponse)
     def synthesize(payload: SynthesizeRequest) -> JobResponse:
-        NoteSequence.from_dict({"tempo": payload.tempo, "notes": [n.model_dump() for n in payload.notes]})
+        sequence = NoteSequence.from_dict(
+            {"tempo": payload.tempo, "notes": [note.model_dump() for note in payload.notes]}
+        )
+        notes = [NoteEvent(note.lyric, note.midi, note.start, note.duration) for note in sequence.notes]
         job = jobs.create()
+        job.status = JobStatus.RUNNING
+        output_path = app_root / "outputs" / job.id / "vocal.wav"
         try:
-            output = engine.synthesize(payload.profile, payload.lyrics, [], payload.tempo)
-            job.status = "completed"
-            job.output_path = str(output)
+            engine.synthesize_to_path(payload.profile, payload.lyrics, notes, payload.tempo, output_path)
+            job.status = JobStatus.COMPLETED
+            job.output_path = str(output_path)
         except RuntimeError as exc:
-            job.status = "failed"
+            job.status = JobStatus.FAILED
+            job.error = str(exc)
+        return JobResponse(job_id=job.id, status=job.status, output_path=job.output_path, error=job.error)
+
+    @app.post("/speak", response_model=JobResponse)
+    def speak(payload: SpeakRequest) -> JobResponse:
+        job = jobs.create()
+        job.status = JobStatus.RUNNING
+        output_path = app_root / "outputs" / job.id / "speech.wav"
+        try:
+            identity_engine.synthesize_speech(
+                SpeechSynthesisRequest(
+                    profile=payload.profile,
+                    text=payload.text,
+                    language=payload.language,
+                    speaking_rate=payload.speaking_rate,
+                ),
+                output_path,
+            )
+            job.status = JobStatus.COMPLETED
+            job.output_path = str(output_path)
+        except IdentityModelUnavailableError as exc:
+            job.status = JobStatus.FAILED
+            job.error = str(exc)
+        return JobResponse(job_id=job.id, status=job.status, output_path=job.output_path, error=job.error)
+
+    @app.post("/sing", response_model=JobResponse)
+    def sing(payload: SingRequest) -> JobResponse:
+        notes = [NoteEvent(note.lyric, note.midi, note.start, note.duration) for note in payload.notes]
+        job = jobs.create()
+        job.status = JobStatus.RUNNING
+        output_path = app_root / "outputs" / job.id / "singing.wav"
+        try:
+            identity_engine.synthesize_singing(
+                SingingSynthesisRequest(
+                    profile=payload.profile,
+                    lyrics=payload.lyrics,
+                    notes=notes,
+                    tempo=payload.tempo,
+                    language=payload.language,
+                ),
+                output_path,
+            )
+            job.status = JobStatus.COMPLETED
+            job.output_path = str(output_path)
+        except IdentityModelUnavailableError as exc:
+            job.status = JobStatus.FAILED
             job.error = str(exc)
         return JobResponse(job_id=job.id, status=job.status, output_path=job.output_path, error=job.error)
 
     @app.post("/synthesize-midi", response_model=JobResponse)
     def synthesize_midi(payload: SynthesizeMidiRequest) -> JobResponse:
         job = jobs.create()
-        job.status = "failed"
-        job.error = "MIDI adapter pendiente: primero validar MusicXML/UST a HTS full-context labels."
-        return JobResponse(job_id=job.id, status=job.status, error=job.error)
+        job.status = JobStatus.RUNNING
+        output_path = app_root / "outputs" / job.id / "vocal.wav"
+        try:
+            parsed = parse_midi(Path(payload.midi_path), external_lyrics=payload.lyrics.split())
+            engine.synthesize_to_path(payload.profile, payload.lyrics, list(parsed.notes), parsed.tempo, output_path)
+            job.status = JobStatus.COMPLETED
+            job.output_path = str(output_path)
+        except (RuntimeError, ValueError, OSError) as exc:
+            job.status = JobStatus.FAILED
+            job.error = str(exc)
+        return JobResponse(job_id=job.id, status=job.status, output_path=job.output_path, error=job.error)
 
     @app.get("/jobs/{job_id}", response_model=JobResponse)
     def get_job(job_id: str) -> JobResponse:
