@@ -95,6 +95,29 @@ Coqui smoke training:
 This smoke checkpoint is not a production LYKENOX voice. It proves that local
 training and inference work end-to-end on CPU.
 
+Coqui one-epoch CPU training:
+
+- Command: `python -m TTS.bin.train_tts --config_path models/lykenox_identity/coqui_smoke/config.json`
+- Result: completed 1 epoch on CPU
+- Training rows loaded: 118
+- Training rows used after length filtering: 98
+- Validation rows loaded: 14
+- Validation rows used after length filtering: 11
+- Best checkpoint: `models/lykenox_identity/coqui_smoke/lykenox_coqui_vits_smoke-August-26-2026_04+32PM-0c34b36/best_model_98.pth`
+- Epoch-1 WAV: `outputs/identity_epoch1/speech_epoch1.wav`
+- Epoch-1 WAV format: 48000 Hz mono PCM16, 2.13 seconds
+
+Known data/config limitations:
+
+- Training metadata was normalized to ASCII for Coqui's default character set.
+- The Spanish-specific characters are preserved in source manifests, but not in
+  the current Coqui metadata used for this run.
+- Some samples were discarded because `max_audio_len` excludes clips longer than
+  about 18 seconds.
+- One validation row still contained an inverted question mark transformed into
+  an unsupported character by normalization; this should be cleaned before a
+  longer run.
+
 ## Next Engineering Step
 
 Do not train the final voice from the unfiltered dataset. Either segment the

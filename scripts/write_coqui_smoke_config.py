@@ -26,7 +26,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    from TTS.tts.configs.shared_configs import BaseDatasetConfig, CharactersConfig
+    from TTS.tts.configs.shared_configs import BaseDatasetConfig
     from TTS.tts.configs.vits_config import VitsConfig
 
     output_dir = args.output_path.parent
@@ -57,10 +57,6 @@ def main() -> None:
         use_phonemes=False,
         phoneme_language="es-es",
         text_cleaner="multilingual_cleaners",
-        characters=CharactersConfig(
-            characters="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÁÉÍÓÚÜÑáéíóúüñ",
-            punctuations="!'(),-.:;?¿¡ ",
-        ),
         min_text_len=10,
         max_text_len=280,
         max_audio_len=48_000 * 18,
