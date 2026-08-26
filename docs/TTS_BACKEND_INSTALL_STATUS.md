@@ -56,10 +56,30 @@ script from:
 
 `datasets/lykenox/identity_voice/prepared/speech/train.auto.csv`
 
+After filtering for direct TTS training quality:
+
+- Total prepared rows: 33
+- Directly usable rows: 6
+- Directly usable duration: 1.05 minutes
+- Blocked rows: 27
+- Blocked by generic metadata: 5
+- Blocked by duplicate text over the safe limit: 9
+- Blocked because long files need segmentation first: 13
+- Recoverable long-audio duration if segmented: 24.6 minutes
+
+Filtered files:
+
+- `datasets/lykenox/identity_voice/prepared/speech/manifest.filtered.jsonl`
+- `datasets/lykenox/identity_voice/prepared/speech/train.filtered.csv`
+- `datasets/lykenox/identity_voice/prepared/speech/val.filtered.csv`
+- `datasets/lykenox/identity_voice/prepared/speech/blocked.filtered.csv`
+
 This is not yet a trained voice model. `/speak` must continue to fail honestly
 until a real LYKENOX checkpoint exists.
 
 ## Next Engineering Step
 
-Implement the smallest real CPU trainable speech model path, then train a trial
-checkpoint and test whether it can overfit short LYKENOX Spanish utterances.
+Do not train the final voice from the unfiltered dataset. Either segment the
+13 long recordings into short sentence-level clips, or record new short prompted
+sentences with exact text. The current 6 usable clips are enough only for a
+runtime smoke test, not for a meaningful identity model.
