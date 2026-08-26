@@ -18,16 +18,11 @@ from lykenox_voice_engine.core.adaptive_voicebank_resolver import (  # noqa: E40
 )
 from lykenox_voice_engine.core.multipitch import MICROTEST_ALIASES, midi_to_hz  # noqa: E402
 from lykenox_voice_engine.core.oto import parse_oto  # noqa: E402
+from lykenox_voice_engine.core.score import load_score  # noqa: E402
 from lykenox_voice_engine.engines.worldline_engine import OpenUtauWorldlineEngine  # noqa: E402
 from lykenox_voice_engine.models.notes import NoteEvent  # noqa: E402
 
-NOTES = [
-    NoteEvent("bai", 60, 0.0, 0.5),
-    NoteEvent("la", 62, 0.5, 0.5),
-    NoteEvent("con", 64, 1.0, 0.5),
-    NoteEvent("mi", 62, 1.5, 0.5),
-    NoteEvent("go", 60, 2.0, 0.75),
-]
+SCORE_PATH = ROOT / "scores" / "baila_conmigo_microtest.json"
 
 
 def main() -> None:
@@ -37,6 +32,8 @@ def main() -> None:
     output_dir = ROOT / "outputs" / "comparison"
     output_dir.mkdir(parents=True, exist_ok=True)
     engine = OpenUtauWorldlineEngine(ROOT)
+    score = load_score(SCORE_PATH)
+    notes = list(score.notes)
 
     mono_path = output_dir / "vocal_monopitch.wav"
     mono_started = time.perf_counter()
@@ -44,8 +41,8 @@ def main() -> None:
         voicebank / "wav",
         parse_oto(voicebank / "oto.ini"),
         lambda lyric: [lyric],
-        NOTES,
-        120,
+        notes,
+        score.tempo,
         mono_path,
     )
 
@@ -53,11 +50,12 @@ def main() -> None:
     metadata_path = voicebank / "adaptive_multipitch_metadata.json"
     missing = _missing_multipitch(metadata_path, multipitch_oto)
     payload = {
-        "phrase": "baila conmigo",
+        "score_file": str(SCORE_PATH),
+        "phrase": score.lyrics,
         "aliases": list(MICROTEST_ALIASES),
-        "score": [{"alias": note.lyric, "midi": note.midi} for note in NOTES],
+        "score": [{"alias": note.lyric, "midi": note.midi} for note in notes],
         "monopitch": {
-            **_validate(engine, mono_path, mono_report.render_time_sec),
+            **_validate(engine, mono_path, mono_report.render_time_sec, notes),
             "selection_table": _monopitch_selection_table(voicebank),
             "average_abs_pitch_shift_cents": _monopitch_average_shift(voicebank),
         },
@@ -77,13 +75,13 @@ def main() -> None:
         voicebank / "wav",
         multipitch_oto,
         resolver.aliases_for_note,
-        NOTES,
-        120,
+        notes,
+        score.tempo,
         multi_path,
     )
     _match_duration(multi_path, mono_path)
     payload["multipitch"] = {
-        **_validate(engine, multi_path, multi_report.render_time_sec),
+        **_validate(engine, multi_path, multi_report.render_time_sec, notes),
         "selection_table": resolver.selection_table(),
         "average_abs_pitch_shift_cents": resolver.average_abs_pitch_shift_cents(),
     }
@@ -98,7 +96,7 @@ def _missing_multipitch(metadata_path: Path, oto: dict[str, object]) -> list[str
         return ["adaptive_multipitch_metadata.json"]
     resolver = AdaptiveVoicebankResolver.from_file(metadata_path, oto)
     missing = []
-    for note in NOTES:
+    for note in load_score(SCORE_PATH).notes:
         try:
             resolver.resolve(note.lyric, note.midi)
         except KeyError:
@@ -111,7 +109,7 @@ def _monopitch_selection_table(voicebank: Path) -> list[dict[str, object]]:
     oto = parse_oto(voicebank / "oto_multipitch.ini")
     resolver = AdaptiveVoicebankResolver.from_file(metadata_path, oto)
     table = []
-    for note in NOTES:
+    for note in load_score(SCORE_PATH).notes:
         low = next(
             sample
             for sample in resolver.metadata[note.lyric]
@@ -152,6 +150,7 @@ def _validate(
     engine: OpenUtauWorldlineEngine,
     path: Path,
     render_time_sec: float,
+    notes: list[NoteEvent],
 ) -> dict[str, object]:
     samples = _read_wav_mono_float(path)
     return {
@@ -159,7 +158,7 @@ def _validate(
         "duration_sec": round(len(samples) / 48000.0, 3),
         "render_time_sec": round(render_time_sec, 3),
         "peak": round(max((abs(value) for value in samples), default=0.0), 4),
-        "per_note_f0": [_note_f0(engine, samples, note) for note in NOTES],
+        "per_note_f0": [_note_f0(engine, samples, note) for note in notes],
     }
 
 

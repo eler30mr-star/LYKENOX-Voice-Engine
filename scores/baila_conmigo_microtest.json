@@ -1,0 +1,38 @@
+{
+  "title": "baila conmigo microtest",
+  "profile": "lykenox",
+  "lyrics": "baila conmigo",
+  "tempo": 120,
+  "notes": [
+    {
+      "lyric": "bai",
+      "midi": 60,
+      "start": 0.0,
+      "duration": 0.5
+    },
+    {
+      "lyric": "la",
+      "midi": 62,
+      "start": 0.5,
+      "duration": 0.5
+    },
+    {
+      "lyric": "con",
+      "midi": 64,
+      "start": 1.0,
+      "duration": 0.5
+    },
+    {
+      "lyric": "mi",
+      "midi": 62,
+      "start": 1.5,
+      "duration": 0.5
+    },
+    {
+      "lyric": "go",
+      "midi": 60,
+      "start": 2.0,
+      "duration": 0.75
+    }
+  ]
+}
