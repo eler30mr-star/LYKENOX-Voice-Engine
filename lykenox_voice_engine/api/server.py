@@ -52,7 +52,6 @@ def create_app(root: Path | None = None) -> FastAPI:
             "voicebank_available": bool(backend.get("voicebank_available")),
             "voicebank_coverage": backend.get("voicebank_coverage", 0.0),
             "renderer_available": bool(backend.get("renderer_available")),
-            "nnsvs": "experimental_not_recommended",
             "runtime": backend,
         }
 

@@ -238,7 +238,7 @@ class VoicebankManager:
             "duration_sec": round(len(audio_data) / TARGET_SAMPLE_WIDTH / TARGET_SAMPLE_RATE, 3),
             "render_time_sec": round(time.perf_counter() - started, 3),
             "coverage": coverage.coverage,
-            "renderer": renderer_type,
+            "renderer": "internal_concat_pcm" if renderer_type == "internal" else renderer_type,
         }
 
     def test_renderer(self, alias: str = "a", output_dir: Path | None = None) -> Path:

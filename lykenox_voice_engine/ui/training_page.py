@@ -1,4 +1,4 @@
-"""Training readiness page."""
+"""Local readiness page for the LYKENOX voicebank route."""
 
 from __future__ import annotations
 
@@ -8,20 +8,19 @@ from lykenox_voice_engine.core.training_service import TrainingService
 
 
 class TrainingPage(QWidget):
-    """Show NNSVS microtest controls without enabling full training."""
+    """Show local identity/voicebank readiness without fake neural training."""
 
     def __init__(self) -> None:
         super().__init__()
         self._service = TrainingService()
-        self._status = QLabel("NNSVS: pendiente | Device: CPU | Entrenamiento completo desactivado")
+        self._status = QLabel("Ruta local: voicebank LYKENOX | CPU | entrenamiento neural desactivado")
         layout = QVBoxLayout()
         layout.addWidget(self._status)
         for text, handler, enabled in [
-            ("Comprobar NNSVS", self._check, True),
-            ("Preparar microtest", self._prepare, True),
-            ("Ejecutar microtest", self._microtest, True),
+            ("Comprobar ruta local", self._check, True),
+            ("Preparar carpetas", self._prepare, True),
+            ("Microtest neural", self._microtest, False),
             ("Detener", self._stop, True),
-            ("Entrenamiento completo", None, False),
         ]:
             button = QPushButton(text)
             button.setEnabled(enabled)
@@ -31,10 +30,14 @@ class TrainingPage(QWidget):
         self.setLayout(layout)
 
     def _check(self) -> None:
-        """Display NNSVS backend readiness."""
+        """Display local backend readiness."""
 
         result = self._service.check()
-        self._status.setText(f"NNSVS disponible: {result.get('available')} | CPU | {result.get('reason', '')}")
+        voicebank = result.get("voicebank", {})
+        self._status.setText(
+            f"Ruta local OK | cobertura voicebank: {voicebank.get('voicebank_coverage', 0)}% | "
+            f"{result.get('reason', '')}"
+        )
 
     def _prepare(self) -> None:
         """Prepare the microtest dataset and show status."""
@@ -43,13 +46,13 @@ class TrainingPage(QWidget):
         self._status.setText(f"Preparacion: {result.get('ok')} | {result.get('status')}")
 
     def _microtest(self) -> None:
-        """Run the safe NNSVS microtraining gate."""
+        """Show why neural microtraining is disabled."""
 
         result = self._service.microtest()
         self._status.setText(f"Microtest: {result.get('ok')} | {result.get('reason')}")
 
     def _stop(self) -> None:
-        """Cancel backend jobs."""
+        """Return current idle state."""
 
         result = self._service.stop()
         self._status.setText(f"Stop: {result['status']}")

@@ -36,7 +36,6 @@ class UtauSampleEngine(SingingVoiceEngine):
             "voicebank_coverage": validation["voicebank_coverage"],
             "microtest": microtest,
             "worldline_r": worldline,
-            "nnsvs": "experimental_not_recommended",
         }
 
     def prepare_dataset(self, profile: str) -> dict[str, Any]:

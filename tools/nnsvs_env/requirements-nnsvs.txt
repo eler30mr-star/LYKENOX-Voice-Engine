@@ -1,4 +1,0 @@
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.13.0+cpu
-nnsvs==0.1.1
-h5py
