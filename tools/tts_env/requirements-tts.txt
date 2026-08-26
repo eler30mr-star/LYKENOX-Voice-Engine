@@ -1,4 +1,0 @@
-TTS==0.22.0
-torch==2.5.1
-torchaudio==2.5.1
-networkx==2.8.8
