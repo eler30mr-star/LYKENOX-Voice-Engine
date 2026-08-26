@@ -92,8 +92,8 @@ Coqui smoke training:
 - Smoke WAV: `outputs/identity_smoke/speech_coqui_smoke.wav`
 - Smoke WAV format: 48000 Hz mono PCM16, 1.20 seconds
 
-This smoke checkpoint is not a production LYKENOX voice. It proves that local
-training and inference work end-to-end on CPU.
+This smoke checkpoint is not a production LYKENOX voice. It proved only that the
+tools execute locally; it is not acceptable as a voice result.
 
 Coqui one-epoch CPU training:
 
@@ -106,6 +106,14 @@ Coqui one-epoch CPU training:
 - Best checkpoint: `models/lykenox_identity/coqui_smoke/lykenox_coqui_vits_smoke-August-26-2026_04+32PM-0c34b36/best_model_98.pth`
 - Epoch-1 WAV: `outputs/identity_epoch1/speech_epoch1.wav`
 - Epoch-1 WAV format: 48000 Hz mono PCM16, 2.13 seconds
+- Listening/measurement result: rejected as unusable output; the generated WAV
+  measured as silence/invalid audio with `-inf dB` peak/RMS.
+
+Final decision:
+
+- Coqui VITS from scratch is rejected for the current LYKENOX identity path.
+- Do not continue training this route as if it were the solution.
+- Do not wire this route into `/speak`, `/sing`, or the UI.
 
 Known data/config limitations:
 
