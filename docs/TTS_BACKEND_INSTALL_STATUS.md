@@ -24,7 +24,8 @@ successfully in an isolated Python 3.11 environment:
 - Environment: `tools/tts_env/.venv`
 - Python: `3.11.16`
 - Coqui TTS: `0.22.0`
-- PyTorch: `2.13.0+cpu`
+- PyTorch: `2.5.1+cpu`
+- torchaudio: `2.5.1+cpu`
 - CUDA available: no
 - Spanish frontend package: `gruut_lang_es` installed through Coqui TTS
 
@@ -74,8 +75,25 @@ Filtered files:
 - `datasets/lykenox/identity_voice/prepared/speech/val.filtered.csv`
 - `datasets/lykenox/identity_voice/prepared/speech/blocked.filtered.csv`
 
-This is not yet a trained voice model. `/speak` must continue to fail honestly
-until a real LYKENOX checkpoint exists.
+After segmenting the 13 long recordings:
+
+- Segmented clips: 132
+- Train rows: 118
+- Validation rows: 14
+- Segmented duration: 23.84 minutes
+- Missing WAVs: 0
+- CPU preflight: passed
+
+Coqui smoke training:
+
+- Command: `python -m TTS.bin.train_tts --config_path models/lykenox_identity/coqui_smoke/config.json --small_run 8`
+- Result: completed one small-run epoch on CPU
+- Best checkpoint: `models/lykenox_identity/coqui_smoke/lykenox_coqui_vits_smoke-August-26-2026_04+23PM-5733fd3/best_model_7.pth`
+- Smoke WAV: `outputs/identity_smoke/speech_coqui_smoke.wav`
+- Smoke WAV format: 48000 Hz mono PCM16, 1.20 seconds
+
+This smoke checkpoint is not a production LYKENOX voice. It proves that local
+training and inference work end-to-end on CPU.
 
 ## Next Engineering Step
 
