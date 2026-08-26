@@ -1,0 +1,72 @@
+[
+  {
+    "id": "speech-001",
+    "mode": "speech",
+    "text": "Hola, esta es mi voz natural para el modelo LYKENOX.",
+    "language": "es",
+    "melody_hint": null
+  },
+  {
+    "id": "speech-002",
+    "mode": "speech",
+    "text": "Hoy voy a leer este texto con claridad y sin forzar la voz.",
+    "language": "es",
+    "melody_hint": null
+  },
+  {
+    "id": "speech-003",
+    "mode": "speech",
+    "text": "El objetivo es que mi identidad vocal se conserve en cada frase.",
+    "language": "es",
+    "melody_hint": null
+  },
+  {
+    "id": "speech-004",
+    "mode": "speech",
+    "text": "Quiero que este sistema pueda leer cualquier texto en español.",
+    "language": "es",
+    "melody_hint": null
+  },
+  {
+    "id": "speech-005",
+    "mode": "speech",
+    "text": "Esta grabación debe sonar tranquila, limpia y parecida a mí.",
+    "language": "es",
+    "melody_hint": null
+  },
+  {
+    "id": "singing-001",
+    "mode": "singing",
+    "text": "baila conmigo",
+    "language": "es",
+    "melody_hint": "canta con una melodia comoda y natural"
+  },
+  {
+    "id": "singing-002",
+    "mode": "singing",
+    "text": "quédate cerca de mí",
+    "language": "es",
+    "melody_hint": "canta con una melodia comoda y natural"
+  },
+  {
+    "id": "singing-003",
+    "mode": "singing",
+    "text": "hoy canta mi corazón",
+    "language": "es",
+    "melody_hint": "canta con una melodia comoda y natural"
+  },
+  {
+    "id": "singing-004",
+    "mode": "singing",
+    "text": "sueño con verte otra vez",
+    "language": "es",
+    "melody_hint": "canta con una melodia comoda y natural"
+  },
+  {
+    "id": "singing-005",
+    "mode": "singing",
+    "text": "mi voz se queda aquí",
+    "language": "es",
+    "melody_hint": "canta con una melodia comoda y natural"
+  }
+]

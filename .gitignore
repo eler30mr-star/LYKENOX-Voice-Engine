@@ -27,3 +27,10 @@ profiles/*/exports/*
 
 tools/nnsvs_env/.venv/
 tools/nnsvs_env/nnsvs_source/
+datasets/*/voicebank_raw/*
+!datasets/lykenox/voicebank_raw/.gitkeep
+datasets/*/identity_voice/*/raw/*
+datasets/*/identity_voice/*/accepted/*
+datasets/*/identity_voice/*/rejected/*
+profiles/*/voicebank/wav/*
+!profiles/lykenox/voicebank/wav/.gitkeep

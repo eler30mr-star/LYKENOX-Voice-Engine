@@ -118,6 +118,7 @@ The current repository contains:
 
 - WORLDLINE-R official integration for direct sample-based singing.
 - Adaptive multipitch voicebank selection based on measured F0.
+- Identity dataset recorder for speech and singing phrases.
 - API compatibility endpoints for legacy `/synthesize` and `/synthesize-midi`.
 - New target endpoints `/speak` and `/sing`.
 
@@ -163,3 +164,32 @@ Minimum viable milestones:
 - No source singer is required at inference time.
 - No RVC/SVC conversion is part of the main path.
 - The other app can call this API and receive final vocal audio directly.
+
+## Current Capture Flow
+
+Use the desktop tab `Grabar Identidad`.
+
+The recorder writes to:
+
+```text
+datasets/lykenox/identity_voice/speech/raw
+datasets/lykenox/identity_voice/speech/accepted
+datasets/lykenox/identity_voice/speech/rejected
+datasets/lykenox/identity_voice/singing/raw
+datasets/lykenox/identity_voice/singing/accepted
+datasets/lykenox/identity_voice/singing/rejected
+datasets/lykenox/identity_voice/metadata/prompts.json
+datasets/lykenox/identity_voice/metadata/takes.jsonl
+```
+
+Validation accepts or rejects by recording quality:
+
+- valid 48 kHz mono PCM16 WAV
+- enough duration
+- sufficient RMS
+- no clipping
+- detectable F0
+
+It does not reject a take for missing an exact target pitch. Speech and singing prompts
+are full phrases because the final model must learn continuous speech/singing identity,
+not only isolated UTAU aliases.
