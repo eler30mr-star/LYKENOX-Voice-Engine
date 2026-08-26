@@ -7,7 +7,7 @@ import struct
 import wave
 from pathlib import Path
 
-from PySide6.QtCore import QTimer, QUrl
+from PySide6.QtCore import QTimer, QUrl, QCoreApplication
 from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -45,6 +45,7 @@ class IdentityDatasetPage(QWidget):
         self.audio_buffer = bytearray()
         self.native_sample_rate = 48000
         self.temp_wav: Path | None = None
+        self.take_paths: list[Path] = []
         self.record_ms = 0
         self.frames_received = 0
         self._build_ui()
@@ -98,6 +99,7 @@ class IdentityDatasetPage(QWidget):
         layout.addLayout(buttons)
 
         self.takes = QListWidget()
+        self.takes.currentRowChanged.connect(lambda _row: self._update_buttons())
         layout.addWidget(self.takes)
         self.setLayout(layout)
 
@@ -124,8 +126,10 @@ class IdentityDatasetPage(QWidget):
             self.instruction.setText("Canta con tu identidad real. No conviertas ni imites; usa una melodía cómoda.")
         self.prompt.setText(prompt.text)
         self.takes.clear()
+        self.take_paths = []
         summary = self.service.summary()
         for take in self.service.takes(mode):
+            self.take_paths.append(Path(take.wav_path))
             self.takes.addItem(
                 f"{take.status} | {take.prompt_id} | {take.duration_sec:.1f}s | "
                 f"F0 {take.measured_f0_hz:.1f} Hz | {Path(take.wav_path).name}"
@@ -170,6 +174,8 @@ class IdentityDatasetPage(QWidget):
         self.timer.stop()
         if self.audio_source:
             self.audio_source.stop()
+        QCoreApplication.processEvents()
+        self._read_audio()
         self.recording = False
         raw_dir = self.service.base_dir / self.mode.currentText() / "raw"
         raw_dir.mkdir(parents=True, exist_ok=True)
@@ -208,16 +214,18 @@ class IdentityDatasetPage(QWidget):
             writer.writeframes(bytes(self.audio_buffer))
 
     def _listen(self) -> None:
-        if not self.temp_wav or not self.temp_wav.exists() or QMediaPlayer is None:
+        path = self._selected_audio_path()
+        if not path or not path.exists() or QMediaPlayer is None:
             return
         if not hasattr(self, "_player"):
             self._player = QMediaPlayer(self)
             self._audio_out = QAudioOutput(self)
             self._player.setAudioOutput(self._audio_out)
         self._player.stop()
-        self._player.setSource(QUrl.fromLocalFile(str(self.temp_wav)))
+        self._player.setSource(QUrl.fromLocalFile(str(path)))
         self._audio_out.setVolume(1.0)
         self._player.play()
+        self.status.setText(f"Reproduciendo completo: {path.name} ({_duration(path):.1f}s)")
 
     def _accept(self) -> None:
         if not self.temp_wav or not self.temp_wav.exists():
@@ -238,11 +246,20 @@ class IdentityDatasetPage(QWidget):
 
     def _update_buttons(self) -> None:
         has_take = self.temp_wav is not None and self.temp_wav.exists()
+        has_selected = 0 <= self.takes.currentRow() < len(self.take_paths)
         self.btn_record.setEnabled(not self.recording)
         self.btn_stop.setEnabled(self.recording)
-        self.btn_listen.setEnabled((not self.recording) and has_take)
+        self.btn_listen.setEnabled((not self.recording) and (has_take or has_selected))
         self.btn_accept.setEnabled((not self.recording) and has_take)
         self.btn_reject.setEnabled((not self.recording) and has_take)
+
+    def _selected_audio_path(self) -> Path | None:
+        if self.temp_wav and self.temp_wav.exists():
+            return self.temp_wav
+        row = self.takes.currentRow()
+        if 0 <= row < len(self.take_paths):
+            return self.take_paths[row]
+        return None
 
 
 def _estimate_f0(samples: list[int], sample_rate: int) -> float:
@@ -257,3 +274,11 @@ def _estimate_f0(samples: list[int], sample_rate: int) -> float:
     duration = len(samples) / float(sample_rate)
     hz = crossings / (2.0 * duration) if duration else 0.0
     return hz if 60.0 <= hz <= 500.0 else 0.0
+
+
+def _duration(path: Path) -> float:
+    try:
+        with wave.open(str(path), "rb") as reader:
+            return reader.getnframes() / float(reader.getframerate())
+    except wave.Error:
+        return 0.0

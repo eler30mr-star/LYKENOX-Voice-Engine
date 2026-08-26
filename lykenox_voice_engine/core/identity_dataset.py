@@ -246,7 +246,7 @@ def analyze_identity_wav(path: Path) -> dict[str, object]:
     elif peak_value >= 32760:
         valid, reason = False, "clipping"
     elif f0 <= 0:
-        valid, reason = False, "F0 no detectable"
+        reason = "F0 no detectable; aceptado para identidad si la toma suena limpia"
     return {
         "valid": valid,
         "reason": reason,
