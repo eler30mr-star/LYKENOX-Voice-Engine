@@ -57,13 +57,7 @@ lowest finite held-out reconstruction loss while requiring finite adversarial me
 Perceptual listening on held-out reconstruction WAVs remains mandatory before an
 architecture can be accepted for longer training.
 
-## Contract gate
-
-Run:
-
-```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_training_contract_smoke
-```
+## v0 listening rejection
 
 The contract smoke passed, and the subsequent bounded persistent short training also
 passed numerically. Its best checkpoint improved held-out reconstruction, but the first
@@ -80,22 +74,61 @@ Therefore:
 
 - do not continue long training of `lykenox_compact_transposed_conv_v0`
 - preserve the v0 checkpoints only as diagnostic history
-- test the v1 resize-convolution replacement before further vocoder investment
+- v0 is not a candidate runtime vocoder
 
-## Resize-convolution v1 corrective probe
+## Resize-convolution v1 rejection
 
-`LykenoxVocoderGeneratorV1` removes every `ConvTranspose1d` stage. Each upsampling stage
-uses deterministic linear interpolation followed by stride-1 `Conv1d` refinement and the
-same compact residual concept. The audio/mel contract remains exactly 24 kHz and 256
-samples per mel frame.
+`LykenoxVocoderGeneratorV1` removed every `ConvTranspose1d` stage and replaced learned
+upsampling with linear interpolation followed by stride-1 convolutions. Its bounded probe
+successfully removed the exact 93.75 Hz frame-rate lock, but the next held-out listening
+and spectral gate still failed.
 
-Run the bounded architecture-selection probe:
+For the three generated validation WAVs examined after the v1 probe:
 
-```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_resizeconv_probe
+- no useful reconstructed speech was audible
+- generated spectral centroids were only about 33 Hz, 116 Hz, and 56 Hz while references
+  were roughly 1.8 kHz, 2.8 kHz, and 2.1 kHz
+- more than 99.9% of generated spectral energy was below 80 Hz in all three examples
+- energy above 300 Hz was effectively absent
+
+This is a different failure from v0. The frame-rate buzz is gone, but linear interpolation
+creates a smooth sample grid with no explicit learned sample-phase representation. More
+v1 epochs are therefore blocked; the architecture needs a waveform-detail mechanism.
+
+## Learned polyphase v2 corrective probe
+
+`LykenoxVocoderGeneratorV2` uses learned 1-D polyphase/subpixel upsampling:
+
+```text
+mel-rate features
+  -> stride-1 Conv1d predicts factor phase channels
+  -> deterministic channel-to-time shuffle
+  -> stride-1 refinement/residual blocks
+  -> waveform
 ```
 
-It trains v1 briefly on the same deterministic mel/wave contract, selects the best held-out
-reconstruction epoch, writes three generated/reference WAV pairs, and reports a simple
-frame-rate-lock diagnostic. A numeric pass alone does not accept v1; the generated WAVs
-must contain recognizable speech structure and must not reproduce the fixed 93.75 Hz buzz.
+Properties:
+
+- no `ConvTranspose1d`
+- no interpolation upsampling bottleneck
+- explicit learned sample-phase channels
+- phase-equal initialization so the initial model does not begin with an arbitrary periodic
+  phase pattern
+- no per-phase expansion bias, removing another easy route to an unconditional carrier
+- exact `8 x 8 x 4 = 256` sample expansion remains enforced
+- CPU-bounded channel schedule for the target laptop
+
+Run:
+
+```powershell
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_polyphase_probe
+```
+
+The v2 probe reports both known automatic failure modes:
+
+- `frame_rate_lock_count_across_3_generated`
+- `subbass_or_silence_collapse_count_across_3_generated`
+
+A numeric pass requires held-out reconstruction improvement and zero detections for both
+known artifact classes. Even then, the three generated/reference WAV pairs must be heard
+before v2 can become the persistent vocoder architecture.
