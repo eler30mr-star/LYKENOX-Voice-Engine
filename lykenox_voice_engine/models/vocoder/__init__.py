@@ -7,6 +7,10 @@ from .discriminator import (
     LykenoxMultiScaleWaveformDiscriminator,
 )
 from .network import LykenoxVocoderGenerator
+from .network_v1 import (
+    VOCODER_GENERATOR_V1_ARCHITECTURE,
+    LykenoxVocoderGeneratorV1,
+)
 
 __all__ = [
     "DISCRIMINATOR_ARCHITECTURE",
@@ -14,4 +18,6 @@ __all__ = [
     "LykenoxMultiScaleWaveformDiscriminator",
     "LykenoxVocoderConfig",
     "LykenoxVocoderGenerator",
+    "VOCODER_GENERATOR_V1_ARCHITECTURE",
+    "LykenoxVocoderGeneratorV1",
 ]
