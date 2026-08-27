@@ -73,6 +73,27 @@ class SpeechTrainingContractTests(unittest.TestCase):
         self.assertTrue(torch.equal(expanded[0, 0], encoded[0, 1]))
         self.assertTrue(torch.equal(expanded[0, 2], encoded[0, 3]))
 
+    def test_padding_does_not_change_valid_duration_predictions(self) -> None:
+        config = LykenoxSpeechConfig(
+            vocab_size=32,
+            hidden_size=32,
+            encoder_layers=1,
+            encoder_heads=4,
+            dropout=0.0,
+        )
+        model = LykenoxSpeechAcousticModel(config).eval()
+        single_ids = torch.tensor([[5, 6, 7]], dtype=torch.long)
+        single_mask = torch.ones_like(single_ids, dtype=torch.bool)
+        batch_ids = torch.tensor([[5, 6, 7, 0], [5, 6, 7, 8]], dtype=torch.long)
+        batch_mask = torch.tensor(
+            [[True, True, True, False], [True, True, True, True]],
+            dtype=torch.bool,
+        )
+        with torch.no_grad():
+            single = model(single_ids, single_mask)["duration_prediction"][0]
+            batched = model(batch_ids, batch_mask)["duration_prediction"][0, :3]
+        self.assertTrue(torch.allclose(single, batched, atol=1e-6, rtol=1e-6))
+
     def test_checkpoint_roundtrip_binds_exact_vocabulary(self) -> None:
         frontend = SpanishTextFrontend()
         config = LykenoxSpeechConfig(
