@@ -32,10 +32,24 @@ Default pitch analysis:
 sample rate:                   24000 Hz
 hop length:                    256 samples
 frame length:                  1024 samples
-F0 range:                      60-350 Hz
+nominal F0 request:            60-350 Hz
 voiced periodicity threshold:  0.30
 voiced RMS fraction:           0.08
 ```
+
+Pitch-v1 searches integer autocorrelation lags. Its existing accepted implementation converts the nominal bounds with integer truncation. At 24 kHz, the nominal upper request of 350 Hz maps to lag 68, so the highest discrete F0 bin the extractor can actually emit is:
+
+```text
+24000 / 68 = 352.941176... Hz
+```
+
+The effective pitch-v1 validation interval is therefore approximately:
+
+```text
+60.000000-352.941176 Hz
+```
+
+This is not a new extractor and does not change `lykenox-pitch-v1`; it documents the exact discrete grid already used by the accepted vocoder training. Cache validation must use those realizable integer-lag bounds rather than reject a legal pitch-v1 bin merely because it is slightly above the nominal 350 Hz request.
 
 Every target artifact stores one value per mel frame for:
 
@@ -76,7 +90,7 @@ Each per-utterance cache identity includes:
 
 Changing owned audio, manifests, mel configuration, target extractor version, or pitch configuration therefore changes the cache identity instead of silently reusing stale targets.
 
-After all train/val targets exist, `cache_index.json` records every artifact path and SHA256 plus dataset/config provenance. Future acoustic training must load targets through this completed index rather than re-running pitch extraction during training.
+After all train/val targets exist, `cache_index.json` records every artifact path and SHA256 plus dataset/config provenance. It also records the effective integer-lag F0 bounds. Future acoustic training must load targets through this completed index rather than re-running pitch extraction during training.
 
 ## Bounded/resumable builder
 
