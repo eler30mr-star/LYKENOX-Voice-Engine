@@ -15,16 +15,37 @@ import torch
 from lykenox_voice_engine.core.spanish_text_frontend import vocabulary
 
 
+_LEADING_BOUNDARY = -2
+_TRAILING_BOUNDARY = -3
+_UNASSIGNED = -1
+
+
 @dataclass(frozen=True)
 class CTCForcedAlignment:
-    """One monotonic hard alignment from CTC frame posteriors."""
+    """One monotonic hard alignment from CTC frame posteriors.
+
+    ``target_durations`` contains only acoustic content/pause targets. Leading and
+    trailing CTC blank runs are reported separately so recording-boundary silence
+    is not folded into the first/last phoneme. Those boundary frames can be mapped
+    to BOS/EOS by ``expand_content_durations``.
+    """
 
     state_path: torch.Tensor
     target_durations: torch.Tensor
+    leading_boundary_frames: int
+    trailing_boundary_frames: int
     score: float
     score_per_step: float
     downsampled_steps: int
     mel_frames: int
+
+    @property
+    def accounted_frames(self) -> int:
+        return (
+            int(self.target_durations.sum().item())
+            + self.leading_boundary_frames
+            + self.trailing_boundary_frames
+        )
 
 
 def ctc_target_positions(token_ids: torch.Tensor) -> list[int]:
@@ -137,46 +158,60 @@ def ctc_viterbi_state_path(
     return path, final_score
 
 
-def _assign_blank_states(state_path: torch.Tensor, target_steps: int) -> torch.Tensor:
-    """Assign every CTC timestep to a neighboring target token.
+def _assign_ctc_states(state_path: torch.Tensor, target_steps: int) -> torch.Tensor:
+    """Assign CTC steps without contaminating boundary phoneme durations.
 
-    Target states are odd indices in the expanded CTC graph. Blank runs are split
-    between neighboring acoustic tokens so derived durations cover every acoustic
-    frame instead of dropping inter-symbol silence.
+    Odd CTC states are acoustic targets. Interior blank runs are divided between
+    neighboring targets, preserving the previous monotonic policy. Blank runs
+    before the first target and after the last target remain distinct boundary
+    labels so they can supervise BOS/EOS silence instead of a spoken phoneme.
     """
 
-    assignments = torch.full_like(state_path, -1)
-    target_mask = (state_path % 2) == 1
-    assignments[target_mask] = state_path[target_mask] // 2
+    if state_path.ndim != 1 or state_path.numel() == 0:
+        raise ValueError("state_path must be a non-empty one-dimensional tensor")
+    if target_steps < 1:
+        raise ValueError("target_steps must be positive")
 
-    total = int(assignments.numel())
-    cursor = 0
-    while cursor < total:
+    assignments = torch.full_like(state_path, _UNASSIGNED)
+    target_mask = (state_path % 2) == 1
+    target_positions = torch.nonzero(target_mask, as_tuple=False).flatten()
+    if target_positions.numel() == 0:
+        raise RuntimeError("CTC path contains no target states")
+
+    assignments[target_mask] = state_path[target_mask] // 2
+    first_target = int(target_positions[0].item())
+    last_target = int(target_positions[-1].item())
+    if first_target > 0:
+        assignments[:first_target] = _LEADING_BOUNDARY
+    if last_target + 1 < assignments.numel():
+        assignments[last_target + 1 :] = _TRAILING_BOUNDARY
+
+    cursor = first_target + 1
+    while cursor < last_target:
         if int(assignments[cursor].item()) >= 0:
             cursor += 1
             continue
         start = cursor
-        while cursor < total and int(assignments[cursor].item()) < 0:
+        while cursor < last_target and int(assignments[cursor].item()) == _UNASSIGNED:
             cursor += 1
         end = cursor
 
-        left = int(assignments[start - 1].item()) if start > 0 else -1
-        right = int(assignments[end].item()) if end < total else -1
+        left = int(assignments[start - 1].item())
+        right = int(assignments[end].item())
+        if left < 0 or right < 0:
+            raise RuntimeError("Interior CTC blank run is missing neighboring targets")
+        run = end - start
+        left_count = (run + 1) // 2
+        assignments[start : start + left_count] = left
+        assignments[start + left_count : end] = right
 
-        if left < 0 and right < 0:
-            raise RuntimeError("Blank-only path cannot be converted to token durations")
-        if left < 0:
-            assignments[start:end] = right
-        elif right < 0:
-            assignments[start:end] = left
-        else:
-            run = end - start
-            left_count = (run + 1) // 2
-            assignments[start : start + left_count] = left
-            assignments[start + left_count : end] = right
-
-    if int(assignments.min().item()) < 0 or int(assignments.max().item()) >= target_steps:
-        raise RuntimeError("Invalid token assignment produced from CTC state path")
+    if bool((assignments == _UNASSIGNED).any().item()):
+        raise RuntimeError("Unassigned CTC states remain after boundary-aware mapping")
+    content = assignments[assignments >= 0]
+    if content.numel() == 0:
+        raise RuntimeError("No acoustic target assignments produced")
+    if int(content.max().item()) >= target_steps:
+        raise RuntimeError("Invalid target index produced from CTC state path")
     return assignments
 
 
@@ -187,7 +222,7 @@ def forced_alignment_durations(
     mel_frames: int,
     frame_stride: int,
 ) -> CTCForcedAlignment:
-    """Convert a CTC Viterbi path into exact mel-frame durations per target."""
+    """Convert a CTC Viterbi path into exact boundary-aware mel-frame durations."""
 
     if mel_frames < 1:
         raise ValueError("mel_frames must be positive")
@@ -195,21 +230,34 @@ def forced_alignment_durations(
         raise ValueError("frame_stride must be positive")
 
     path, score = ctc_viterbi_state_path(log_probs, targets, blank_id)
-    downsampled_assignment = _assign_blank_states(path, int(targets.numel()))
+    downsampled_assignment = _assign_ctc_states(path, int(targets.numel()))
     frame_assignment = downsampled_assignment.repeat_interleave(frame_stride)
     if frame_assignment.numel() < mel_frames:
         pad = frame_assignment[-1].repeat(mel_frames - frame_assignment.numel())
         frame_assignment = torch.cat((frame_assignment, pad))
     frame_assignment = frame_assignment[:mel_frames]
-    durations = torch.bincount(frame_assignment, minlength=int(targets.numel())).to(torch.long)
 
-    if int(durations.sum().item()) != mel_frames:
-        raise RuntimeError("Forced-alignment durations do not cover all mel frames")
+    content_assignment = frame_assignment[frame_assignment >= 0]
+    durations = torch.bincount(
+        content_assignment,
+        minlength=int(targets.numel()),
+    ).to(torch.long)
+    leading_boundary_frames = int((frame_assignment == _LEADING_BOUNDARY).sum().item())
+    trailing_boundary_frames = int((frame_assignment == _TRAILING_BOUNDARY).sum().item())
+    accounted = (
+        int(durations.sum().item())
+        + leading_boundary_frames
+        + trailing_boundary_frames
+    )
+    if accounted != mel_frames:
+        raise RuntimeError("Forced-alignment assignments do not cover all mel frames")
 
     steps = int(path.numel())
     return CTCForcedAlignment(
         state_path=path,
         target_durations=durations,
+        leading_boundary_frames=leading_boundary_frames,
+        trailing_boundary_frames=trailing_boundary_frames,
         score=score,
         score_per_step=score / max(1, steps),
         downsampled_steps=steps,
@@ -221,15 +269,41 @@ def expand_content_durations(
     token_ids: torch.Tensor,
     content_durations: torch.Tensor,
     positions: list[int],
+    *,
+    leading_boundary_frames: int = 0,
+    trailing_boundary_frames: int = 0,
 ) -> torch.Tensor:
-    """Map CTC acoustic durations back to the full model token sequence."""
+    """Map acoustic and boundary durations back to the full model token sequence.
+
+    Content/pause targets are restored at ``positions``. Leading recording silence
+    is assigned to BOS and trailing recording silence to EOS. This preserves exact
+    mel coverage without teaching the first or last spoken phoneme to emit silence.
+    ``<wb>`` and other non-acoustic structural tokens keep zero duration.
+    """
 
     if content_durations.ndim != 1:
         raise ValueError("content_durations must be one-dimensional")
     if len(positions) != int(content_durations.numel()):
         raise ValueError("positions and content_durations must have matching lengths")
+    if leading_boundary_frames < 0 or trailing_boundary_frames < 0:
+        raise ValueError("boundary frame counts must be non-negative")
 
     durations = torch.zeros_like(token_ids, dtype=torch.long)
     for position, duration in zip(positions, content_durations.tolist(), strict=True):
         durations[position] = int(duration)
+
+    vocab = vocabulary()
+    token_values = [int(value) for value in token_ids.detach().cpu().tolist()]
+    if leading_boundary_frames:
+        try:
+            bos_position = token_values.index(vocab["<bos>"])
+        except (KeyError, ValueError) as error:
+            raise RuntimeError("Cannot assign leading boundary frames without BOS") from error
+        durations[bos_position] = int(leading_boundary_frames)
+    if trailing_boundary_frames:
+        try:
+            eos_position = len(token_values) - 1 - token_values[::-1].index(vocab["<eos>"])
+        except (KeyError, ValueError) as error:
+            raise RuntimeError("Cannot assign trailing boundary frames without EOS") from error
+        durations[eos_position] = int(trailing_boundary_frames)
     return durations
