@@ -45,8 +45,10 @@ class LykenoxSpeechAcousticModel(nn.Module):
       mel: [batch, mel_steps, mel_bins]
       duration_prediction: [batch, text_steps]
 
-    During training, ground-truth durations should be supplied once an aligner is
-    available. During inference, predicted durations are rounded and clamped.
+    During training, ground-truth durations are supplied by the validated LYKENOX
+    aligner and must be preserved exactly. ``max_duration_frames`` is only an
+    inference safety bound for predicted durations; clipping teacher durations
+    would silently shorten the mel target and corrupt supervision.
     """
 
     def __init__(self, config: LykenoxSpeechConfig) -> None:
@@ -78,17 +80,28 @@ class LykenoxSpeechAcousticModel(nn.Module):
     ) -> dict[str, torch.Tensor]:
         if token_ids.ndim != 2:
             raise ValueError("token_ids must have shape [batch, text_steps]")
+        if token_mask is not None and token_mask.shape != token_ids.shape:
+            raise ValueError("token_mask must match token_ids shape")
+        if durations is not None and durations.shape != token_ids.shape:
+            raise ValueError("durations must match token_ids shape")
+
         padding_mask = None if token_mask is None else ~token_mask.bool()
         encoded = self.encoder(self.embedding(token_ids), src_key_padding_mask=padding_mask)
         duration_prediction = self.duration_predictor(encoded)
 
         if durations is None:
-            durations = torch.round(duration_prediction).to(torch.long)
-            durations = torch.clamp(durations, min=1, max=self.config.max_duration_frames)
+            regulated_durations = torch.round(duration_prediction).to(torch.long)
+            regulated_durations = torch.clamp(
+                regulated_durations,
+                min=1,
+                max=self.config.max_duration_frames,
+            )
         else:
-            durations = torch.clamp(durations.to(torch.long), min=0, max=self.config.max_duration_frames)
+            if bool((durations < 0).any().item()):
+                raise ValueError("teacher durations must be non-negative")
+            regulated_durations = durations.to(torch.long)
 
-        expanded = self._length_regulate(encoded, durations)
+        expanded = self._length_regulate(encoded, regulated_durations)
         mel = self.mel_decoder(expanded)
         return {"mel": mel, "duration_prediction": duration_prediction}
 
