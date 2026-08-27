@@ -4,7 +4,11 @@ import unittest
 
 import torch
 
-from lykenox_voice_engine.core.spanish_text_frontend import encode_spanish_text, vocabulary
+from lykenox_voice_engine.core.spanish_text_frontend import (
+    SpanishTextFrontend,
+    encode_spanish_text,
+    vocabulary,
+)
 from lykenox_voice_engine.models.speech import LykenoxSpeechAcousticModel, LykenoxSpeechConfig
 
 
@@ -16,6 +20,14 @@ class LykenoxSpeechModelTests(unittest.TestCase):
         self.assertEqual(encoded.tokens[-1], "<eos>")
         self.assertEqual(len(encoded.tokens), len(encoded.token_ids))
         self.assertGreater(len(vocabulary()), 40)
+
+    def test_spanish_frontend_class_matches_functional_contract(self) -> None:
+        frontend = SpanishTextFrontend()
+        processed = frontend.process("  Hola   mundo  ")
+        self.assertEqual(processed.normalized_text, "hola mundo")
+        self.assertEqual(frontend.encode("  Hola   mundo  "), processed.token_ids)
+        self.assertEqual(frontend.vocabulary(), vocabulary())
+        self.assertEqual(frontend.vocab_size, len(vocabulary()))
 
     def test_model_forward_shapes(self) -> None:
         config = LykenoxSpeechConfig(vocab_size=128, hidden_size=64, encoder_layers=2, encoder_heads=4)
