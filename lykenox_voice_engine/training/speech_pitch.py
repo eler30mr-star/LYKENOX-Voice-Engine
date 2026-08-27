@@ -24,6 +24,58 @@ class PitchFrames:
     periodicity: torch.Tensor
 
 
+def _pitch_lag_bounds(
+    *,
+    sample_rate: int,
+    frame_length: int,
+    min_f0_hz: float,
+    max_f0_hz: float,
+) -> tuple[int, int]:
+    """Return the exact integer-lag search interval used by pitch-v1.
+
+    Pitch-v1 historically converts the requested F0 bounds to integer autocorrelation
+    lags with ``int``. That quantization is part of the accepted v1 target semantics.
+    For example, 24 kHz / 350 Hz becomes lag 68, whose realizable F0 is
+    352.941... Hz. Keep this helper behaviorally identical to the original extractor.
+    """
+
+    if sample_rate < 1 or frame_length < 64:
+        raise ValueError("invalid pitch analysis dimensions")
+    if not 0.0 < min_f0_hz < max_f0_hz:
+        raise ValueError("invalid pitch range")
+    min_lag = max(1, int(sample_rate / max_f0_hz))
+    max_lag = min(frame_length - 2, int(sample_rate / min_f0_hz))
+    if max_lag < min_lag:
+        raise ValueError("pitch range has no realizable integer-lag candidates")
+    return min_lag, max_lag
+
+
+def pitch_search_bounds_hz(
+    *,
+    sample_rate: int = 24000,
+    frame_length: int = 1024,
+    min_f0_hz: float = 60.0,
+    max_f0_hz: float = 350.0,
+) -> tuple[float, float]:
+    """Return the effective F0 bounds realizable by the pitch-v1 integer-lag grid.
+
+    These are validation bounds, not a new extraction algorithm. The nominal configured
+    interval remains part of provenance; this function exposes the discrete frequencies
+    that the already-versioned extractor can actually emit.
+    """
+
+    min_lag, max_lag = _pitch_lag_bounds(
+        sample_rate=sample_rate,
+        frame_length=frame_length,
+        min_f0_hz=min_f0_hz,
+        max_f0_hz=max_f0_hz,
+    )
+    return (
+        float(sample_rate) / float(max_lag),
+        float(sample_rate) / float(min_lag),
+    )
+
+
 def extract_pitch_frames(
     waveform: torch.Tensor,
     *,
@@ -93,8 +145,12 @@ def extract_pitch_frames(
     zero_lag = autocorrelation[:, :1].clamp_min(1e-8)
     normalized = autocorrelation / zero_lag
 
-    min_lag = max(1, int(sample_rate / max_f0_hz))
-    max_lag = min(frame_length - 2, int(sample_rate / min_f0_hz))
+    min_lag, max_lag = _pitch_lag_bounds(
+        sample_rate=sample_rate,
+        frame_length=frame_length,
+        min_f0_hz=min_f0_hz,
+        max_f0_hz=max_f0_hz,
+    )
     candidates = normalized[:, min_lag : max_lag + 1]
     periodicity, relative_lag = torch.max(candidates, dim=1)
     lag = relative_lag + min_lag
