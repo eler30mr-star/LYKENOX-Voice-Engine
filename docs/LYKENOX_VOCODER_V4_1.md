@@ -74,10 +74,11 @@ loss simply by making the excitation louder.
 
 ### 2. DC/subgrave blocker below the speech F0 floor
 
-A fixed 45 Hz linear-phase windowed-sinc high-pass FIR is applied before the final waveform
+A fixed 30 Hz linear-phase windowed-sinc high-pass FIR is applied before the final waveform
 `tanh`. It is deliberately well below the pitch extractor's 60 Hz lower bound and is **not**
 a notch at 93.75 Hz. Genuine low speech F0 near 80-100 Hz remains legal. The purpose is only
-to prevent DC/subgrave drift from becoming an easy reconstruction shortcut.
+to prevent DC/subgrave drift from becoming an easy reconstruction shortcut while keeping
+the lower speech fundamental substantially intact.
 
 The FIR is an owned deterministic runtime operation implemented with PyTorch `conv1d` and
 ships as part of the generator state.
