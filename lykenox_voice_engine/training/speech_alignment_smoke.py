@@ -197,6 +197,8 @@ def run_alignment_smoke(
             probe_token_ids,
             alignment.target_durations,
             positions,
+            leading_boundary_frames=alignment.leading_boundary_frames,
+            trailing_boundary_frames=alignment.trailing_boundary_frames,
         )
 
     duration_sum_ok = int(full_durations.sum().item()) == int(probe_mel.shape[0])
@@ -229,6 +231,9 @@ def run_alignment_smoke(
         "all_content_tokens_nonzero": content_nonzero,
         "min_content_duration_frames": int(alignment.target_durations.min().item()),
         "max_content_duration_frames": int(alignment.target_durations.max().item()),
+        "leading_boundary_frames": alignment.leading_boundary_frames,
+        "trailing_boundary_frames": alignment.trailing_boundary_frames,
+        "boundary_blank_policy": "leading_to_bos_trailing_to_eos",
         "alignment_score_per_step": round(alignment.score_per_step, 6),
         "alignment": "lykenox_ctc_viterbi_smoke",
         "warning": (
