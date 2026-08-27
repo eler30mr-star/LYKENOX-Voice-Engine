@@ -23,6 +23,7 @@ Architecture documents:
 - `docs/LYKENOX_IDENTITY_VOICE_ARCHITECTURE.md`
 - `docs/PRODUCT_INDEPENDENCE.md`
 - `docs/LYKENOX_SPEECH_V0.md`
+- `docs/LYKENOX_SPEECH_ALIGNMENT_PIPELINE.md`
 
 ## Product boundary
 
@@ -40,28 +41,35 @@ They must not become mandatory third-party product runtimes.
 
 ## Current neural speech milestone
 
-The repository now contains the first LYKENOX-owned speech acoustic prototype:
+The repository contains the first LYKENOX-owned speech stack under active validation:
 
 ```text
 Spanish text
-  -> LYKENOX Spanish frontend
+  -> LYKENOX es-phoneme-v1 frontend
+  -> LYKENOX duration/alignment supervision
   -> LYKENOX compact acoustic model
   -> mel spectrogram
   -> future LYKENOX vocoder
   -> speech.wav
 ```
 
-This is deliberately not advertised as finished TTS yet. The current milestone establishes
-an in-project neural architecture, deterministic frontend, tests, and a CPU forward/backward
-feasibility probe without invoking a third-party TTS executable.
+Validated locally on CPU so far:
 
-Run the CPU probe on the target Windows machine before any real long training:
+- synthetic acoustic forward/backward gate
+- real WAV -> mel feature cache
+- real-data acoustic update smoke
+- phoneme CTC/Viterbi forced-alignment smoke
+
+The next controlled gate trains a persistent LYKENOX aligner against train/validation data,
+saves the best versioned checkpoint with early stopping, and only after validation passes
+generates checkpoint-bound duration caches plus an outlier audit:
 
 ```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_cpu_probe
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_alignment_pipeline --epochs 20 --patience 4
 ```
 
-Do not start full dataset training until the gates in `docs/LYKENOX_SPEECH_V0.md` pass.
+Do not start long acoustic-model training until the duration audit is reviewed and the
+aligned acoustic smoke gate passes.
 
 ## Run
 
