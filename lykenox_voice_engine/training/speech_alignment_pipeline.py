@@ -1,4 +1,4 @@
-"""One controlled command for persistent LYKENOX aligner training and duration audit."""
+"""Controlled LYKENOX aligner training/recovery and duration audit pipeline."""
 
 from __future__ import annotations
 
@@ -6,8 +6,23 @@ import argparse
 import json
 from pathlib import Path
 
+from lykenox_voice_engine.core.spanish_text_frontend import SpanishTextFrontend
+from lykenox_voice_engine.training.speech_aligner_recover import recover_pipeline
 from lykenox_voice_engine.training.speech_aligner_train import train_persistent_aligner
 from lykenox_voice_engine.training.speech_duration_cache import generate_duration_cache
+
+
+def _best_checkpoint(root: Path) -> Path:
+    frontend = SpanishTextFrontend()
+    return (
+        Path(root)
+        / "models"
+        / "lykenox_identity"
+        / "training"
+        / "speech_aligner"
+        / frontend.version
+        / "best.pt"
+    )
 
 
 def run_pipeline(
@@ -19,8 +34,36 @@ def run_pipeline(
     max_mel_frames: int = 1800,
     seed: int = 1337,
     nonpause_warn_frames: int = 100,
+    recover_existing: bool = True,
 ) -> dict[str, object]:
     root = Path(root).resolve()
+
+    # A killed terminal/executor can interrupt after best.pt was already written.
+    # Never throw that work away: audit it first and only retrain if it fails.
+    if recover_existing and _best_checkpoint(root).exists():
+        recovered = recover_pipeline(
+            root,
+            max_mel_frames=max_mel_frames,
+            seed=seed,
+            nonpause_warn_frames=nonpause_warn_frames,
+        )
+        if recovered["status"] in {"pass", "duration_review_required"}:
+            return {
+                "status": recovered["status"],
+                "mode": "recovered_existing_checkpoint",
+                "training": recovered["recovery"],
+                "durations": recovered["durations"],
+                "next_gate": recovered["next_gate"],
+            }
+        if recovered["status"] == "duration_gate_failed":
+            return {
+                "status": "duration_gate_failed",
+                "mode": "recovered_existing_checkpoint",
+                "training": recovered["recovery"],
+                "durations": recovered["durations"],
+                "next_gate": recovered["next_gate"],
+            }
+
     training = train_persistent_aligner(
         root,
         epochs=epochs,
@@ -32,8 +75,10 @@ def run_pipeline(
     if training["status"] != "pass":
         return {
             "status": "training_gate_failed",
+            "mode": "trained_new_checkpoint",
             "training": training,
             "durations": None,
+            "next_gate": "review_alignment_training",
         }
 
     durations = generate_duration_cache(
@@ -41,16 +86,23 @@ def run_pipeline(
         Path(str(training["best_checkpoint"])),
         nonpause_warn_frames=nonpause_warn_frames,
     )
-    status = "pass" if durations["status"] == "pass" else "duration_gate_failed"
+    suspicious = int(durations.get("suspicious_utterance_count", 0))
+    if durations["status"] != "pass":
+        status = "duration_gate_failed"
+        next_gate = "review_failed_alignments"
+    elif suspicious > 0:
+        status = "duration_review_required"
+        next_gate = "review_duration_outliers"
+    else:
+        status = "pass"
+        next_gate = "aligned_acoustic_smoke"
+
     result = {
         "status": status,
+        "mode": "trained_new_checkpoint",
         "training": training,
         "durations": durations,
-        "next_gate": (
-            "aligned_acoustic_smoke"
-            if status == "pass"
-            else "review_duration_audit"
-        ),
+        "next_gate": next_gate,
     }
 
     report_dir = Path(str(training["best_checkpoint"])).parent
@@ -70,6 +122,11 @@ def main() -> None:
     parser.add_argument("--max-mel-frames", type=int, default=1800)
     parser.add_argument("--seed", type=int, default=1337)
     parser.add_argument("--nonpause-warn-frames", type=int, default=100)
+    parser.add_argument(
+        "--force-retrain",
+        action="store_true",
+        help="Ignore an existing best.pt and start a new aligner run.",
+    )
     args = parser.parse_args()
     print(
         json.dumps(
@@ -81,6 +138,7 @@ def main() -> None:
                 max_mel_frames=args.max_mel_frames,
                 seed=args.seed,
                 nonpause_warn_frames=args.nonpause_warn_frames,
+                recover_existing=not args.force_retrain,
             ),
             indent=2,
             ensure_ascii=False,
