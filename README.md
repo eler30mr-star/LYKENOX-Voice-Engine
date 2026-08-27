@@ -22,6 +22,7 @@ Architecture documents:
 
 - `docs/LYKENOX_IDENTITY_VOICE_ARCHITECTURE.md`
 - `docs/PRODUCT_INDEPENDENCE.md`
+- `docs/LYKENOX_SPEECH_V0.md`
 
 ## Product boundary
 
@@ -36,6 +37,31 @@ LYKENOX owns and keeps stable:
 
 Training recipes and neural architecture families are replaceable implementation details.
 They must not become mandatory third-party product runtimes.
+
+## Current neural speech milestone
+
+The repository now contains the first LYKENOX-owned speech acoustic prototype:
+
+```text
+Spanish text
+  -> LYKENOX Spanish frontend
+  -> LYKENOX compact acoustic model
+  -> mel spectrogram
+  -> future LYKENOX vocoder
+  -> speech.wav
+```
+
+This is deliberately not advertised as finished TTS yet. The current milestone establishes
+an in-project neural architecture, deterministic frontend, tests, and a CPU forward/backward
+feasibility probe without invoking a third-party TTS executable.
+
+Run the CPU probe on the target Windows machine before any real long training:
+
+```powershell
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_cpu_probe
+```
+
+Do not start full dataset training until the gates in `docs/LYKENOX_SPEECH_V0.md` pass.
 
 ## Run
 
