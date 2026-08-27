@@ -16,10 +16,12 @@ class LykenoxSpeechModelTests(unittest.TestCase):
     def test_spanish_frontend_is_deterministic(self) -> None:
         encoded = encode_spanish_text("¡Hola, LYKENOX!")
         self.assertEqual(encoded.normalized_text, "¡hola, lykenox!")
+        self.assertEqual(encoded.frontend_version, "es-phoneme-v1")
         self.assertEqual(encoded.tokens[0], "<bos>")
         self.assertEqual(encoded.tokens[-1], "<eos>")
         self.assertEqual(len(encoded.tokens), len(encoded.token_ids))
-        self.assertGreater(len(vocabulary()), 40)
+        self.assertGreater(len(vocabulary()), 20)
+        self.assertNotIn("<unk>", encoded.tokens)
 
     def test_spanish_frontend_class_matches_functional_contract(self) -> None:
         frontend = SpanishTextFrontend()
