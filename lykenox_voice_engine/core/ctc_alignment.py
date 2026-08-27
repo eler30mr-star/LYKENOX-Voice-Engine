@@ -126,8 +126,7 @@ def ctc_viterbi_state_path(
     expanded[1::2] = targets_cpu
     emissions = probabilities.index_select(1, expanded)
 
-    negative_infinity = torch.tensor(float("-inf"), dtype=emissions.dtype)
-    previous = torch.full((state_count,), negative_infinity, dtype=emissions.dtype)
+    previous = torch.full((state_count,), float("-inf"), dtype=emissions.dtype)
     previous[0] = emissions[0, 0]
     previous[1] = emissions[0, 1]
 
@@ -151,7 +150,7 @@ def ctc_viterbi_state_path(
         stay = previous
 
         advance_one = torch.empty_like(previous)
-        advance_one[0] = negative_infinity
+        advance_one[0] = float("-inf")
         advance_one[1:] = previous[:-1]
 
         advance_two = neg_inf_vector.clone()
