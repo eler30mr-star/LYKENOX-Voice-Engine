@@ -27,6 +27,7 @@ except ImportError:
     QMediaPlayer = None
 
 from lykenox_voice_engine.engines.utau_engine import UtauSampleEngine
+from lykenox_voice_engine.core.multipitch_microtest import render_baila_conmigo_microtest
 from lykenox_voice_engine.core.score import load_score, score_to_json
 from lykenox_voice_engine.models.notes import NoteEvent
 
@@ -81,6 +82,8 @@ class SynthesisPage(QWidget):
         generate.clicked.connect(
             lambda: self._generate(profile.currentText(), lyrics.toPlainText(), melody.toPlainText(), tempo.value())
         )
+        compare = QPushButton("Comparar mono vs multipitch")
+        compare.clicked.connect(self._compare_multipitch)
 
         # Player controls
         player_layout = QHBoxLayout()
@@ -114,6 +117,7 @@ class SynthesisPage(QWidget):
         layout.addWidget(melody)
         layout.addLayout(player_layout)
         layout.addWidget(generate)
+        layout.addWidget(compare)
         layout.addWidget(self.status)
         self.setLayout(layout)
         if score_list.count():
@@ -142,6 +146,25 @@ class SynthesisPage(QWidget):
                 btn.setEnabled(True)
         except (json.JSONDecodeError, TypeError, RuntimeError, ValueError) as exc:
             self.status.setText(f"No se pudo generar: {exc}")
+
+    def _compare_multipitch(self) -> None:
+        """Render the official microtest comparison from the saved score."""
+
+        try:
+            report = render_baila_conmigo_microtest(self.root)
+            if report.get("missing_multipitch_aliases"):
+                missing = ", ".join(report.get("missing_multipitch_aliases", []))
+                self.status.setText(f"Multipitch incompleto. Falta: {missing}")
+                return
+            multipitch = report.get("multipitch", {})
+            self.output_wav = Path(str(multipitch.get("path")))
+            self.status.setText(
+                "Comparacion generada: vocal_monopitch.wav / vocal_adaptive_multipitch.wav"
+            )
+            for btn in [self.btn_play, self.btn_pause, self.btn_stop, self.btn_folder, self.btn_save_as]:
+                btn.setEnabled(True)
+        except (RuntimeError, OSError, ValueError, KeyError) as exc:
+            self.status.setText(f"No se pudo comparar: {exc}")
 
     def _play(self) -> None:
         if self.player and self.output_wav and self.output_wav.exists():

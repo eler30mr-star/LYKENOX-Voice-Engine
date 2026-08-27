@@ -59,6 +59,24 @@ class TestIdentityVoiceApi(unittest.TestCase):
         self.assertIn("no entrenado", data["error"])
         self.assertIsNone(data["output_path"])
 
+    def test_sample_singing_endpoint_is_separate_from_neural_sing(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = _minimal_root(Path(temp_dir))
+            app = create_app(root)
+
+            response = _endpoint(app, "/sing-sample")(
+                SingRequest(
+                    profile="lykenox",
+                    lyrics="baila",
+                    tempo=120,
+                    notes=[{"lyric": "bai", "midi": 60, "start": 0.0, "duration": 0.5}],
+                )
+            )
+
+        data = response.model_dump()
+        self.assertEqual(data["status"], "failed")
+        self.assertIn("Voicebank incompleto", data["error"])
+
 
 def _minimal_root(root: Path) -> Path:
     config = root / "config"

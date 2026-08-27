@@ -68,13 +68,26 @@ def create_app(root: Path | None = None) -> FastAPI:
 
     @app.post("/synthesize", response_model=JobResponse)
     def synthesize(payload: SynthesizeRequest) -> JobResponse:
+        """Render the legacy sample-based singing endpoint."""
+
+        return _sample_sing(payload, "vocal.wav")
+
+    @app.post("/sing-sample", response_model=JobResponse)
+    def sing_sample(payload: SynthesizeRequest) -> JobResponse:
+        """Render direct local singing from the LYKENOX voicebank."""
+
+        return _sample_sing(payload, "singing_sample.wav")
+
+    def _sample_sing(payload: SynthesizeRequest, filename: str) -> JobResponse:
+        """Render sample-based singing and return a job response."""
+
         sequence = NoteSequence.from_dict(
             {"tempo": payload.tempo, "notes": [note.model_dump() for note in payload.notes]}
         )
         notes = [NoteEvent(note.lyric, note.midi, note.start, note.duration) for note in sequence.notes]
         job = jobs.create()
         job.status = JobStatus.RUNNING
-        output_path = app_root / "outputs" / job.id / "vocal.wav"
+        output_path = app_root / "outputs" / job.id / filename
         try:
             engine.synthesize_to_path(payload.profile, payload.lyrics, notes, payload.tempo, output_path)
             job.status = JobStatus.COMPLETED

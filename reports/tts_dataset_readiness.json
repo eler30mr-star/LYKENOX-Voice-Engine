@@ -1,0 +1,28 @@
+{
+  "profile": "lykenox",
+  "purpose": "future neural text-to-speech identity training",
+  "status": "dataset_prepared_not_trained",
+  "backend_selected": false,
+  "model_trained": false,
+  "train_csv": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech_segmented\\train.segmented.csv",
+  "val_csv": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech_segmented\\val.segmented.csv",
+  "train_rows": 118,
+  "val_rows": 14,
+  "segmented_minutes": 23.84,
+  "segmented_rows": 132,
+  "direct_usable_minutes": 1.05,
+  "blocked_rows": 27,
+  "blocked_reasons": {
+    "generic_metadata": 5,
+    "duplicate_over_limit": 9,
+    "needs_segmentation": 13
+  },
+  "ready_for_backend_microtest": true,
+  "limitations": [
+    "No neural backend is installed or selected.",
+    "No model checkpoint exists for /speak.",
+    "Spanish frontend/backend choice still must be researched before training.",
+    "CPU-only training must be proven with a tiny controlled run before use."
+  ],
+  "report_path": "D:\\Proyectos\\LYKENOX-Voice-Engine\\reports\\tts_dataset_readiness.json"
+}
