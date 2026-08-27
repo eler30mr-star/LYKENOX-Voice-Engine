@@ -128,6 +128,9 @@ class LykenoxVocoderGeneratorV2(nn.Module):
     Every stage expands time by an exact integer factor using learned phase channels. The
     product of all factors remains the versioned speech hop length, so the acoustic model
     and vocoder stay sample-count compatible without post-hoc trimming or padding.
+
+    The channel schedule is intentionally aggressive (128 -> 32 -> 16 -> 16) so the
+    architecture-selection probe stays below the target laptop's short command budget.
     """
 
     architecture = VOCODER_GENERATOR_V2_ARCHITECTURE
@@ -145,7 +148,7 @@ class LykenoxVocoderGeneratorV2(nn.Module):
         stages: list[nn.Module] = []
         in_channels = self.config.channels
         for factor in self.config.upsample_factors:
-            out_channels = max(16, in_channels // 2)
+            out_channels = max(16, in_channels // 4)
             stages.append(
                 _PolyphaseStage(
                     in_channels,
