@@ -95,40 +95,62 @@ This is a different failure from v0. The frame-rate buzz is gone, but linear int
 creates a smooth sample grid with no explicit learned sample-phase representation. More
 v1 epochs are therefore blocked; the architecture needs a waveform-detail mechanism.
 
-## Learned polyphase v2 corrective probe
+## Learned polyphase v2 rejection
 
-`LykenoxVocoderGeneratorV2` uses learned 1-D polyphase/subpixel upsampling:
+`LykenoxVocoderGeneratorV2` added learned phase channels and channel-to-time shuffling.
+It solved the v1 spectral-collapse problem and improved held-out reconstruction strongly,
+but its first artifact gate again reported a 93.75 Hz lock in all three generated files.
+
+Because an autocorrelation detector can confuse a legitimate low male F0 with the mel-frame
+rate, the result was not accepted at face value. A second WAV-only differential forensic
+compared every generated signal against its paired real reference. That forensic found:
+
+- `raw_generated_frame_locks: 3`
+- `raw_reference_frame_locks: 0`
+- `confirmed_generated_specific_frame_locks: 3`
+- `subbass_or_silence_collapse_count: 0`
+
+Therefore v2 is also blocked from additional training. The failure is not the reference
+speaker's natural pitch; it is generated-specific periodicity at exactly the mel hop.
+
+## Periodicity-controlled v3
+
+`LykenoxVocoderGeneratorV3` addresses the v1/v2 tradeoff directly. Each integer upsampling
+stage has two branches:
 
 ```text
-mel-rate features
-  -> stride-1 Conv1d predicts factor phase channels
-  -> deterministic channel-to-time shuffle
-  -> stride-1 refinement/residual blocks
-  -> waveform
+mel-rate feature
+  -> smooth base Conv1d -> linear resize --------------------+
+                                                            +-> refine/residual -> next stage
+  -> learned phase-detail Conv1d -> zero phase mean -> gate -+
 ```
 
-Properties:
+The phase-detail branch is constrained so its phase channels have zero mean at every
+low-rate time step. It therefore cannot create a frame-level DC phase pattern by itself.
+The branch has no phase bias, starts from zero weights, and is multiplied by a learned
+sigmoid gate initialized at 0.10. The smooth base branch prevents the sub-bass-only failure
+of using phase detail as the sole waveform mechanism.
 
-- no `ConvTranspose1d`
-- no interpolation upsampling bottleneck
-- explicit learned sample-phase channels
-- phase-equal initialization so the initial model does not begin with an arbitrary periodic
-  phase pattern
-- no per-phase expansion bias, removing another easy route to an unconditional carrier
-- exact `8 x 8 x 4 = 256` sample expansion remains enforced
-- CPU-bounded channel schedule for the target laptop
+Training also adds `vocoder-periodicity-v1`, a differentiable target-referenced loss. It
+matches generated exact-hop *excess* autocorrelation to the real paired waveform rather
+than applying a fixed 93.75 Hz notch. This matters because a real speaker is allowed to
+have genuine F0 near 93.75 Hz; only extra grid periodicity absent from the target should be
+penalized.
 
-Run:
+Run the bounded v3 gate:
 
 ```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_polyphase_probe
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_periodicity_probe
 ```
 
-The v2 probe reports both known automatic failure modes:
+The v3 probe trains from scratch and does not resume v0/v1/v2 weights. It selects the best
+held-out composite score from reconstruction plus target-referenced periodicity error, then
+runs the same differential generated-vs-reference forensic that confirmed the v2 failure.
+A pass requires:
 
-- `frame_rate_lock_count_across_3_generated`
-- `subbass_or_silence_collapse_count_across_3_generated`
+- held-out selection score improves
+- `confirmed_generated_specific_frame_locks == 0`
+- `subbass_or_silence_collapse_count == 0`
 
-A numeric pass requires held-out reconstruction improvement and zero detections for both
-known artifact classes. Even then, the three generated/reference WAV pairs must be heard
-before v2 can become the persistent vocoder architecture.
+Even a numeric/automatic pass still requires listening to the generated/reference WAVs
+before v3 can be accepted as the persistent vocoder architecture.
