@@ -39,7 +39,14 @@ def extract_pitch_frames(
     """Extract one F0/voicing target per mel frame using FFT autocorrelation.
 
     ``waveform`` is a mono tensor ``[samples]``. The returned tensors have exactly
-    ``frame_count`` entries. Unvoiced F0 values are zero.
+    ``frame_count`` entries and use the same centered-frame convention as the speech
+    mel frontend. Unvoiced F0 values are zero.
+
+    Full utterances do not normally contain exactly ``frame_count * hop_length`` samples
+    because the mel frontend uses centered STFT frames. Earlier vocoder probes happened
+    to use exact hop-sized crops. The pitch algorithm itself is unchanged; this function
+    now accepts both contracts and pads only when a caller requests a final centered frame
+    beyond the available waveform edge.
     """
 
     if waveform.ndim != 1:
@@ -50,16 +57,26 @@ def extract_pitch_frames(
         raise ValueError("invalid pitch analysis dimensions")
     if not 0.0 < min_f0_hz < max_f0_hz:
         raise ValueError("invalid pitch range")
-
-    expected_samples = frame_count * hop_length
-    if int(waveform.numel()) != expected_samples:
-        raise ValueError(
-            f"waveform/frame contract mismatch: {waveform.numel()} != {expected_samples}"
-        )
+    if waveform.numel() < 2:
+        raise ValueError("waveform is too short for pitch analysis")
 
     half = frame_length // 2
+    # Reflect padding mirrors torchaudio's centered mel framing convention. For ordinary
+    # full utterances this already yields floor(samples / hop) + 1 frames, matching the
+    # active center=True mel frontend. Exact-hop vocoder crops yield one extra trailing
+    # centered frame; slicing below preserves their existing v1 target values exactly.
     padded = F.pad(waveform.unsqueeze(0).unsqueeze(0), (half, half), mode="reflect")
     frames = padded.squeeze(0).squeeze(0).unfold(0, frame_length, hop_length)
+    if int(frames.shape[0]) < frame_count:
+        missing = frame_count - int(frames.shape[0])
+        right_pad = missing * hop_length
+        extended = F.pad(
+            waveform.unsqueeze(0).unsqueeze(0),
+            (0, right_pad),
+            mode="reflect",
+        )
+        padded = F.pad(extended, (half, half), mode="reflect")
+        frames = padded.squeeze(0).squeeze(0).unfold(0, frame_length, hop_length)
     if int(frames.shape[0]) < frame_count:
         raise RuntimeError("pitch framing produced too few frames")
     frames = frames[:frame_count].to(torch.float32)
