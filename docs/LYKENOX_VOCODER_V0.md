@@ -15,9 +15,10 @@ ships the LYKENOX generator only; the discriminator described below is training-
 ## First CPU feasibility architecture
 
 `LykenoxVocoderGenerator` is a compact non-autoregressive PyTorch generator implemented
-inside this repository. It uses a mel pre-convolution, three learned upsampling stages,
-local residual convolution blocks, and a bounded waveform output. The default upsample
-factors are `8 x 8 x 4 = 256`, exactly matching the current speech hop length.
+inside this repository. It uses a mel pre-convolution, three learned transposed-convolution
+upsampling stages, local residual convolution blocks, and a bounded waveform output. The
+default upsample factors are `8 x 8 x 4 = 256`, exactly matching the current speech hop
+length.
 
 The target-laptop CPU benchmark passed:
 
@@ -29,12 +30,12 @@ The target-laptop CPU benchmark passed:
 - median real-time factor: 0.0088
 - median real-time multiple: 113.28x
 
-This establishes local compute feasibility only. It does not establish naturalness,
+This established local compute feasibility only. It did not establish naturalness,
 identity fidelity, or final waveform quality.
 
 ## Persistent training contract
 
-Before any long vocoder run, LYKENOX now uses an explicit versioned training boundary:
+Before any long vocoder run, LYKENOX uses an explicit versioned training boundary:
 
 - `vocoder-segment-v1`: deterministic train/validation mel-wave pairing with exact
   hop-aligned sample lengths and a stable segment seed
@@ -53,7 +54,7 @@ Before any long vocoder run, LYKENOX now uses an explicit versioned training bou
 
 The persistent checkpoint's best-model rule is intentionally conservative: choose the
 lowest finite held-out reconstruction loss while requiring finite adversarial metrics.
-Perceptual listening on held-out reconstruction WAVs remains mandatory before the compact
+Perceptual listening on held-out reconstruction WAVs remains mandatory before an
 architecture can be accepted for longer training.
 
 ## Contract gate
@@ -64,60 +65,37 @@ Run:
 .\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_training_contract_smoke
 ```
 
-This bounded smoke checks deterministic train/validation segmentation, exact waveform
-length, reconstruction warm-up, discriminator and generator adversarial updates, feature
-matching, finite gradients, held-out validation measurement, checkpoint provenance, both
-optimizer states, and exact checkpoint round-trip.
+The contract smoke passed, and the subsequent bounded persistent short training also
+passed numerically. Its best checkpoint improved held-out reconstruction, but the first
+human listening gate rejected the transposed-convolution v0 output: generated validation
+WAVs contained a strong nearly fixed periodic sound instead of reconstructed speech.
 
-The target laptop passed this gate with finite train/validation losses, exact checkpoint
-round-trip, exact provenance and both optimizer states present.
+Offline forensic analysis of the three held-out generated WAVs found their dominant pitch
+locked almost exactly to `24000 / 256 = 93.75 Hz`, the mel-frame rate, while the reference
+speech pitch varied normally. The generated spectral fingerprints were also unusually
+similar across different validation segments. This is treated as an architectural
+upsampling artifact, not as evidence that more v0 epochs are warranted.
 
-## Persistent short-training gate
+Therefore:
 
-The next gate is the first run that is allowed to produce audio worth listening to, while
-still remaining intentionally bounded. Run:
+- do not continue long training of `lykenox_compact_transposed_conv_v0`
+- preserve the v0 checkpoints only as diagnostic history
+- test the v1 resize-convolution replacement before further vocoder investment
+
+## Resize-convolution v1 corrective probe
+
+`LykenoxVocoderGeneratorV1` removes every `ConvTranspose1d` stage. Each upsampling stage
+uses deterministic linear interpolation followed by stride-1 `Conv1d` refinement and the
+same compact residual concept. The audio/mel contract remains exactly 24 kHz and 256
+samples per mel frame.
+
+Run the bounded architecture-selection probe:
 
 ```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_short_train
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_resizeconv_probe
 ```
 
-Default contract:
-
-- `vocoder-short-train-v1`
-- 96 mel frames per segment (~1.024 s at 24 kHz / hop 256)
-- 16 deterministic training segments
-- 6 deterministic held-out validation segments
-- up to 8 epochs
-- 2 reconstruction-only warm-up epochs
-- adversarial + feature matching afterward
-- best checkpoint selected only by held-out reconstruction
-- early stopping patience 3
-- 85-second internal wall-clock budget
-- compatible interrupted runs resume from `last.pt`
-
-Artifacts are written under:
-
-```text
-models/lykenox_identity/training/vocoder_short_training/
-```
-
-The run writes `best.pt`, `last.pt`, `training_progress.json`, `training_report.json` and
-up to three held-out `generated.wav` / `reference.wav` listening pairs from the best
-checkpoint.
-
-A numerical pass requires the best reloaded checkpoint to improve held-out reconstruction
-over random initialization and reproduce its stored validation metric. A numerical pass is
-**not** a perceptual pass. The listening pairs must be heard before any longer vocoder run.
-
-## Gate order after the short run
-
-1. Listen to the held-out generated/reference WAV pairs.
-2. If the generated audio is dominated by noise, metallic artifacts, instability, or does
-   not reconstruct recognizable speech structure, adjust or replace the current vocoder
-   architecture/recipe before spending more CPU.
-3. If reconstruction is recognizably speech-like and artifacts appear tractable, perform a
-   controlled longer vocoder experiment with held-out validation and best-checkpoint
-   selection.
-4. Only after perceptual evidence should the project spend hours on long acoustic identity
-   training and final end-to-end synthesis integration.
-5. Export the eventual generator-only runtime artifact under the LYKENOX model manifest.
+It trains v1 briefly on the same deterministic mel/wave contract, selects the best held-out
+reconstruction epoch, writes three generated/reference WAV pairs, and reports a simple
+frame-rate-lock diagnostic. A numeric pass alone does not accept v1; the generated WAVs
+must contain recognizable speech structure and must not reproduce the fixed 93.75 Hz buzz.
