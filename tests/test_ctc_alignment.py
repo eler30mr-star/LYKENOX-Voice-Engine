@@ -23,7 +23,7 @@ class LykenoxCTCAlignmentTests(unittest.TestCase):
         self.assertEqual(positions[0], 1)
         self.assertEqual(positions[-1], encoded.numel() - 2)
 
-    def test_forced_alignment_covers_every_mel_frame(self) -> None:
+    def test_forced_alignment_preserves_boundary_blanks(self) -> None:
         blank_id = 9
         targets = torch.tensor([5, 6], dtype=torch.long)
         logits = torch.full((7, 10), -8.0)
@@ -38,7 +38,10 @@ class LykenoxCTCAlignmentTests(unittest.TestCase):
             mel_frames=13,
             frame_stride=2,
         )
-        self.assertEqual(int(result.target_durations.sum().item()), 13)
+        self.assertEqual(result.accounted_frames, 13)
+        self.assertGreater(result.leading_boundary_frames, 0)
+        self.assertGreater(result.trailing_boundary_frames, 0)
+        self.assertLess(int(result.target_durations.sum().item()), 13)
         self.assertTrue(bool((result.target_durations > 0).all().item()))
 
     def test_repeated_target_uses_blank_transition(self) -> None:
@@ -55,6 +58,9 @@ class LykenoxCTCAlignmentTests(unittest.TestCase):
             mel_frames=5,
             frame_stride=1,
         )
+        self.assertEqual(result.accounted_frames, 5)
+        self.assertEqual(result.leading_boundary_frames, 0)
+        self.assertEqual(result.trailing_boundary_frames, 0)
         self.assertEqual(int(result.target_durations.sum().item()), 5)
         self.assertEqual(result.target_durations.numel(), 2)
 
@@ -94,6 +100,22 @@ class LykenoxCTCAlignmentTests(unittest.TestCase):
         self.assertEqual(int(full[0].item()), 0)
         self.assertEqual(int(full[-1].item()), 0)
         self.assertEqual(int(full.sum().item()), 10)
+
+    def test_expand_content_durations_maps_boundary_silence_to_bos_eos(self) -> None:
+        frontend = SpanishTextFrontend()
+        token_ids = torch.tensor(frontend.encode("si"), dtype=torch.long)
+        _, positions = ctc_targets(token_ids)
+        content = torch.tensor([4, 6], dtype=torch.long)
+        full = expand_content_durations(
+            token_ids,
+            content,
+            positions,
+            leading_boundary_frames=3,
+            trailing_boundary_frames=2,
+        )
+        self.assertEqual(int(full[0].item()), 3)
+        self.assertEqual(int(full[-1].item()), 2)
+        self.assertEqual(int(full.sum().item()), 15)
 
 
 if __name__ == "__main__":
