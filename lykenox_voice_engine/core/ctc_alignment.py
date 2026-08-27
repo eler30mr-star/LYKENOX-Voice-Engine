@@ -90,7 +90,12 @@ def ctc_viterbi_state_path(
     targets: torch.Tensor,
     blank_id: int,
 ) -> tuple[torch.Tensor, float]:
-    """Find the best legal CTC state sequence with a monotonic Viterbi search.
+    """Find the best legal CTC state sequence with monotonic Viterbi search.
+
+    The dynamic program is sequential in time but vectorized across all CTC
+    states. The previous implementation used nested Python loops over time and
+    state and performed ``.item()`` for every transition; that became the main
+    bottleneck when regenerating alignments for the complete corpus on CPU.
 
     Args:
         log_probs: [time, classes] log probabilities.
@@ -115,44 +120,61 @@ def ctc_viterbi_state_path(
     if time_steps < required:
         raise ValueError(f"CTC path impossible: {time_steps} frames for minimum {required}")
 
-    target_values = [int(value) for value in targets_cpu.tolist()]
-    expanded: list[int] = [blank_id]
-    for token in target_values:
-        expanded.extend((token, blank_id))
-    state_count = len(expanded)
+    target_count = int(targets_cpu.numel())
+    state_count = target_count * 2 + 1
+    expanded = torch.full((state_count,), blank_id, dtype=torch.long)
+    expanded[1::2] = targets_cpu
+    emissions = probabilities.index_select(1, expanded)
 
-    previous = [float("-inf")] * state_count
-    previous[0] = float(probabilities[0, blank_id].item())
-    previous[1] = float(probabilities[0, target_values[0]].item())
-    backpointer: list[list[int]] = [[0] * state_count for _ in range(time_steps)]
+    negative_infinity = torch.tensor(float("-inf"), dtype=emissions.dtype)
+    previous = torch.full((state_count,), negative_infinity, dtype=emissions.dtype)
+    previous[0] = emissions[0, 0]
+    previous[1] = emissions[0, 1]
+
+    # ``skip_allowed[s]`` means the state can be entered from s-2. CTC forbids
+    # skipping into blank states and forbids the skip when repeated labels would
+    # otherwise collapse without an intervening blank.
+    skip_allowed = torch.zeros((state_count,), dtype=torch.bool)
+    if state_count > 2:
+        state_ids = torch.arange(state_count)
+        skip_allowed = (
+            (state_ids > 1)
+            & (expanded != blank_id)
+            & (expanded != torch.roll(expanded, shifts=2))
+        )
+        skip_allowed[:2] = False
+
+    backpointer = torch.zeros((time_steps, state_count), dtype=torch.int8)
+    neg_inf_vector = torch.full_like(previous, float("-inf"))
 
     for time_index in range(1, time_steps):
-        current = [float("-inf")] * state_count
-        for state in range(state_count):
-            candidates: list[tuple[float, int]] = [(previous[state], 0)]
-            if state > 0:
-                candidates.append((previous[state - 1], 1))
-            if (
-                state > 1
-                and expanded[state] != blank_id
-                and expanded[state] != expanded[state - 2]
-            ):
-                candidates.append((previous[state - 2], 2))
-            best_score, move = max(candidates, key=lambda item: item[0])
-            current[state] = best_score + float(probabilities[time_index, expanded[state]].item())
-            backpointer[time_index][state] = move
-        previous = current
+        stay = previous
 
-    final_states = (state_count - 1, state_count - 2)
-    state = max(final_states, key=lambda index: previous[index])
-    final_score = previous[state]
+        advance_one = torch.empty_like(previous)
+        advance_one[0] = negative_infinity
+        advance_one[1:] = previous[:-1]
+
+        advance_two = neg_inf_vector.clone()
+        if state_count > 2:
+            advance_two[2:] = previous[:-2]
+            advance_two = torch.where(skip_allowed, advance_two, neg_inf_vector)
+
+        candidates = torch.stack((stay, advance_one, advance_two), dim=0)
+        best_scores, moves = torch.max(candidates, dim=0)
+        previous = best_scores + emissions[time_index]
+        backpointer[time_index] = moves.to(torch.int8)
+
+    final_candidates = torch.stack((previous[-1], previous[-2]))
+    final_choice = int(torch.argmax(final_candidates).item())
+    state = state_count - 1 if final_choice == 0 else state_count - 2
+    final_score = float(previous[state].item())
     if not math.isfinite(final_score):
         raise RuntimeError("No finite CTC alignment path found")
 
     path = torch.empty((time_steps,), dtype=torch.long)
     path[-1] = state
     for time_index in range(time_steps - 1, 0, -1):
-        state -= backpointer[time_index][state]
+        state -= int(backpointer[time_index, state].item())
         path[time_index - 1] = state
 
     return path, final_score
