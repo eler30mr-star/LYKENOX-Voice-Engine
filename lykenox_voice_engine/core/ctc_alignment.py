@@ -28,16 +28,19 @@ class CTCForcedAlignment:
 
 
 def ctc_target_positions(token_ids: torch.Tensor) -> list[int]:
-    """Return model-token positions that participate in CTC alignment.
+    """Return acoustic token positions that participate in CTC alignment.
 
-    BOS/EOS/PAD are structural model tokens and do not represent spoken content.
-    SPACE, punctuation, UNK, and ordinary Spanish graphemes remain alignable.
+    BOS/EOS/PAD are structural. ``<wb>`` marks lexical context for the text
+    encoder but has no independent acoustic realization, so it is excluded from
+    the forced-alignment target. Pause tokens remain alignable because they
+    represent actual acoustic silence/prosodic time.
     """
 
     if token_ids.ndim != 1:
         raise ValueError("token_ids must be one-dimensional")
     vocab = vocabulary()
-    excluded = {vocab["<pad>"], vocab["<bos>"], vocab["<eos>"]}
+    excluded_names = ("<pad>", "<bos>", "<eos>", "<wb>")
+    excluded = {vocab[name] for name in excluded_names if name in vocab}
     values = token_ids.detach().cpu().tolist()
     return [index for index, value in enumerate(values) if int(value) not in excluded]
 
@@ -70,7 +73,7 @@ def ctc_viterbi_state_path(
 
     Args:
         log_probs: [time, classes] log probabilities.
-        targets: [target_steps] token IDs, excluding BOS/EOS/PAD.
+        targets: [target_steps] token IDs, excluding structural tokens.
         blank_id: class ID reserved for the CTC blank.
     """
 
@@ -138,7 +141,7 @@ def _assign_blank_states(state_path: torch.Tensor, target_steps: int) -> torch.T
     """Assign every CTC timestep to a neighboring target token.
 
     Target states are odd indices in the expanded CTC graph. Blank runs are split
-    between neighboring content tokens so derived durations cover every acoustic
+    between neighboring acoustic tokens so derived durations cover every acoustic
     frame instead of dropping inter-symbol silence.
     """
 
@@ -219,7 +222,7 @@ def expand_content_durations(
     content_durations: torch.Tensor,
     positions: list[int],
 ) -> torch.Tensor:
-    """Map CTC content durations back to the acoustic model token sequence."""
+    """Map CTC acoustic durations back to the full model token sequence."""
 
     if content_durations.ndim != 1:
         raise ValueError("content_durations must be one-dimensional")
