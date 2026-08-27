@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import os
 import platform
-import resource
 import time
 from dataclasses import asdict
 
@@ -20,10 +19,11 @@ from lykenox_voice_engine.models.speech import LykenoxSpeechAcousticModel, Lyken
 
 
 def _peak_rss_mb() -> float | None:
+    """Best-effort peak RSS without breaking Windows imports."""
     try:
+        import resource  # Unix only
+
         value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        if os.name == "nt":
-            return value / (1024 * 1024)
         return value / 1024
     except Exception:
         return None
