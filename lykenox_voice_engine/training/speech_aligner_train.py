@@ -156,6 +156,8 @@ def _audit_forced_alignments(
     failures: list[dict[str, object]] = []
     scores: list[float] = []
     max_content_duration = 0
+    leading_boundary_frames: list[int] = []
+    trailing_boundary_frames: list[int] = []
 
     model.eval()
     with torch.no_grad():
@@ -178,12 +180,16 @@ def _audit_forced_alignments(
                     token_ids,
                     alignment.target_durations,
                     positions,
+                    leading_boundary_frames=alignment.leading_boundary_frames,
+                    trailing_boundary_frames=alignment.trailing_boundary_frames,
                 )
                 if int(full.sum().item()) == int(mel.shape[0]):
                     exact += 1
                 if bool((alignment.target_durations > 0).all().item()):
                     nonzero += 1
                 scores.append(float(alignment.score_per_step))
+                leading_boundary_frames.append(alignment.leading_boundary_frames)
+                trailing_boundary_frames.append(alignment.trailing_boundary_frames)
                 max_content_duration = max(
                     max_content_duration,
                     int(alignment.target_durations.max().item()),
@@ -206,6 +212,9 @@ def _audit_forced_alignments(
             round(sum(scores) / len(scores), 6) if scores else None
         ),
         "max_content_duration_frames": max_content_duration,
+        "max_leading_boundary_frames": max(leading_boundary_frames) if leading_boundary_frames else 0,
+        "max_trailing_boundary_frames": max(trailing_boundary_frames) if trailing_boundary_frames else 0,
+        "boundary_blank_policy": "leading_to_bos_trailing_to_eos",
         "failures": failures[:20],
         "pass": (
             count > 0
