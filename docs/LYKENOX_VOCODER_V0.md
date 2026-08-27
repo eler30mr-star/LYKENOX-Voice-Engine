@@ -69,6 +69,55 @@ length, reconstruction warm-up, discriminator and generator adversarial updates,
 matching, finite gradients, held-out validation measurement, checkpoint provenance, both
 optimizer states, and exact checkpoint round-trip.
 
-A pass advances to `persistent_vocoder_short_training`. That next run is still bounded:
-it must create a best validation checkpoint and held-out WAV reconstructions for listening
-before any long identity/acoustic training is allowed.
+The target laptop passed this gate with finite train/validation losses, exact checkpoint
+round-trip, exact provenance and both optimizer states present.
+
+## Persistent short-training gate
+
+The next gate is the first run that is allowed to produce audio worth listening to, while
+still remaining intentionally bounded. Run:
+
+```powershell
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_short_train
+```
+
+Default contract:
+
+- `vocoder-short-train-v1`
+- 96 mel frames per segment (~1.024 s at 24 kHz / hop 256)
+- 16 deterministic training segments
+- 6 deterministic held-out validation segments
+- up to 8 epochs
+- 2 reconstruction-only warm-up epochs
+- adversarial + feature matching afterward
+- best checkpoint selected only by held-out reconstruction
+- early stopping patience 3
+- 85-second internal wall-clock budget
+- compatible interrupted runs resume from `last.pt`
+
+Artifacts are written under:
+
+```text
+models/lykenox_identity/training/vocoder_short_training/
+```
+
+The run writes `best.pt`, `last.pt`, `training_progress.json`, `training_report.json` and
+up to three held-out `generated.wav` / `reference.wav` listening pairs from the best
+checkpoint.
+
+A numerical pass requires the best reloaded checkpoint to improve held-out reconstruction
+over random initialization and reproduce its stored validation metric. A numerical pass is
+**not** a perceptual pass. The listening pairs must be heard before any longer vocoder run.
+
+## Gate order after the short run
+
+1. Listen to the held-out generated/reference WAV pairs.
+2. If the generated audio is dominated by noise, metallic artifacts, instability, or does
+   not reconstruct recognizable speech structure, adjust or replace the current vocoder
+   architecture/recipe before spending more CPU.
+3. If reconstruction is recognizably speech-like and artifacts appear tractable, perform a
+   controlled longer vocoder experiment with held-out validation and best-checkpoint
+   selection.
+4. Only after perceptual evidence should the project spend hours on long acoustic identity
+   training and final end-to-end synthesis integration.
+5. Export the eventual generator-only runtime artifact under the LYKENOX model manifest.
