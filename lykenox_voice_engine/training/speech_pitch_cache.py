@@ -36,6 +36,7 @@ from lykenox_voice_engine.training.speech_pitch import (
     PITCH_TARGET_VERSION,
     PitchFrames,
     extract_pitch_frames,
+    pitch_search_bounds_hz,
 )
 
 
@@ -172,10 +173,22 @@ def _extract_target(
     )
 
 
+def _effective_pitch_bounds_hz(*, sample_rate: int) -> tuple[float, float]:
+    """Return the exact F0 interval that pitch-v1 can emit on its integer-lag grid."""
+
+    return pitch_search_bounds_hz(
+        sample_rate=sample_rate,
+        frame_length=int(PITCH_CONFIG["frame_length"]),
+        min_f0_hz=float(PITCH_CONFIG["min_f0_hz"]),
+        max_f0_hz=float(PITCH_CONFIG["max_f0_hz"]),
+    )
+
+
 def _validate_tensors(
     pitch: PitchFrames,
     *,
     mel_frames: int,
+    sample_rate: int = 24000,
 ) -> None:
     expected = (int(mel_frames),)
     if tuple(pitch.f0_hz.shape) != expected:
@@ -194,12 +207,25 @@ def _validate_tensors(
         raise RuntimeError("voicing targets must be binary")
     if not bool((pitch.f0_hz[pitch.voiced < 0.5] == 0.0).all()):
         raise RuntimeError("unvoiced F0 targets must be exactly zero")
+
     voiced_f0 = pitch.f0_hz[pitch.voiced > 0.5]
     if voiced_f0.numel():
-        if float(voiced_f0.min()) < float(PITCH_CONFIG["min_f0_hz"]):
-            raise RuntimeError("voiced F0 target is below configured range")
-        if float(voiced_f0.max()) > float(PITCH_CONFIG["max_f0_hz"]):
-            raise RuntimeError("voiced F0 target is above configured range")
+        effective_min, effective_max = _effective_pitch_bounds_hz(
+            sample_rate=sample_rate
+        )
+        actual_min = float(voiced_f0.min())
+        actual_max = float(voiced_f0.max())
+        tolerance = 1e-4
+        if actual_min < effective_min - tolerance:
+            raise RuntimeError(
+                "voiced F0 target is below pitch-v1 integer-lag range: "
+                f"{actual_min:.6f} < {effective_min:.6f} Hz"
+            )
+        if actual_max > effective_max + tolerance:
+            raise RuntimeError(
+                "voiced F0 target is above pitch-v1 integer-lag range: "
+                f"{actual_max:.6f} > {effective_max:.6f} Hz"
+            )
 
 
 def _payload_to_pitch(payload: dict[str, Any]) -> PitchFrames:
@@ -223,6 +249,7 @@ def _load_valid_target(
     path: Path,
     *,
     expected_identity: dict[str, object],
+    sample_rate: int,
 ) -> PitchFrames | None:
     if not path.exists():
         return None
@@ -233,7 +260,11 @@ def _load_valid_target(
         if payload.get("identity") != expected_identity:
             return None
         pitch = _payload_to_pitch(payload)
-        _validate_tensors(pitch, mel_frames=int(expected_identity["mel_frames"]))
+        _validate_tensors(
+            pitch,
+            mel_frames=int(expected_identity["mel_frames"]),
+            sample_rate=sample_rate,
+        )
         return pitch
     except Exception:
         return None
@@ -288,7 +319,17 @@ def load_indexed_pitch_target(
     if not isinstance(payload, dict):
         raise RuntimeError("Invalid indexed pitch target payload")
     pitch = _payload_to_pitch(payload)
-    _validate_tensors(pitch, mel_frames=int(match["mel_frames"]))
+    speech_config = index.get("speech_config")
+    sample_rate = (
+        int(speech_config["sample_rate"])
+        if isinstance(speech_config, dict) and "sample_rate" in speech_config
+        else LykenoxSpeechConfig().sample_rate
+    )
+    _validate_tensors(
+        pitch,
+        mel_frames=int(match["mel_frames"]),
+        sample_rate=sample_rate,
+    )
     return pitch
 
 
@@ -305,6 +346,9 @@ def build_pitch_target_cache(
     started = time.perf_counter()
     torch.set_num_threads(max(1, min(4, torch.get_num_threads())))
     speech_config = LykenoxSpeechConfig()
+    effective_f0_min, effective_f0_max = _effective_pitch_bounds_hz(
+        sample_rate=speech_config.sample_rate
+    )
     cache_root = _cache_root(root)
     cache_root.mkdir(parents=True, exist_ok=True)
     progress_path = cache_root / "cache_progress.json"
@@ -334,6 +378,8 @@ def build_pitch_target_cache(
                     "device": "cpu",
                     "cache_version": PITCH_CACHE_VERSION,
                     "pitch_target_version": PITCH_TARGET_VERSION,
+                    "effective_f0_min_hz": round(effective_f0_min, 6),
+                    "effective_f0_max_hz": round(effective_f0_max, 6),
                     "cached_or_reused": len(entries),
                     "total_expected": total_expected,
                     "remaining": total_expected - len(entries),
@@ -361,7 +407,11 @@ def build_pitch_target_cache(
                 speech_config=speech_config,
             )
             target_path = _target_path(cache_root, identity)
-            pitch = _load_valid_target(target_path, expected_identity=identity)
+            pitch = _load_valid_target(
+                target_path,
+                expected_identity=identity,
+                sample_rate=speech_config.sample_rate,
+            )
 
             if pitch is None:
                 waveform = _mono_waveform(wav_path, speech_config)
@@ -378,7 +428,11 @@ def build_pitch_target_cache(
                     mel_frames=mel_frames,
                     speech_config=speech_config,
                 )
-                _validate_tensors(pitch, mel_frames=mel_frames)
+                _validate_tensors(
+                    pitch,
+                    mel_frames=mel_frames,
+                    sample_rate=speech_config.sample_rate,
+                )
                 payload = {
                     "identity": identity,
                     "f0_hz": pitch.f0_hz,
@@ -427,6 +481,10 @@ def build_pitch_target_cache(
         "speech_config_sha256": _sha256_json(speech_config.to_dict()),
         "pitch_config": dict(PITCH_CONFIG),
         "pitch_config_sha256": _sha256_json(PITCH_CONFIG),
+        "effective_pitch_bounds_hz": {
+            "min": effective_f0_min,
+            "max": effective_f0_max,
+        },
         "manifest_paths": {split: str(path) for split, path in manifests.items()},
         "manifest_sha256": manifest_hashes,
         "train_count": len(datasets["train"]),
@@ -468,6 +526,10 @@ def build_pitch_target_cache(
         "all_centered_frame_counts_match_mel": (
             exact_centered_alignment_count == total_expected
         ),
+        "nominal_f0_min_hz": float(PITCH_CONFIG["min_f0_hz"]),
+        "nominal_f0_max_hz": float(PITCH_CONFIG["max_f0_hz"]),
+        "effective_f0_min_hz": round(effective_f0_min, 6),
+        "effective_f0_max_hz": round(effective_f0_max, 6),
         "mean_voiced_fraction": round(statistics.fmean(voiced_fractions), 6),
         "min_voiced_f0_hz": (
             round(min(voiced_f0_values), 4) if voiced_f0_values else None
