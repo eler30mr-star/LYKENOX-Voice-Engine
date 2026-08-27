@@ -1,9 +1,8 @@
 """Fast forensic review of LYKENOX speech duration-cache outliers.
 
-This command performs no model inference and no training. It reads the already-generated
-alignment-v1 cache, classifies long non-pause durations by token and utterance position,
-and produces a compact report that helps distinguish boundary-silence absorption from
-interior alignment failures before acoustic-model training is allowed.
+This command performs no model inference and no training. It reads the latest generated
+alignment cache, classifies long non-pause durations by token and utterance position,
+and produces a compact report before acoustic-model training is allowed.
 """
 
 from __future__ import annotations
@@ -30,7 +29,6 @@ def _latest_duration_root(root: Path) -> Path:
         / "identity_voice"
         / "features"
         / "speech"
-        / "alignment-v1"
     )
     reports = list(base.rglob("duration_audit.json"))
     if not reports:
@@ -90,6 +88,24 @@ def classify_boundary_pattern(boundary_count: int, interior_count: int) -> str:
     return "boundary_outliers_only"
 
 
+def _diagnosis_for_cache(
+    raw_diagnosis: str,
+    cache_version: str,
+    outlier_count: int,
+) -> tuple[str, str]:
+    if outlier_count == 0:
+        return "duration_distribution_clean", "aligned_acoustic_smoke"
+    boundary_heavy = raw_diagnosis in {
+        "boundary_silence_absorption_likely",
+        "boundary_outliers_only",
+    }
+    if cache_version == "alignment-v2" and boundary_heavy:
+        return "residual_boundary_alignment_outliers", "inspect_residual_boundary_outliers"
+    if cache_version == "alignment-v1" and boundary_heavy:
+        return raw_diagnosis, "fix_boundary_blank_assignment"
+    return raw_diagnosis, "inspect_interior_alignment_outliers"
+
+
 def review_duration_outliers(
     root: Path,
     *,
@@ -105,17 +121,26 @@ def review_duration_outliers(
 
     token_durations: dict[str, list[int]] = defaultdict(list)
     loaded: list[tuple[str, dict[str, object]]] = []
+    cache_versions: Counter[str] = Counter()
+    leading_boundaries: list[int] = []
+    trailing_boundaries: list[int] = []
     for split, path in _record_paths(duration_root):
         record = torch.load(path, map_location="cpu", weights_only=False)
         if not isinstance(record, dict):
             raise RuntimeError(f"Invalid duration record: {path}")
         loaded.append((split, record))
+        cache_versions[str(record.get("cache_version", "unknown"))] += 1
+        boundary = record.get("boundary_frames", {})
+        if isinstance(boundary, dict):
+            leading_boundaries.append(int(boundary.get("leading", 0)))
+            trailing_boundaries.append(int(boundary.get("trailing", 0)))
         for row in record.get("content", []):
             token = str(row.get("token"))
             duration = int(row.get("duration_frames", 0))
             if token not in PAUSE_TOKENS:
                 token_durations[token].append(duration)
 
+    cache_version = cache_versions.most_common(1)[0][0] if cache_versions else "unknown"
     token_stats: dict[str, dict[str, object]] = {}
     for token, values in sorted(token_durations.items()):
         ordered = sorted(values)
@@ -167,6 +192,7 @@ def review_duration_outliers(
                     "alignment_score_per_step": round(
                         float(record.get("alignment_score_per_step", 0.0)), 6
                     ),
+                    "boundary_frames": record.get("boundary_frames"),
                 }
             )
 
@@ -177,11 +203,13 @@ def review_duration_outliers(
         + role_counts["only_nonpause"]
     )
     interior_count = role_counts["interior"]
-    diagnosis = classify_boundary_pattern(boundary_count, interior_count)
+    raw_diagnosis = classify_boundary_pattern(boundary_count, interior_count)
+    diagnosis, next_gate = _diagnosis_for_cache(raw_diagnosis, cache_version, len(outliers))
 
     report = {
         "status": "pass" if not outliers else "review_required",
         "duration_root": str(duration_root),
+        "cache_version": cache_version,
         "threshold_frames": threshold_frames,
         "threshold_ms": round(threshold_frames * frame_ms, 2),
         "records_loaded": len(loaded),
@@ -192,23 +220,25 @@ def review_duration_outliers(
         "boundary_fraction": (
             round(boundary_count / len(outliers), 4) if outliers else 0.0
         ),
+        "raw_pattern": raw_diagnosis,
         "diagnosis": diagnosis,
         "role_counts": dict(role_counts),
         "most_common_outlier_tokens": token_counts.most_common(12),
         "top_outliers": outliers[:40],
         "token_stats": token_stats,
-        "algorithmic_risk": (
-            "Current CTC blank assignment can fold leading blank frames into the first "
-            "acoustic token and trailing blank frames into the last acoustic token. A "
-            "boundary-heavy result supports fixing that policy before acoustic training."
+        "boundary_frame_stats": {
+            "leading_median": round(statistics.median(leading_boundaries), 2) if leading_boundaries else None,
+            "leading_max": max(leading_boundaries) if leading_boundaries else None,
+            "trailing_median": round(statistics.median(trailing_boundaries), 2) if trailing_boundaries else None,
+            "trailing_max": max(trailing_boundaries) if trailing_boundaries else None,
+        },
+        "algorithmic_policy": (
+            "alignment-v2 preserves leading CTC blank frames on BOS and trailing blank "
+            "frames on EOS instead of assigning them to spoken phonemes."
+            if cache_version == "alignment-v2"
+            else "alignment-v1 folds boundary blank runs into neighboring spoken tokens."
         ),
-        "next_gate": (
-            "fix_boundary_blank_assignment"
-            if diagnosis in {"boundary_silence_absorption_likely", "boundary_outliers_only"}
-            else "inspect_interior_alignment_outliers"
-            if outliers
-            else "aligned_acoustic_smoke"
-        ),
+        "next_gate": next_gate,
     }
     report_path = duration_root / "duration_outlier_review.json"
     report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
