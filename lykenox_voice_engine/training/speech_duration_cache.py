@@ -12,11 +12,8 @@ from pathlib import Path
 import torch
 import torch.nn.functional as F
 
-from lykenox_voice_engine.core.ctc_alignment import (
-    ctc_targets,
-    expand_content_durations,
-    forced_alignment_durations,
-)
+from lykenox_voice_engine.core.ctc_alignment import ctc_targets, forced_alignment_durations
+from lykenox_voice_engine.core.ctc_timing import expand_alignment_timing_durations
 from lykenox_voice_engine.core.spanish_text_frontend import SpanishTextFrontend
 from lykenox_voice_engine.models.speech import LykenoxSpeechConfig
 from lykenox_voice_engine.training.alignment_artifact import (
@@ -26,8 +23,9 @@ from lykenox_voice_engine.training.alignment_artifact import (
 from lykenox_voice_engine.training.speech_aligner_train import _dataset
 
 
-DURATION_CACHE_VERSION = "alignment-v2"
+DURATION_CACHE_VERSION = "alignment-v3"
 BOUNDARY_BLANK_POLICY = "leading_to_bos_trailing_to_eos"
+INTERIOR_BLANK_POLICY = "word_boundary_to_wb_pause_to_pause_intra_word_split_neighbors"
 
 
 def _percentile(values: list[int], percentile: float) -> int | None:
@@ -62,12 +60,14 @@ def _record_is_reusable(
         record.get("cache_version") == DURATION_CACHE_VERSION
         and record.get("frontend_version") == frontend_version
         and record.get("checkpoint_sha256") == checkpoint_sha256_value
+        and record.get("interior_blank_policy") == INTERIOR_BLANK_POLICY
         and str(record.get("utterance_id")) == utterance_id
         and str(record.get("text", "")) == text
         and [int(value) for value in record.get("token_ids", [])] == token_ids
         and isinstance(record.get("durations"), list)
         and isinstance(record.get("content"), list)
         and isinstance(record.get("boundary_frames"), dict)
+        and isinstance(record.get("timing_frames"), dict)
     )
 
 
@@ -81,13 +81,19 @@ def _consume_record(
     all_content_durations: list[int],
     leading_boundary_durations: list[int],
     trailing_boundary_durations: list[int],
+    word_boundary_blank_frames: list[int],
+    pause_blank_frames: list[int],
+    neighbor_split_blank_frames: list[int],
     suspicious_utterances: list[dict[str, object]],
 ) -> tuple[float, int]:
     boundary = dict(record.get("boundary_frames", {}))
-    leading = int(boundary.get("leading", 0))
-    trailing = int(boundary.get("trailing", 0))
-    leading_boundary_durations.append(leading)
-    trailing_boundary_durations.append(trailing)
+    leading_boundary_durations.append(int(boundary.get("leading", 0)))
+    trailing_boundary_durations.append(int(boundary.get("trailing", 0)))
+
+    timing = dict(record.get("timing_frames", {}))
+    word_boundary_blank_frames.append(int(timing.get("word_boundary_blank", 0)))
+    pause_blank_frames.append(int(timing.get("pause_blank", 0)))
+    neighbor_split_blank_frames.append(int(timing.get("neighbor_split_blank", 0)))
 
     utterance_nonpause_max = 0
     for content_row in record.get("content", []):
@@ -116,6 +122,7 @@ def _index_row(
     max_nonpause_duration_frames: int,
 ) -> dict[str, object]:
     boundary = dict(record.get("boundary_frames", {}))
+    timing = dict(record.get("timing_frames", {}))
     return {
         "utterance_id": str(record.get("utterance_id")),
         "path": str(target_path),
@@ -123,6 +130,9 @@ def _index_row(
         "content_tokens": len(record.get("content", [])),
         "leading_boundary_frames": int(boundary.get("leading", 0)),
         "trailing_boundary_frames": int(boundary.get("trailing", 0)),
+        "word_boundary_blank_frames": int(timing.get("word_boundary_blank", 0)),
+        "pause_blank_frames": int(timing.get("pause_blank", 0)),
+        "neighbor_split_blank_frames": int(timing.get("neighbor_split_blank", 0)),
         "alignment_score_per_step": round(
             float(record.get("alignment_score_per_step", 0.0)), 6
         ),
@@ -139,13 +149,7 @@ def generate_duration_cache(
     progress_every: int = 10,
     resume: bool = True,
 ) -> dict[str, object]:
-    """Generate boundary-safe durations, safely resumable after interruption.
-
-    Existing per-utterance ``alignment-v2`` records are reused only when their
-    checkpoint hash, frontend version, text and token IDs still match. A caller
-    can supply ``time_budget_seconds`` to guarantee a clean partial return before
-    an external executor timeout; rerunning the same command resumes missing rows.
-    """
+    """Generate word-boundary-safe durations, safely resumable after interruption."""
 
     if time_budget_seconds is not None and time_budget_seconds <= 0:
         raise ValueError("time_budget_seconds must be positive when provided")
@@ -185,6 +189,9 @@ def generate_duration_cache(
     all_content_durations: list[int] = []
     leading_boundary_durations: list[int] = []
     trailing_boundary_durations: list[int] = []
+    word_boundary_blank_totals: list[int] = []
+    pause_blank_totals: list[int] = []
+    neighbor_split_blank_totals: list[int] = []
     suspicious_utterances: list[dict[str, object]] = []
     total_new_generated = 0
     total_reused = 0
@@ -198,10 +205,7 @@ def generate_duration_cache(
             index_path = split_dir / "index.jsonl"
             split_failures: list[dict[str, object]] = []
             split_scores: list[float] = []
-            generated = 0
-            reused = 0
-            new_generated = 0
-            pending = 0
+            generated = reused = new_generated = pending = 0
             index_rows: list[dict[str, object]] = []
 
             for item_index, source_row in enumerate(dataset.rows):
@@ -213,11 +217,7 @@ def generate_duration_cache(
 
                 if resume and target_path.exists():
                     try:
-                        existing = torch.load(
-                            target_path,
-                            map_location="cpu",
-                            weights_only=False,
-                        )
+                        existing = torch.load(target_path, map_location="cpu", weights_only=False)
                         if _record_is_reusable(
                             existing,
                             frontend_version=frontend.version,
@@ -231,15 +231,9 @@ def generate_duration_cache(
                         record = None
 
                 if record is None:
-                    elapsed = time.perf_counter() - started
-                    if (
-                        time_budget_seconds is not None
-                        and elapsed >= time_budget_seconds
-                    ):
+                    if time_budget_seconds is not None and time.perf_counter() - started >= time_budget_seconds:
                         pending += 1
-                        pending_items.append(
-                            {"split": split, "utterance_id": utterance_id}
-                        )
+                        pending_items.append({"split": split, "utterance_id": utterance_id})
                         continue
 
                     item = dataset[item_index]
@@ -256,19 +250,17 @@ def generate_duration_cache(
                             mel_frames=int(mel.shape[0]),
                             frame_stride=model.config.frame_stride,
                         )
-                        full = expand_content_durations(
+                        timing = expand_alignment_timing_durations(
                             token_ids,
-                            alignment.target_durations,
                             positions,
-                            leading_boundary_frames=alignment.leading_boundary_frames,
-                            trailing_boundary_frames=alignment.trailing_boundary_frames,
+                            alignment,
+                            frame_stride=model.config.frame_stride,
                         )
+                        full = timing.durations
                         if int(full.sum().item()) != int(mel.shape[0]):
                             raise RuntimeError("Duration sum does not match mel frame count")
-                        if not bool((alignment.target_durations > 0).all().item()):
-                            raise RuntimeError(
-                                "At least one aligned content token has zero duration"
-                            )
+                        if not bool((timing.direct_target_frames > 0).all().item()):
+                            raise RuntimeError("At least one acoustic target has zero direct occupancy")
 
                         duration_values = [int(value) for value in full.tolist()]
                         content_rows: list[dict[str, object]] = []
@@ -292,22 +284,26 @@ def generate_duration_cache(
                             "mel_frames": int(mel.shape[0]),
                             "token_ids": token_values,
                             "durations": duration_values,
+                            "boundary_blank_policy": BOUNDARY_BLANK_POLICY,
+                            "interior_blank_policy": INTERIOR_BLANK_POLICY,
                             "boundary_frames": {
-                                "leading": alignment.leading_boundary_frames,
-                                "trailing": alignment.trailing_boundary_frames,
+                                "leading": timing.leading_boundary_frames,
+                                "trailing": timing.trailing_boundary_frames,
+                            },
+                            "timing_frames": {
+                                "word_boundary_blank": timing.word_boundary_blank_frames,
+                                "pause_blank": timing.pause_blank_frames,
+                                "neighbor_split_blank": timing.neighbor_split_blank_frames,
                             },
                             "content": content_rows,
-                            "alignment_score_per_step": float(
-                                alignment.score_per_step
-                            ),
+                            "alignment_score_per_step": float(alignment.score_per_step),
                         }
                         torch.save(record, target_path)
                         new_generated += 1
                         total_new_generated += 1
                         if total_new_generated % progress_every == 0:
                             print(
-                                f"[LYKENOX durations] new={total_new_generated} "
-                                f"reused={total_reused} split={split}",
+                                f"[LYKENOX durations v3] new={total_new_generated} reused={total_reused} split={split}",
                                 file=sys.stderr,
                                 flush=True,
                             )
@@ -333,19 +329,18 @@ def generate_duration_cache(
                     all_content_durations=all_content_durations,
                     leading_boundary_durations=leading_boundary_durations,
                     trailing_boundary_durations=trailing_boundary_durations,
+                    word_boundary_blank_frames=word_boundary_blank_totals,
+                    pause_blank_frames=pause_blank_totals,
+                    neighbor_split_blank_frames=neighbor_split_blank_totals,
                     suspicious_utterances=suspicious_utterances,
                 )
                 split_scores.append(score)
                 generated += 1
-                index_rows.append(
-                    _index_row(record, target_path, utterance_nonpause_max)
-                )
+                index_rows.append(_index_row(record, target_path, utterance_nonpause_max))
 
             with index_path.open("w", encoding="utf-8") as index_file:
                 for index_row in index_rows:
-                    index_file.write(
-                        json.dumps(index_row, ensure_ascii=False) + "\n"
-                    )
+                    index_file.write(json.dumps(index_row, ensure_ascii=False) + "\n")
 
             split_reports[split] = {
                 "items": len(dataset),
@@ -358,11 +353,7 @@ def generate_duration_cache(
                     round(statistics.fmean(split_scores), 6) if split_scores else None
                 ),
                 "index": str(index_path),
-                "pass": (
-                    generated == len(dataset)
-                    and pending == 0
-                    and not split_failures
-                ),
+                "pass": generated == len(dataset) and pending == 0 and not split_failures,
             }
 
     frame_ms = speech_config.hop_length / speech_config.sample_rate * 1000.0
@@ -386,6 +377,7 @@ def generate_duration_cache(
         "duration_cache_root": str(duration_root),
         "duration_cache_version": DURATION_CACHE_VERSION,
         "boundary_blank_policy": BOUNDARY_BLANK_POLICY,
+        "interior_blank_policy": INTERIOR_BLANK_POLICY,
         "resume_enabled": resume,
         "time_budget_seconds": time_budget_seconds,
         "elapsed_seconds": round(time.perf_counter() - started, 3),
@@ -402,19 +394,18 @@ def generate_duration_cache(
         },
         "leading_boundary_frames": _duration_stats(leading_boundary_durations),
         "trailing_boundary_frames": _duration_stats(trailing_boundary_durations),
+        "word_boundary_blank_frames": _duration_stats(word_boundary_blank_totals),
+        "pause_blank_frames": _duration_stats(pause_blank_totals),
+        "neighbor_split_blank_frames": _duration_stats(neighbor_split_blank_totals),
         "suspicious_utterance_count": len(suspicious_utterances),
         "suspicious_utterances": suspicious_utterances[:30],
         "failures": overall_failures[:30],
         "next_gate": next_gate,
     }
     report_path = duration_root / "duration_audit.json"
-    report_path.write_text(
-        json.dumps(report, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     (duration_root / "duration_progress.json").write_text(
-        json.dumps(report, indent=2, ensure_ascii=False),
-        encoding="utf-8",
+        json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     return report
 
