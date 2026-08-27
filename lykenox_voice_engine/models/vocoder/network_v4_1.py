@@ -12,8 +12,8 @@ V4.1 keeps the source-filter architecture and changes only that local balance:
   permanently fixed at ``1 / harmonic``;
 * the learned weights are bounded and RMS-normalized so the source cannot win merely by
   becoming louder;
-* the output uses a fixed 45 Hz linear-phase high-pass FIR to remove DC/subgrave drift
-  while preserving the observed 80-100 Hz speech fundamentals.
+* the output uses a fixed 30 Hz linear-phase high-pass FIR to remove DC/subgrave drift
+  while minimally disturbing the observed 80-100 Hz speech fundamentals.
 
 There is still no learned temporal upsampling, no external vocoder, and no reference
 audio requirement in the intended runtime.  Training uses target F0/voicing only until
@@ -107,7 +107,7 @@ class LykenoxVocoderGeneratorV41(nn.Module):
         hidden_channels: int = 32,
         harmonics: int = 8,
         harmonic_log_range: float = 1.25,
-        highpass_cutoff_hz: float = 45.0,
+        highpass_cutoff_hz: float = 30.0,
         highpass_kernel_size: int = 513,
     ) -> None:
         super().__init__()
