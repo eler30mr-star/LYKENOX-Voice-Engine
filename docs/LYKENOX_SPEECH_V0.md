@@ -12,9 +12,10 @@ Product contract:
 Spanish text -> LYKENOX frontend -> LYKENOX acoustic model -> LYKENOX vocoder -> speech.wav
 ```
 
-The current v0 implementation covers the frontend contract and the acoustic text-to-mel
-core. It does **not** yet claim finished TTS quality because the production aligner,
-vocoder, real dataset trainer, export pipeline, and perceptual validation are still gates.
+The current v0 implementation covers the frontend contract, the acoustic text-to-mel
+core, real-data mel caching, and the first LYKENOX-owned alignment path. It does **not**
+yet claim finished TTS quality because production alignment training, the vocoder, export,
+and perceptual validation are still gates.
 
 ## Design rules
 
@@ -40,12 +41,27 @@ vocoder, real dataset trainer, export pipeline, and perceptual validation are st
 - 24 kHz target sample rate
 
 The initial configuration is a feasibility baseline, not a frozen production architecture.
-Parameter count and CPU step time must be measured on the target laptop before real
-training is approved.
+
+Measured on the target CPU during the synthetic gate:
+
+- parameters: 1,967,889
+- 10 forward/backward/update steps: pass
+- mean step time: 0.0352 seconds
+
+Measured during the first real-data acoustic smoke test:
+
+- 118 training utterances available
+- 20 update steps: pass
+- first loss: 1.332389
+- last loss: 1.029874
+- mean step time: 0.0668 seconds
+
+These results prove mechanical local CPU viability for the current acoustic core. They do
+not prove final voice quality.
 
 ## Spanish frontend
 
-`spanish_text_frontend.py` currently provides:
+`spanish_text_frontend.py` provides a stable `SpanishTextFrontend` contract with:
 
 - NFC normalization
 - lowercase normalization
@@ -53,53 +69,115 @@ training is approved.
 - deterministic Spanish grapheme vocabulary
 - BOS/EOS/PAD/UNK/SPACE tokens
 
-This is an explicit bootstrap. A production Spanish phoneme/G2P frontend may replace the
-grapheme tokenizer later, but it must preserve the LYKENOX-owned frontend contract and
+This remains an explicit bootstrap. A production Spanish phoneme/G2P implementation may
+replace the internals later, but it must preserve the LYKENOX-owned frontend contract and
 must not create a TTS-product runtime dependency.
 
-## CPU feasibility gate
+## Real-data feature pipeline
 
-Before touching the real 23+ minute identity corpus, run:
+The real speech dataset now passes through:
 
-```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_cpu_probe
+```text
+LYKENOX WAV -> LYKENOX audio I/O -> 24 kHz -> 80-bin log-mel -> local feature cache
 ```
 
-The probe performs forward + backward + optimizer steps on CPU and reports:
+The train split currently contains:
 
-- parameter count
-- mean/min/max seconds per step
-- Torch/Python/platform
-- synthetic loss
-- best-effort memory measurement
+- 118 utterances
+- 119,897 mel frames
+- cache path under `datasets/lykenox/identity_voice/features/speech/mel-v1/train`
 
-This probe does **not** validate voice quality. It only answers whether the proposed
-acoustic core can train mechanically on the target CPU.
+Audio decoding is owned by the LYKENOX audio boundary and does not require TorchCodec.
 
-## Hard gates before real training
+## Alignment decision
 
-Do not start a long run until all of these are satisfied:
+Uniform token durations were used only for plumbing in the first real-data acoustic smoke
+test. They are explicitly forbidden for production training.
 
-1. CPU probe completes without OOM or unsupported operations.
-2. Step time is measured and extrapolated.
-3. Real speech dataset loader produces mel targets correctly.
-4. Train/validation split remains stable.
-5. A duration/alignment strategy is selected and tested.
-6. A LYKENOX-owned vocoder path is designed and separately benchmarked.
-7. Checkpoint format and export manifest are versioned.
-8. A 10-50 step real-data smoke test decreases loss without NaN/Inf.
+The next alignment architecture is LYKENOX-owned and training-only:
+
+```text
+real mel
+  -> compact convolutional acoustic frontend
+  -> bidirectional GRU
+  -> CTC token posteriors
+  -> LYKENOX monotonic Viterbi forced alignment
+  -> exact mel-frame durations per text token
+```
+
+Files:
+
+- `lykenox_voice_engine/models/speech/alignment.py`
+- `lykenox_voice_engine/core/ctc_alignment.py`
+- `lykenox_voice_engine/training/speech_alignment_smoke.py`
+
+Why this route:
+
+- it trains directly from LYKENOX text + LYKENOX audio
+- it does not need an external TTS or ASR executable
+- it enforces monotonic text/audio order
+- repeated symbols are handled through the CTC blank state
+- every mel frame is assigned to a neighboring content token
+- derived durations can later supervise the acoustic model's duration predictor
+- the aligner can remain a training tool and does not have to ship in the final inference runtime
+
+The first aligner uses a 2-frame acoustic stride for CPU efficiency. The forced-alignment
+stage expands the result back to exact original mel-frame counts.
+
+## Alignment smoke gate
+
+Before training or caching production durations, run only the controlled real-data smoke:
+
+```powershell
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_alignment_smoke --steps 120
+```
+
+The gate reports:
+
+- aligner parameter count
+- CTC training loss
+- a fixed probe utterance CTC loss before/after training
+- CPU step time
+- monotonic forced-alignment score
+- whether derived durations sum exactly to the probe mel-frame count
+- whether every content token receives non-zero duration
+
+Pass criteria:
+
+1. all losses and gradients remain finite
+2. fixed-probe CTC loss decreases
+3. forced alignment returns a legal monotonic path
+4. duration sum equals the original mel-frame count
+5. all content tokens receive non-zero duration
+
+This smoke model is not saved as a production aligner.
+
+## Hard gates before real acoustic training
+
+Do not start a long acoustic run until all of these are satisfied:
+
+1. synthetic CPU probe passes
+2. real mel cache is complete
+3. real-data acoustic smoke test decreases loss without NaN/Inf
+4. CTC alignment smoke gate passes
+5. a persistent aligner checkpoint is trained and validated on held-out speech
+6. production duration caches are generated and audited
+7. the acoustic model is re-smoked using real aligned durations instead of uniform durations
+8. a LYKENOX-owned vocoder path is designed and separately benchmarked
+9. checkpoint/export manifest is versioned
 
 ## What comes next
 
 Professional next milestones, in order:
 
-1. Run the synthetic CPU probe on the actual laptop.
-2. Build the engine-neutral speech dataset loader and mel feature cache.
-3. Implement/validate alignment or duration supervision.
-4. Run a tiny real-data acoustic training smoke test.
-5. Design and benchmark a compact LYKENOX vocoder.
-6. Train a short experimental model only after timing/memory gates pass.
-7. Export a self-contained LYKENOX artifact and connect it to `/speak`.
+1. Run the CTC alignment smoke on the actual laptop.
+2. If it passes, train a small persistent LYKENOX aligner with train/validation metrics.
+3. Generate deterministic duration caches for the speech corpus.
+4. Audit alignment outliers before acoustic training.
+5. Re-run the acoustic smoke test with real durations.
+6. Design and benchmark a compact LYKENOX vocoder.
+7. Train a short experimental speech model only after timing/memory/quality gates pass.
+8. Export a self-contained LYKENOX artifact and connect it to `/speak`.
 
 ## Success definition
 
