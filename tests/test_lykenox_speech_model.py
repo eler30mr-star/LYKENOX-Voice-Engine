@@ -42,6 +42,28 @@ class LykenoxSpeechModelTests(unittest.TestCase):
         self.assertEqual(tuple(output["duration_prediction"].shape), (1, 4))
         self.assertGreater(model.parameter_count(), 0)
 
+    def test_teacher_durations_are_not_clipped_by_inference_limit(self) -> None:
+        config = LykenoxSpeechConfig(
+            vocab_size=128,
+            hidden_size=32,
+            encoder_layers=1,
+            encoder_heads=4,
+            max_duration_frames=5,
+        )
+        model = LykenoxSpeechAcousticModel(config)
+        token_ids = torch.tensor([[5, 6]], dtype=torch.long)
+        durations = torch.tensor([[8, 3]], dtype=torch.long)
+        output = model(token_ids, durations=durations)
+        self.assertEqual(tuple(output["mel"].shape), (1, 11, config.mel_bins))
+
+    def test_negative_teacher_duration_is_rejected(self) -> None:
+        config = LykenoxSpeechConfig(vocab_size=128, hidden_size=32, encoder_layers=1, encoder_heads=4)
+        model = LykenoxSpeechAcousticModel(config)
+        token_ids = torch.tensor([[5, 6]], dtype=torch.long)
+        durations = torch.tensor([[2, -1]], dtype=torch.long)
+        with self.assertRaises(ValueError):
+            model(token_ids, durations=durations)
+
     def test_model_can_backpropagate(self) -> None:
         config = LykenoxSpeechConfig(vocab_size=128, hidden_size=32, encoder_layers=1, encoder_heads=4)
         model = LykenoxSpeechAcousticModel(config)
