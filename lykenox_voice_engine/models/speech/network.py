@@ -25,12 +25,26 @@ class DurationPredictor(nn.Module):
         )
         self.proj = nn.Linear(hidden_size, 1)
 
-    def forward(self, encoded: torch.Tensor) -> torch.Tensor:
-        x = encoded.transpose(1, 2)
+    def forward(
+        self,
+        encoded: torch.Tensor,
+        token_mask: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        valid = (
+            torch.ones(encoded.shape[:2], dtype=torch.bool, device=encoded.device)
+            if token_mask is None
+            else token_mask.bool()
+        )
+        # Transformer padding positions can contain residual activations even when
+        # excluded as attention keys. Zero them before the temporal convolution so
+        # a padded neighbor cannot affect the final valid token in a shorter item.
+        masked_encoded = encoded * valid.unsqueeze(-1).to(encoded.dtype)
+        x = masked_encoded.transpose(1, 2)
         x = self.net[0](x).transpose(1, 2)
         x = self.net[1](x)
         x = self.net[2](x)
-        return torch.nn.functional.softplus(self.proj(x).squeeze(-1))
+        prediction = torch.nn.functional.softplus(self.proj(x).squeeze(-1))
+        return torch.where(valid, prediction, torch.zeros_like(prediction))
 
 
 class LykenoxSpeechAcousticModel(nn.Module):
@@ -103,12 +117,7 @@ class LykenoxSpeechAcousticModel(nn.Module):
             self.embedding(token_ids),
             src_key_padding_mask=~valid_tokens,
         )
-        duration_prediction = self.duration_predictor(encoded)
-        duration_prediction = torch.where(
-            valid_tokens,
-            duration_prediction,
-            torch.zeros_like(duration_prediction),
-        )
+        duration_prediction = self.duration_predictor(encoded, valid_tokens)
 
         if durations is None:
             regulated_durations = torch.round(duration_prediction).to(torch.long)
