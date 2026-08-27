@@ -16,6 +16,7 @@ import torch
 import torchaudio
 from torch.utils.data import Dataset
 
+from lykenox_voice_engine.audio.io import load_audio
 from lykenox_voice_engine.core.spanish_text_frontend import SpanishTextFrontend
 from lykenox_voice_engine.models.speech import LykenoxSpeechConfig
 
@@ -41,7 +42,7 @@ class MelFeatureExtractor:
         )
 
     def __call__(self, wav_path: Path) -> torch.Tensor:
-        waveform, sample_rate = torchaudio.load(str(wav_path))
+        waveform, sample_rate = load_audio(wav_path)
         if waveform.shape[0] > 1:
             waveform = waveform.mean(dim=0, keepdim=True)
         if sample_rate != self.config.sample_rate:
