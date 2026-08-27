@@ -1,0 +1,6 @@
+utterance_id,wav_path,text
+speech_0007_a51c59448b2a,D:\Proyectos\LYKENOX-Voice-Engine\datasets\lykenox\identity_voice\prepared\speech\wav\speech_0007_a51c59448b2a.wav,Hoy voy a leer este texto con claridad y sin forzar la voz.
+speech_0008_da08a9ccf7ae,D:\Proyectos\LYKENOX-Voice-Engine\datasets\lykenox\identity_voice\prepared\speech\wav\speech_0008_da08a9ccf7ae.wav,El objetivo es que mi identidad vocal se conserve en cada frase.
+speech_0009_b56bc8f9abf4,D:\Proyectos\LYKENOX-Voice-Engine\datasets\lykenox\identity_voice\prepared\speech\wav\speech_0009_b56bc8f9abf4.wav,Quiero que este sistema pueda leer cualquier texto en español.
+speech_0010_40f06f5c95fa,D:\Proyectos\LYKENOX-Voice-Engine\datasets\lykenox\identity_voice\prepared\speech\wav\speech_0010_40f06f5c95fa.wav,"Esta grabación debe sonar tranquila, limpia y parecida a mí."
+speech_0011_0f2509233ec3,D:\Proyectos\LYKENOX-Voice-Engine\datasets\lykenox\identity_voice\prepared\speech\wav\speech_0011_0f2509233ec3.wav,"Hola, esta es mi voz natural para el modelo LYKENOX."

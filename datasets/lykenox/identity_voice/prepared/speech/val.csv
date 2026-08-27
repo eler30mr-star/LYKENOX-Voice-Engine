@@ -1,0 +1,4 @@
+utterance_id,wav_path,text
+speech_0001_e8e584084dd6,D:\Proyectos\LYKENOX-Voice-Engine\datasets\lykenox\identity_voice\prepared\speech\wav\speech_0001_e8e584084dd6.wav,Frases emocionales
+speech_0012_da1f1bf6f1f9,D:\Proyectos\LYKENOX-Voice-Engine\datasets\lykenox\identity_voice\prepared\speech\wav\speech_0012_da1f1bf6f1f9.wav,"Hola, esta es mi voz natural para el modelo LYKENOX."
+speech_0023_fcefc8faaf26,D:\Proyectos\LYKENOX-Voice-Engine\datasets\lykenox\identity_voice\prepared\speech\wav\speech_0023_fcefc8faaf26.wav,"Hola, esta es mi voz natural para el modelo LYKENOX."

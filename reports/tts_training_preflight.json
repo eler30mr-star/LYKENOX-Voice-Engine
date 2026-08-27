@@ -1,0 +1,80 @@
+{
+  "runtime": {
+    "python": "3.12.14",
+    "torch": "2.13.0+cpu",
+    "torch_cuda_available": false,
+    "librosa": "1.0.0",
+    "soundfile": "0.14.0"
+  },
+  "dataset": {
+    "train_csv": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech\\train.auto.csv",
+    "val_csv": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech\\val.auto.csv",
+    "train_rows": 30,
+    "val_rows": 3,
+    "missing_wavs": []
+  },
+  "samples_checked": [
+    {
+      "utterance_id": "speech_0002_1906c1225a84",
+      "wav_exists": true,
+      "sample_rate": 48000,
+      "duration_sec": 10.17,
+      "text_chars": 14,
+      "mel_shape": [
+        80,
+        1907
+      ],
+      "mel_finite": true
+    },
+    {
+      "utterance_id": "speech_0003_f18f379dc570",
+      "wav_exists": true,
+      "sample_rate": 48000,
+      "duration_sec": 15.534,
+      "text_chars": 13,
+      "mel_shape": [
+        80,
+        2913
+      ],
+      "mel_finite": true
+    },
+    {
+      "utterance_id": "speech_0004_0f21b2989f96",
+      "wav_exists": true,
+      "sample_rate": 48000,
+      "duration_sec": 22.338,
+      "text_chars": 17,
+      "mel_shape": [
+        80,
+        4189
+      ],
+      "mel_finite": true
+    },
+    {
+      "utterance_id": "speech_0005_4f0abbeb4201",
+      "wav_exists": true,
+      "sample_rate": 48000,
+      "duration_sec": 23.777,
+      "text_chars": 12,
+      "mel_shape": [
+        80,
+        4459
+      ],
+      "mel_finite": true
+    },
+    {
+      "utterance_id": "speech_0006_ed1f01e7ad76",
+      "wav_exists": true,
+      "sample_rate": 48000,
+      "duration_sec": 10.52,
+      "text_chars": 52,
+      "mel_shape": [
+        80,
+        1973
+      ],
+      "mel_finite": true
+    }
+  ],
+  "ready_for_cpu_microtraining": true,
+  "elapsed_sec": 4.247
+}

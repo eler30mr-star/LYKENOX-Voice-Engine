@@ -1,0 +1,104 @@
+{
+  "source_dir": "D:\\entrenamiento de voz\\nivel 1",
+  "imported": [
+    {
+      "source": "D:\\entrenamiento de voz\\nivel 1\\Cambios de registro.m4a",
+      "mode": "singing",
+      "status": "accepted",
+      "reason": "F0 no detectable; aceptado para identidad si la toma suena limpia",
+      "duration_sec": 12.608,
+      "f0_hz": 0.0,
+      "wav_path": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\singing\\accepted\\import-cambios-de-registro_13fc00424fd7.wav"
+    },
+    {
+      "source": "D:\\entrenamiento de voz\\nivel 1\\Canto cin mas energía.m4a",
+      "mode": "singing",
+      "status": "accepted",
+      "reason": "F0 no detectable; aceptado para identidad si la toma suena limpia",
+      "duration_sec": 11.587,
+      "f0_hz": 0.0,
+      "wav_path": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\singing\\accepted\\import-canto-cin-mas-energía_35084dfac601.wav"
+    },
+    {
+      "source": "D:\\entrenamiento de voz\\nivel 1\\Canto suave.m4a",
+      "mode": "singing",
+      "status": "accepted",
+      "reason": "F0 no detectable; aceptado para identidad si la toma suena limpia",
+      "duration_sec": 15.627,
+      "f0_hz": 0.0,
+      "wav_path": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\singing\\accepted\\import-canto-suave_8279a575df8b.wav"
+    },
+    {
+      "source": "D:\\entrenamiento de voz\\nivel 1\\Frases emocionales.m4a",
+      "mode": "speech",
+      "status": "accepted",
+      "reason": "F0 no detectable; aceptado para identidad si la toma suena limpia",
+      "duration_sec": 11.401,
+      "f0_hz": 0.0,
+      "wav_path": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\speech\\accepted\\import-frases-emocionales_e8e584084dd6.wav"
+    },
+    {
+      "source": "D:\\entrenamiento de voz\\nivel 1\\Frases rápidas .m4a",
+      "mode": "speech",
+      "status": "accepted",
+      "reason": "F0 no detectable; aceptado para identidad si la toma suena limpia",
+      "duration_sec": 10.17,
+      "f0_hz": 0.0,
+      "wav_path": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\speech\\accepted\\import-frases-rápidas-_1906c1225a84.wav"
+    },
+    {
+      "source": "D:\\entrenamiento de voz\\nivel 1\\Frases suaves.m4a",
+      "mode": "speech",
+      "status": "accepted",
+      "reason": "F0 no detectable; aceptado para identidad si la toma suena limpia",
+      "duration_sec": 15.534,
+      "f0_hz": 0.0,
+      "wav_path": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\speech\\accepted\\import-frases-suaves_f18f379dc570.wav"
+    },
+    {
+      "source": "D:\\entrenamiento de voz\\nivel 1\\Habla con energía.m4a",
+      "mode": "speech",
+      "status": "accepted",
+      "reason": "F0 no detectable; aceptado para identidad si la toma suena limpia",
+      "duration_sec": 22.338,
+      "f0_hz": 0.0,
+      "wav_path": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\speech\\accepted\\import-habla-con-energía_0f21b2989f96.wav"
+    },
+    {
+      "source": "D:\\entrenamiento de voz\\nivel 1\\Habla normal.m4a",
+      "mode": "speech",
+      "status": "accepted",
+      "reason": "F0 no detectable; aceptado para identidad si la toma suena limpia",
+      "duration_sec": 23.777,
+      "f0_hz": 0.0,
+      "wav_path": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\speech\\accepted\\import-habla-normal_4f0abbeb4201.wav"
+    },
+    {
+      "source": "D:\\entrenamiento de voz\\nivel 1\\Notas largas.m4a",
+      "mode": "singing",
+      "status": "accepted",
+      "reason": "F0 no detectable; aceptado para identidad si la toma suena limpia",
+      "duration_sec": 28.328,
+      "f0_hz": 0.0,
+      "wav_path": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\singing\\accepted\\import-notas-largas_a184adfb3336.wav"
+    },
+    {
+      "source": "D:\\entrenamiento de voz\\nivel 1\\Vocales sostenidas.m4a",
+      "mode": "singing",
+      "status": "accepted",
+      "reason": "F0 no detectable; aceptado para identidad si la toma suena limpia",
+      "duration_sec": 18.088,
+      "f0_hz": 0.0,
+      "wav_path": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\singing\\accepted\\import-vocales-sostenidas_b92f64ce27c7.wav"
+    }
+  ],
+  "summary": {
+    "base_dir": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice",
+    "speech_accepted": 5,
+    "singing_accepted": 5,
+    "speech_prompts": 5,
+    "singing_prompts": 5,
+    "ready_for_first_speech_training": false,
+    "ready_for_first_singing_training": false
+  }
+}

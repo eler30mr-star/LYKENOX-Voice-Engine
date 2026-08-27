@@ -1,0 +1,113 @@
+# LYKENOX Spanish Lite Reclist
+# Vocales
+a
+e
+i
+o
+u
+# Ba...
+ba
+be
+bi
+bo
+bu
+# Da...
+da
+de
+di
+do
+du
+# Ga...
+ga
+ge
+gi
+go
+gu
+# Pa...
+pa
+pe
+pi
+po
+pu
+# Ta...
+ta
+te
+ti
+to
+tu
+# Ka...
+ka
+ke
+ki
+ko
+ku
+# Fa...
+fa
+fe
+fi
+fo
+fu
+# Sa...
+sa
+se
+si
+so
+su
+# Ma...
+ma
+me
+mi
+mo
+mu
+# Na...
+na
+ne
+ni
+no
+nu
+# Ña...
+ña
+ñe
+ñi
+ño
+ñu
+# La...
+la
+le
+li
+lo
+lu
+# Ra...
+ra
+re
+ri
+ro
+ru
+# Rra...
+rra
+rre
+rri
+rro
+rru
+# Cha...
+cha
+che
+chi
+cho
+chu
+# Ya...
+ya
+ye
+yi
+yo
+yu
+# Silencios iniciales (opcional pero util)
+- a
+- e
+- i
+- o
+- u
+
+# Test phrase extensions
+bai
+con

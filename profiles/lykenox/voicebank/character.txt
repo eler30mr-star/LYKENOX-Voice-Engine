@@ -1,0 +1,6 @@
+name=LYKENOX Spanish Lite
+image=lykenox.png
+author=LYKENOX Voice Engine
+web=https://github.com/lykenox/voice-engine
+sample_rate=48000
+encoding=UTF-8

@@ -223,6 +223,34 @@ class OpenUtauWorldlineEngine:
         values = [float(f0_ptr[index]) for index in range(length) if f0_ptr[index] > 0]
         return sum(values) / len(values) if values else 0.0
 
+    def analyze_f0(self, samples: list[float]) -> dict[str, float | int]:
+        """Detailed F0 analysis including frame counts and confidence."""
+
+        if not samples:
+            return {"mean_f0_hz": 0.0, "total_frames": 0, "voiced_frames": 0, "confidence": 0.0, "duration_sec": 0.0}
+
+        dll = self._load()
+        sample_array = (ctypes.c_float * len(samples))(*samples)
+        f0_ptr = ctypes.POINTER(ctypes.c_double)()
+        length = dll.F0(sample_array, len(samples), self.sample_rate, FRAME_MS, 0, ctypes.byref(f0_ptr))
+
+        if length <= 0 or not f0_ptr:
+            return {"mean_f0_hz": 0.0, "total_frames": 0, "voiced_frames": 0, "confidence": 0.0, "duration_sec": len(samples) / self.sample_rate}
+
+        values = [float(f0_ptr[index]) for index in range(length)]
+        voiced = [v for v in values if v > 0]
+
+        mean_f0 = sum(voiced) / len(voiced) if voiced else 0.0
+        confidence = (len(voiced) / length) if length > 0 else 0.0
+
+        return {
+            "mean_f0_hz": round(mean_f0, 2),
+            "total_frames": length,
+            "voiced_frames": len(voiced),
+            "confidence": round(confidence * 100, 1),
+            "duration_sec": round(len(samples) / self.sample_rate, 2)
+        }
+
     def _build_request(
         self,
         item: OpenUtauRequest,

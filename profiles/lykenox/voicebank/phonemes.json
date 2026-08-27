@@ -1,0 +1,9 @@
+{
+  "vowels": ["a", "e", "i", "o", "u"],
+  "consonants": ["b", "d", "g", "p", "t", "k", "f", "s", "j", "m", "n", "ñ", "l", "r", "rr", "ch", "y"],
+  "aliases": "reclist.txt",
+  "microtest": ["a", "i", "u", "e", "o", "ma", "mi", "la", "ba", "ya", "bai"],
+  "phrase_aliases": {
+    "baila conmigo": ["bai", "la", "con", "mi", "go"]
+  }
+}

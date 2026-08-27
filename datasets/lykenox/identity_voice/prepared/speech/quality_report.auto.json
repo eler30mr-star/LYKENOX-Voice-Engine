@@ -1,0 +1,11 @@
+{
+  "output_manifest": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech\\manifest.auto.jsonl",
+  "output_train_csv": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech\\train.auto.csv",
+  "output_val_csv": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech\\val.auto.csv",
+  "output_report": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech\\quality_report.auto.json",
+  "updated_count": 13,
+  "missing_count": 0,
+  "source": "faster-whisper-base-cpu-int8",
+  "ready_for_trial_training": true,
+  "ready_for_production_training": false
+}

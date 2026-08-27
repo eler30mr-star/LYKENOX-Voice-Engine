@@ -1,0 +1,20 @@
+{
+  "usable_manifest": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech\\manifest.filtered.jsonl",
+  "usable_train_csv": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech\\train.filtered.csv",
+  "usable_val_csv": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech\\val.filtered.csv",
+  "blocked_csv": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech\\blocked.filtered.csv",
+  "report_path": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech\\quality_report.filtered.json",
+  "total_rows": 33,
+  "usable_rows": 6,
+  "train_rows": 5,
+  "val_rows": 1,
+  "blocked_rows": 27,
+  "usable_minutes": 1.05,
+  "segmentation_minutes": 24.6,
+  "record_more_recommended": true,
+  "blocked_reasons": {
+    "generic_metadata": 5,
+    "duplicate_over_limit": 9,
+    "needs_segmentation": 13
+  }
+}

@@ -1,0 +1,9 @@
+name: LYKENOX Spanish Lite
+author: LYKENOX Voice Engine
+language: es
+voice: lite
+description: Spanish sample-based voicebank for LYKENOX Voice Engine.
+version: 1.0
+image: lykenox.png
+sample_rate: 48000
+encoding: UTF-8

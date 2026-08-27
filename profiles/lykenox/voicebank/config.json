@@ -1,0 +1,11 @@
+{
+  "name": "LYKENOX Spanish Lite",
+  "language": "es",
+  "sample_rate": 48000,
+  "channels": 1,
+  "sample_width_bits": 16,
+  "renderer": "internal_concat_pcm",
+  "format": "utau_style_oto",
+  "version": 1,
+  "recommended": true
+}

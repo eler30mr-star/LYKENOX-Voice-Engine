@@ -1,0 +1,10 @@
+{
+  "source_blocked_csv": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech\\blocked.filtered.csv",
+  "output_dir": "D:\\Proyectos\\LYKENOX-Voice-Engine\\datasets\\lykenox\\identity_voice\\prepared\\speech_segmented",
+  "source_files": 13,
+  "segments": 132,
+  "train_rows": 118,
+  "val_rows": 14,
+  "minutes": 23.84,
+  "ready_for_trial_training": true
+}
