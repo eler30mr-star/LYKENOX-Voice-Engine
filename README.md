@@ -1,20 +1,41 @@
 # LYKENOX Voice Engine
 
-Personal LYKENOX identity voice engine for direct Spanish speech and singing synthesis.
+Standalone LYKENOX identity voice product for direct Spanish speech and singing synthesis.
 
 Final objective:
 
 ```text
-text -> LYKENOX identity model -> speech.wav
-lyrics + melody -> LYKENOX identity model -> singing.wav
+text -> LYKENOX speech identity model -> speech.wav
+lyrics + melody/score -> LYKENOX singing identity model -> singing.wav
 ```
 
-The main architecture is not RVC, SVC, or post-conversion of another voice. The target is
-an original voice model trained/adapted from the owner's recordings. WORLDLINE-R and the
-UTAU-style voicebank are kept as local baselines and fallback research tools, not as the
-final neural model.
+LYKENOX is the product. The final application must not require Piper, Coqui, OpenUtau,
+RVC, SVC, a cloud API, a source speaker/singer, or a reference WAV at inference time.
+Published architectures and redistributable infrastructure libraries may be used or
+implemented internally, but the shipped runtime must load self-contained LYKENOX model
+artifacts directly.
 
-See `docs/LYKENOX_IDENTITY_VOICE_ARCHITECTURE.md`.
+WORLDLINE-R and the UTAU-style voicebank remain local baselines/fallback research tools,
+not the final neural identity model.
+
+Architecture documents:
+
+- `docs/LYKENOX_IDENTITY_VOICE_ARCHITECTURE.md`
+- `docs/PRODUCT_INDEPENDENCE.md`
+
+## Product boundary
+
+LYKENOX owns and keeps stable:
+
+- master identity dataset and metadata
+- Spanish frontend contracts
+- model manifest/artifact layout
+- training orchestration interfaces
+- speech and singing runtime interfaces
+- local API and desktop UI
+
+Training recipes and neural architecture families are replaceable implementation details.
+They must not become mandatory third-party product runtimes.
 
 ## Run
 
@@ -33,18 +54,21 @@ Default API: `http://127.0.0.1:8765`.
 
 ## Identity Dataset
 
-Start here for the real model objective:
+The engine-neutral master dataset is the source of truth:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\prepare_identity_dataset.py
 .\.venv\Scripts\python.exe scripts\run_app.py
 ```
 
-Open `Grabar Identidad` and record full Spanish speech and singing phrases. These
-recordings are the source dataset for the future LYKENOX personal speech/singing model.
+Open `Grabar Identidad` and record full Spanish speech and singing phrases. Trainer-specific
+metadata must be generated from this master dataset; it must never replace it.
 
 Target API:
 
-- `POST /speak`: direct text-to-speech with the trained LYKENOX identity model.
-- `POST /sing`: direct text-to-singing with lyrics and notes.
+- `POST /speak`: direct text-to-speech with the persistent LYKENOX speech model.
+- `POST /sing`: direct text-to-singing with lyrics and notes using the persistent LYKENOX singing model.
 - `POST /synthesize`: legacy WORLDLINE/voicebank compatibility endpoint.
+
+Until neural artifacts actually exist, `/speak` and `/sing` must fail honestly rather than
+fall back to another voice or a placeholder.
