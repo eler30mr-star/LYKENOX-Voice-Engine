@@ -68,6 +68,23 @@ F0 and voicing used during the isolated vocoder run are extracted from the owned
 
 The acoustic model must predict the same F0/voicing contract from text/prosody before product inference is considered complete.
 
-## Next engineering gate
+## Current engineering gate
 
-Create a versioned persistent F0/voicing target cache aligned exactly to the speech mel frames, with dataset/config/provenance checks. Then add acoustic-model F0 and voicing prediction heads and validate them with a bounded CPU smoke before any end-to-end unseen-text synthesis.
+The persistent F0/voicing cache implementation is now defined by `speech-pitch-cache-v1`. It records one target per speech mel frame, hashes the owned source WAV and manifests, verifies centered mel/wave frame alignment, writes per-target artifact hashes, and exposes an indexed loader for the future acoustic dataset.
+
+Run the bounded/resumable cache builder:
+
+```powershell
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_pitch_cache
+```
+
+If it returns `status: incomplete`, rerun the identical command. The pitch-cache gate is closed only when every train/val utterance reloads exactly through the completed index and the report returns:
+
+```text
+status: pass
+all_targets_exact_mel_length: true
+all_centered_frame_counts_match_mel: true
+next_gate: add_acoustic_f0_voicing_heads
+```
+
+Only after that local pass should the acoustic model gain frame-level F0 and voicing prediction heads.
