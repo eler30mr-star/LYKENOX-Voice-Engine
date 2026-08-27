@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This milestone starts the first neural speech stack owned by LYKENOX Voice Engine.
+This milestone builds the first neural speech stack owned by LYKENOX Voice Engine.
 It is intentionally independent of Piper, Coqui, OpenUtau, hosted APIs, reference-audio
 cloning, and third-party TTS executables.
 
@@ -12,10 +12,11 @@ Product contract:
 Spanish text -> LYKENOX frontend -> LYKENOX acoustic model -> LYKENOX vocoder -> speech.wav
 ```
 
-The current v0 implementation covers the versioned Spanish phoneme frontend, the acoustic
-text-to-mel core, real-data mel caching, and the first LYKENOX-owned alignment path. It
-does **not** yet claim finished TTS quality because duration outlier correction, the
-vocoder, export, and perceptual validation are still gates.
+The current v0 implementation covers the versioned Spanish phoneme frontend, real-data
+mel caching, an owned persistent CTC/Viterbi aligner, cleaned `alignment-v3` duration
+supervision, and the first aligned acoustic optimization gate. It does **not** yet claim
+finished TTS quality because the batched training contract, vocoder, long identity
+training, export, and perceptual validation are still gates.
 
 ## Design rules
 
@@ -35,18 +36,22 @@ vocoder, export, and perceptual validation are still gates.
 - learned token embedding
 - Transformer text encoder
 - duration predictor
-- deterministic length regulator
+- tensorized duration-conditioned length regulator
 - mel decoder
 - default 80-bin mel output
 - 24 kHz target sample rate
 
+The length regulator no longer uses Python loops or duration-dependent `.item()` calls.
+It emits exact per-item mel lengths and a frame mask for padded batches. Teacher durations
+are never clipped by the inference-only `max_duration_frames` safety bound.
+
 Measured on the target CPU during the synthetic gate:
 
-- parameters: 1,967,889
+- parameters: 1,967,889 with the original temporary vocabulary size
 - 10 forward/backward/update steps: pass
 - mean step time: 0.0352 seconds
 
-Measured during the first real-data acoustic smoke test:
+Measured during the first real-data plumbing smoke with temporary uniform durations:
 
 - 118 training utterances available
 - 20 update steps: pass
@@ -54,19 +59,18 @@ Measured during the first real-data acoustic smoke test:
 - last loss: 1.029874
 - mean step time: 0.0668 seconds
 
-These results prove mechanical local CPU viability for the current acoustic core. They do
-not prove final voice quality.
+Uniform durations were plumbing-only and are forbidden for production training.
 
 ## Spanish frontend
 
-The product frontend is now versioned as:
+The product frontend is versioned as:
 
 ```text
 es-phoneme-v1
 ```
 
-`spanish_text_frontend.py` exposes the stable product interface and
-`spanish_g2p.py` contains LYKENOX-owned pronunciation rules.
+`spanish_text_frontend.py` exposes the stable product interface and `spanish_g2p.py`
+contains LYKENOX-owned pronunciation rules.
 
 Current properties:
 
@@ -75,53 +79,43 @@ Current properties:
 - phoneme tokens instead of temporary raw-grapheme training tokens
 - local handling of `ch`, `ll`, `rr`, `ñ`, `qu`, `gue/gui`, `güe/güi`, soft `c/g`, `j`,
   `b/v`, `z`, and silent `h`
-- explicit `<wb>` word-boundary context token
+- explicit `<wb>` word-boundary context/timing token
 - explicit `<pau_short>` and `<pau_long>` prosodic tokens from punctuation
 - deterministic bootstrap number handling
 - no external phonemizer or TTS frontend dependency
 
-The rule set is versioned so pronunciation improvements can be introduced later without
-silently changing an already-trained model artifact.
+The exact vocabulary is now bound into acoustic checkpoints together with a SHA-256
+checksum. Acoustic model construction uses `SpanishTextFrontend().vocab_size`; the old
+hard-coded 128-symbol assumption is not part of the long-run training contract.
 
 ## Real-data feature pipeline
-
-The real speech dataset passes through:
 
 ```text
 LYKENOX WAV -> LYKENOX audio I/O -> 24 kHz -> 80-bin log-mel -> local feature cache
 ```
 
-The train split currently contains:
+The train split contains:
 
 - 118 utterances
 - 119,897 mel frames
-- cache path under `datasets/lykenox/identity_voice/features/speech/mel-v1/train`
+- cache under `datasets/lykenox/identity_voice/features/speech/mel-v1/train`
 
 Audio decoding is owned by the LYKENOX audio boundary and does not require TorchCodec.
-The mel cache remains reusable after the phoneme frontend change because it contains audio
-features only; token IDs are generated dynamically from the text.
+The mel cache is audio-only; token IDs are generated dynamically from the versioned
+frontend.
 
-## Alignment decision
+## Persistent owned alignment
 
-Uniform token durations were used only for plumbing in the first real-data acoustic smoke
-test. They are explicitly forbidden for production training.
-
-The LYKENOX-owned training-time alignment architecture is:
+Training-time alignment is:
 
 ```text
 real mel
-  -> compact convolutional acoustic frontend
-  -> bidirectional GRU
+  -> compact LYKENOX acoustic aligner
   -> CTC phoneme posteriors
-  -> LYKENOX monotonic Viterbi forced alignment
-  -> exact mel-frame durations per acoustic token
+  -> LYKENOX monotonic Viterbi path
+  -> LYKENOX timing ownership policy
+  -> exact model-token durations
 ```
-
-Files:
-
-- `lykenox_voice_engine/models/speech/alignment.py`
-- `lykenox_voice_engine/core/ctc_alignment.py`
-- `lykenox_voice_engine/training/speech_alignment_smoke.py`
 
 The `es-phoneme-v1` alignment smoke passed on the target laptop:
 
@@ -134,83 +128,127 @@ The `es-phoneme-v1` alignment smoke passed on the target laptop:
 - exact duration coverage: pass
 - every aligned content token non-zero: pass
 
-`<wb>` is encoder context only and is excluded from CTC targets. Pause tokens remain
-alignable because they represent real acoustic/prosodic time.
-
-## Persistent aligner recovery
-
-The first persistent run was interrupted by the local executor timeout after it had already
-written checkpoints. The existing `best.pt` was recovered instead of discarding work.
-The recovery gate validated:
+The persistent aligner checkpoint recovered from the interrupted long run passed held-out
+validation:
 
 - best checkpoint epoch: 18
-- stored validation CTC loss: 1.033748
-- recomputed validation CTC loss: 1.033748
+- stored/recomputed validation CTC loss: 1.033748
 - random-initialization validation CTC loss: 13.918439
 - held-out forced-alignment success: 12/12
 - held-out exact duration coverage: 12/12
 - held-out content tokens non-zero: 12/12
 
-The recovered checkpoint generated duration caches successfully for:
+## alignment-v3 timing contract
 
-- train: 118/118, 0 failures
-- validation: 14/14, 0 failures
+Two mechanical duration bugs were found and corrected without retraining the validated
+aligner:
 
-Those facts validate the checkpoint and cache generation mechanically, but the duration
-audit found 23 utterances containing at least one non-pause token above the current
-100-frame warning threshold. Acoustic training remains blocked until those outliers are
-explained or corrected.
+1. leading/trailing blank runs were being folded into the first/last phoneme;
+2. long interior blank runs between words were being split into neighboring phonemes.
 
-## Duration outlier gate
+The current timing policy is:
 
-The current CTC blank-to-token policy has a specific boundary risk: a leading CTC blank
-run can be assigned to the first acoustic token and a trailing blank run can be assigned
-to the last acoustic token. If recordings contain boundary silence, this can create an
-artificially long first or last phoneme even when the monotonic path itself is legal.
-
-Before changing the aligner or deleting data, run the fast cache-only forensic review:
-
-```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_duration_outlier_review
+```text
+leading blank              -> <bos>
+trailing blank             -> <eos>
+blank between words        -> <wb>
+blank adjacent to pause    -> <pau_short>/<pau_long>
+intra-word blank           -> split between neighboring phonemes
 ```
 
-It performs no training and no neural inference. It classifies every >100-frame non-pause
-outlier as first, last, or interior, reports milliseconds and token-relative statistics,
-and writes `duration_outlier_review.json` inside the active duration cache. A boundary-heavy
-result supports correcting blank-boundary handling and regenerating durations from the
-same validated epoch-18 checkpoint; an interior-heavy result requires inspecting actual
-alignment failures instead.
+The final cleaned cache is versioned as `alignment-v3` and was generated for all 132
+utterances:
 
-## Hard gates before real acoustic training
+- train: 118/118
+- validation: 14/14
+- outlier tokens above 100 frames: 0
+- outlier utterances: 0
+- non-pause duration median: 5 frames
+- non-pause duration p95: 10 frames
+- non-pause duration max: 99 frames
 
-Do not start a long acoustic run until all of these are satisfied:
+The validated aligner remains a training tool; normal product inference does not require it.
 
-1. synthetic CPU probe passes
-2. real mel cache is complete
-3. real-data acoustic smoke test decreases loss without NaN/Inf
-4. `es-phoneme-v1` pronunciation tests pass
-5. CTC alignment smoke passes using `es-phoneme-v1`
-6. persistent aligner checkpoint passes held-out validation
-7. production duration caches are generated without alignment failures
-8. duration outliers are explained/corrected and re-audited
-9. the acoustic model is re-smoked using real aligned durations instead of uniform durations
-10. a LYKENOX-owned vocoder path is designed and separately benchmarked
-11. checkpoint/export manifest is versioned
+## Aligned acoustic gate
 
-## What comes next
+The first acoustic smoke using real cleaned durations passed on CPU:
 
-Professional next milestones, in order:
+- alignment: `alignment-v3`
+- items used: 8
+- steps: 40
+- parameters: 1,949,073 with the exact `es-phoneme-v1` vocabulary size
+- first/last total training loss: 1.411191 -> 0.604989
+- first/last acoustic loss: 1.309268 -> 0.583238
+- first/last duration loss: 1.019234 -> 0.217505
+- fixed-probe total loss: 1.411519 -> 0.766106
+- fixed-probe acoustic loss: 1.310069 -> 0.744595
+- fixed-probe duration loss: 1.014506 -> 0.215107
+- mean CPU step time: 0.1265 seconds
 
-1. Run the cache-only duration outlier forensic review.
-2. Correct boundary blank assignment if the outliers are boundary-heavy; otherwise inspect interior failures.
-3. Regenerate/audit duration caches from the already validated epoch-18 checkpoint.
-4. Re-run the acoustic smoke test with real durations.
-5. Design and benchmark a compact LYKENOX vocoder.
-6. Train a short experimental speech model only after timing/memory/quality gates pass.
-7. Export a self-contained LYKENOX artifact and connect it to `/speak`.
+This proves the real path:
+
+```text
+real WAV -> mel-v1 -> alignment-v3 -> es-phoneme-v1 -> acoustic model -> loss -> backward -> update
+```
+
+It does not prove final identity, intelligibility, waveform quality, or long-run training
+stability.
+
+## Batched acoustic training contract
+
+Long training is blocked until the explicit batching/checkpoint gate passes. The contract
+now lives in:
+
+- `training/speech_aligned_data.py`: alignment-v3 dataset, padded batches, token/mel masks
+- `training/speech_losses.py`: masked acoustic and duration losses
+- `models/speech/network.py`: tensorized length regulation and exact frame masks
+- `training/speech_acoustic_artifact.py`: versioned checkpoint + exact vocabulary/provenance
+- `training/speech_training_contract_smoke.py`: short CPU gate for all of the above
+
+A training checkpoint records:
+
+- checkpoint format version and kind
+- `es-phoneme-v1` frontend version
+- complete vocabulary and vocabulary SHA-256
+- exact acoustic model configuration
+- epoch/global step/validation metric
+- train and validation manifest SHA-256 hashes
+- alignment-v3 duration-audit SHA-256
+- mel-cache version
+- model state and optional optimizer state
+
+Padded mel frames must contribute exactly zero acoustic loss, and padded text tokens must
+contribute exactly zero duration loss.
+
+## Hard gates before a long acoustic run
+
+1. synthetic CPU probe: **passed**
+2. real mel cache: **passed**
+3. real-data plumbing smoke: **passed**
+4. `es-phoneme-v1`: **active**
+5. CTC alignment smoke: **passed**
+6. persistent aligner held-out validation: **passed**
+7. complete duration cache: **passed**
+8. duration outlier correction/audit: **passed with alignment-v3**
+9. aligned acoustic smoke: **passed**
+10. batched/masked/export-oriented training-contract smoke: **next gate**
+11. LYKENOX-owned vocoder CPU feasibility benchmark: pending
+12. bounded short identity-training experiment: pending
+13. runtime export and `/speak` integration: pending
+
+Do not start a long acoustic run before gates 10 and 11 pass.
+
+## Next controlled command
+
+```powershell
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_training_contract_smoke
+```
+
+If it passes, the next architectural gate is a bounded CPU benchmark of a compact
+LYKENOX-owned vocoder path. A long identity run is still not authorized at that point.
 
 ## Success definition
 
-Speech v0 is not considered a usable TTS until unseen Spanish text can produce intelligible
+Speech v0 is not considered usable TTS until unseen Spanish text produces intelligible
 speech with the persistent LYKENOX identity without reference audio, source conversion,
 network access, or a third-party TTS executable.
