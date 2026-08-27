@@ -24,7 +24,7 @@ from lykenox_voice_engine.training.alignment_artifact import (
 from lykenox_voice_engine.training.speech_aligner_train import _dataset
 
 
-DURATION_CACHE_VERSION = "alignment-v1"
+DURATION_CACHE_VERSION = "alignment-v2"
 
 
 def _percentile(values: list[int], percentile: float) -> int | None:
@@ -33,6 +33,15 @@ def _percentile(values: list[int], percentile: float) -> int | None:
     ordered = sorted(values)
     index = round((len(ordered) - 1) * percentile)
     return int(ordered[index])
+
+
+def _duration_stats(values: list[int]) -> dict[str, int | float | None]:
+    return {
+        "count": len(values),
+        "median": round(statistics.median(values), 2) if values else None,
+        "p95": _percentile(values, 0.95),
+        "max": max(values) if values else None,
+    }
 
 
 def generate_duration_cache(
@@ -68,6 +77,8 @@ def generate_duration_cache(
     split_reports: dict[str, object] = {}
     all_nonpause_durations: list[int] = []
     all_content_durations: list[int] = []
+    leading_boundary_durations: list[int] = []
+    trailing_boundary_durations: list[int] = []
     suspicious_utterances: list[dict[str, object]] = []
 
     model.eval()
@@ -102,11 +113,16 @@ def generate_duration_cache(
                             token_ids,
                             alignment.target_durations,
                             positions,
+                            leading_boundary_frames=alignment.leading_boundary_frames,
+                            trailing_boundary_frames=alignment.trailing_boundary_frames,
                         )
                         if int(full.sum().item()) != int(mel.shape[0]):
                             raise RuntimeError("Duration sum does not match mel frame count")
                         if not bool((alignment.target_durations > 0).all().item()):
                             raise RuntimeError("At least one aligned content token has zero duration")
+
+                        leading_boundary_durations.append(alignment.leading_boundary_frames)
+                        trailing_boundary_durations.append(alignment.trailing_boundary_frames)
 
                         token_values = token_ids.tolist()
                         duration_values = full.tolist()
@@ -147,6 +163,10 @@ def generate_duration_cache(
                             "mel_frames": int(mel.shape[0]),
                             "token_ids": [int(value) for value in token_values],
                             "durations": [int(value) for value in duration_values],
+                            "boundary_frames": {
+                                "leading": alignment.leading_boundary_frames,
+                                "trailing": alignment.trailing_boundary_frames,
+                            },
                             "content": content_rows,
                             "alignment_score_per_step": float(alignment.score_per_step),
                         }
@@ -159,6 +179,8 @@ def generate_duration_cache(
                                     "path": str(target_path),
                                     "mel_frames": int(mel.shape[0]),
                                     "content_tokens": len(content_rows),
+                                    "leading_boundary_frames": alignment.leading_boundary_frames,
+                                    "trailing_boundary_frames": alignment.trailing_boundary_frames,
                                     "alignment_score_per_step": round(
                                         alignment.score_per_step, 6
                                     ),
@@ -199,29 +221,16 @@ def generate_duration_cache(
         "checkpoint_epoch": payload.get("epoch"),
         "duration_cache_root": str(duration_root),
         "duration_cache_version": DURATION_CACHE_VERSION,
+        "boundary_blank_policy": "leading_to_bos_trailing_to_eos",
         "frame_ms": round(frame_ms, 6),
         "splits": split_reports,
-        "content_duration_frames": {
-            "count": len(all_content_durations),
-            "median": (
-                round(statistics.median(all_content_durations), 2)
-                if all_content_durations
-                else None
-            ),
-            "p95": _percentile(all_content_durations, 0.95),
-            "max": max(all_content_durations) if all_content_durations else None,
-        },
+        "content_duration_frames": _duration_stats(all_content_durations),
         "nonpause_duration_frames": {
-            "count": len(all_nonpause_durations),
-            "median": (
-                round(statistics.median(all_nonpause_durations), 2)
-                if all_nonpause_durations
-                else None
-            ),
-            "p95": _percentile(all_nonpause_durations, 0.95),
-            "max": max(all_nonpause_durations) if all_nonpause_durations else None,
+            **_duration_stats(all_nonpause_durations),
             "warning_threshold": nonpause_warn_frames,
         },
+        "leading_boundary_frames": _duration_stats(leading_boundary_durations),
+        "trailing_boundary_frames": _duration_stats(trailing_boundary_durations),
         "suspicious_utterance_count": len(suspicious_utterances),
         "suspicious_utterances": suspicious_utterances[:30],
         "failures": overall_failures[:30],
