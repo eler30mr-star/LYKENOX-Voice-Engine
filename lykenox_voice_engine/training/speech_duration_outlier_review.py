@@ -99,7 +99,7 @@ def _diagnosis_for_cache(
         "boundary_silence_absorption_likely",
         "boundary_outliers_only",
     }
-    if cache_version == "alignment-v2" and boundary_heavy:
+    if cache_version in {"alignment-v2", "alignment-v3"} and boundary_heavy:
         return "residual_boundary_alignment_outliers", "inspect_residual_boundary_outliers"
     if cache_version == "alignment-v1" and boundary_heavy:
         return raw_diagnosis, "fix_boundary_blank_assignment"
@@ -193,6 +193,7 @@ def review_duration_outliers(
                         float(record.get("alignment_score_per_step", 0.0)), 6
                     ),
                     "boundary_frames": record.get("boundary_frames"),
+                    "timing_frames": record.get("timing_frames"),
                 }
             )
 
@@ -206,6 +207,20 @@ def review_duration_outliers(
     raw_diagnosis = classify_boundary_pattern(boundary_count, interior_count)
     diagnosis, next_gate = _diagnosis_for_cache(raw_diagnosis, cache_version, len(outliers))
 
+    if cache_version == "alignment-v3":
+        policy = (
+            "alignment-v3 keeps leading/trailing blanks on BOS/EOS and routes blank runs "
+            "crossing a word boundary to <wb>; explicit punctuation pauses absorb adjacent "
+            "blank time, while only intra-word blanks are split between phoneme neighbors."
+        )
+    elif cache_version == "alignment-v2":
+        policy = (
+            "alignment-v2 preserves leading CTC blank frames on BOS and trailing blank "
+            "frames on EOS instead of assigning them to spoken phonemes."
+        )
+    else:
+        policy = "alignment-v1 folds boundary blank runs into neighboring spoken tokens."
+
     report = {
         "status": "pass" if not outliers else "review_required",
         "duration_root": str(duration_root),
@@ -217,9 +232,7 @@ def review_duration_outliers(
         "outlier_utterance_count": len(utterance_ids),
         "boundary_outlier_token_count": boundary_count,
         "interior_outlier_token_count": interior_count,
-        "boundary_fraction": (
-            round(boundary_count / len(outliers), 4) if outliers else 0.0
-        ),
+        "boundary_fraction": round(boundary_count / len(outliers), 4) if outliers else 0.0,
         "raw_pattern": raw_diagnosis,
         "diagnosis": diagnosis,
         "role_counts": dict(role_counts),
@@ -232,12 +245,7 @@ def review_duration_outliers(
             "trailing_median": round(statistics.median(trailing_boundaries), 2) if trailing_boundaries else None,
             "trailing_max": max(trailing_boundaries) if trailing_boundaries else None,
         },
-        "algorithmic_policy": (
-            "alignment-v2 preserves leading CTC blank frames on BOS and trailing blank "
-            "frames on EOS instead of assigning them to spoken phonemes."
-            if cache_version == "alignment-v2"
-            else "alignment-v1 folds boundary blank runs into neighboring spoken tokens."
-        ),
+        "algorithmic_policy": policy,
         "next_gate": next_gate,
     }
     report_path = duration_root / "duration_outlier_review.json"
