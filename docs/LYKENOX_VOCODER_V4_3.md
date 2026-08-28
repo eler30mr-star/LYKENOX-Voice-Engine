@@ -19,7 +19,7 @@ carrier = F0 / phase / aperiodic excitation
 mel     = timbre / spectral envelope / amplitude filtering authority
 ```
 
-The carrier is no longer added to a separate mel waveform path. Instead, every audible sample must originate from the carrier and pass through a mel-controlled nonlinear filter.
+The carrier is no longer added to a separate mel waveform path. Every audible sample must originate from the carrier and pass through a mel-controlled nonlinear filter.
 
 Architecture identity:
 
@@ -62,34 +62,21 @@ mel != 0
 
 This prevents the v4.2 failure mode where mel and source paths can split waveform authority in a way that leaves periodic source leakage exposed.
 
-## Richer carrier, stronger filtering obligation
+## Richer carrier and local spectral-contrast objective
 
-V4.1/v4.2 used eight explicit harmonics. Removing harmonics degraded useful voice, so v4.3 does not solve the residual artifact by starving the excitation. The candidate uses 24 deterministic harmonics with `1/sqrt(h)` weighting, total harmonic RMS normalization and a smooth anti-alias guard.
+V4.1/v4.2 used eight explicit harmonics. Removing harmonics degraded useful voice, so v4.3 instead uses 24 deterministic harmonics with `1/sqrt(h)` weighting, total harmonic RMS normalization and a smooth anti-alias guard. The carrier is not a direct waveform; it must pass through the mel-conditioned filter.
 
-The richer carrier is not a direct waveform. It is required to pass through the mel-conditioned filter before projection.
-
-## New target-relative local spectral-contrast loss
-
-Broad-band spectral balance cannot directly detect narrow metallic peaks. V4.3 therefore adds a training-only local log-STFT contrast objective:
-
-```text
-log magnitude spectrum
-  - local frequency-smoothed log magnitude
-  -> local spectral contrast
-  -> compare prediction against paired real target
-```
-
-Because the comparison is target-relative, natural harmonic speech structure is not globally penalized. The objective targets excess narrow peak/notch structure relative to the real recording.
-
-Loss identity:
+V4.3 also adds the training-only target-relative local log-STFT contrast objective:
 
 ```text
 vocoder-local-spectral-contrast-v1
 ```
 
+It compares narrow local peak/notch structure against the paired real waveform instead of globally suppressing natural harmonic speech structure.
+
 ## Architecture smoke — PASSED
 
-The bounded real-data CPU smoke passed locally:
+The bounded real-data CPU smoke passed:
 
 ```text
 status: pass
@@ -121,7 +108,7 @@ benchmark_inference_seconds_median: 0.4167
 benchmark_rtf: 0.4069
 ```
 
-Bounded optimization also reduced the composite, envelope and local-contrast objectives:
+Bounded optimization reduced all required corrective objectives:
 
 ```text
 probe_before.total: 6.311642
@@ -132,11 +119,9 @@ probe_before.local_spectral_contrast: 0.323659
 probe_after.local_spectral_contrast: 0.302628
 ```
 
-This closes the architecture gate. It does not authorize persistent training by itself.
+## Persistent trainer contract
 
-## Persistent trainer candidate
-
-The separate v4.3 checkpoint/trainer contract is now implemented in:
+The separate v4.3 checkpoint/trainer implementation is:
 
 ```text
 lykenox_voice_engine/training/speech_vocoder_v4_3_artifact.py
@@ -149,13 +134,13 @@ Trainer identity:
 v4-3-bounded-resumable-v1
 ```
 
-Production artifact directory, once authorized:
+Production artifact directory:
 
 ```text
 models/lykenox_identity/training/vocoder_mel_filtered_carrier_v4_3/
 ```
 
-The stable target-referenced validation selection score is:
+Stable target-referenced validation selection score:
 
 ```text
 reconstruction
@@ -164,24 +149,37 @@ reconstruction
 + 0.20 * local_spectral_contrast
 ```
 
-Adversarial and feature-matching terms may train the generator after warmup, but they are intentionally excluded from checkpoint selection.
+Adversarial and feature-matching terms may train the generator after warmup, but they are excluded from checkpoint selection.
 
-## Current gate: exact resume
+Default persistent configuration:
 
-**Do not start persistent v4.3 training yet.** First prove bit-exact interruption/resume semantics.
-
-Run only:
-
-```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_v4_3_resume_smoke
+```text
+segment_mel_frames: 64
+train_items: 118
+val_items: 14
+max_epochs: 28
+warmup_epochs: 4
+patience: 6
+seed: 2430
+generator_lr: 2e-4
+discriminator_lr: 1e-4
+envelope_weight: 0.50
+balance_weight: 0.25
+contrast_weight: 0.20
+adversarial_weight: 0.03
+feature_matching_weight: 0.50
+gradient_clip_norm: 5.0
+checkpoint_every_updates: 8
+time_budget_seconds: 70
 ```
 
-The smoke executes the same four deterministic updates as `4` versus `2 + checkpoint/reload + 2` in temporary directories and requires equality of generator, discriminator, both optimizers, RNG, epoch, item offset and global step. It also verifies that the historical v4.2 best checkpoint is unchanged.
+## Exact-resume gate — PASSED
 
-Required result:
+The exact-resume smoke compared four deterministic updates executed directly against `2 + checkpoint/reload + 2` and passed every persistent-state equality check:
 
 ```text
 status: pass
+trainer_contract_version: v4-3-bounded-resumable-v1
 global_step_exact: true
 epoch_exact: true
 next_item_offset_exact: true
@@ -192,21 +190,55 @@ discriminator_optimizer_exact: true
 torch_rng_state_exact: true
 run_config_exact: true
 v4_2_checkpoint_unchanged: true
+temporary_artifacts_removed: true
 persistent_v4_3_training_started: false
 next_gate: start_bounded_resumable_v4_3_persistent_training
 ```
 
-Only after that exact-resume gate passes is the long v4.3 run authorized.
+This closes the architecture and resumability gates. **Persistent v4.3 training is now authorized.**
 
-## Remaining gate order
+## Authorized persistent run
+
+Run only the default training identity:
+
+```powershell
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_v4_3_train
+```
+
+If an invocation returns:
+
+```text
+status: incomplete
+next_gate: rerun_same_command_to_resume
+```
+
+rerun the identical command. Do not change hyperparameters, delete `last.pt`, replace checkpoints, or restart the experiment under the same artifact directory.
+
+Numerical completion requires:
+
+```text
+persistent_training_complete: true
+training_improved: true
+envelope_improved: true
+local_spectral_contrast_improved: true
+status: pass
+```
+
+Completion by `early_stopping` or `max_epochs` is acceptable if those gates pass.
+
+## Mandatory post-training gate
+
+A numerical PASS does not grant perceptual or product acceptance. After training, the next mandatory gate is full held-out oracle generation using target mel + target F0 + target voicing. The characteristic metallic/chillido artifact must be materially resolved on complete utterances before predicted acoustic conditioning is reconnected.
+
+Remaining order:
 
 ```text
 v4.3 architecture smoke          [PASS]
-  -> exact-resume trainer gate   [CURRENT]
-  -> bounded persistent v4.3 training
+  -> exact-resume trainer gate   [PASS]
+  -> bounded persistent v4.3 training [AUTHORIZED]
   -> full-utterance oracle listening acceptance
   -> predicted-duration calibration
   -> full reference-free text-to-waveform perceptual gate
 ```
 
-No `/speak` integration or product-runtime acceptance is authorized before the full-utterance oracle waveform gate passes without the characteristic metallic/chillido artifact.
+No `/speak` integration or product-runtime acceptance is authorized before the full-utterance oracle waveform gate passes.
