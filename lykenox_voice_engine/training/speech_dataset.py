@@ -94,12 +94,15 @@ class LykenoxSpeechDataset(Dataset[dict[str, object]]):
         }
 
     def _load_or_create_mel(self, row: SpeechRow) -> torch.Tensor:
+        # mel-v1 predates frame-context architecture fields. Keep the exact historical
+        # config payload so accepted feature caches remain reusable across acoustic model
+        # revisions that do not change the audio frontend itself.
         key_payload = {
             "version": self.CACHE_VERSION,
             "wav": str(row.wav_path),
             "size": row.wav_path.stat().st_size,
             "mtime_ns": row.wav_path.stat().st_mtime_ns,
-            "config": self.config.to_dict(),
+            "config": self.config.feature_cache_dict(),
         }
         digest = hashlib.sha256(json.dumps(key_payload, sort_keys=True).encode("utf-8")).hexdigest()[:20]
         cache_path = self.cache_dir / f"{row.utterance_id}-{digest}.pt"
