@@ -5,9 +5,9 @@
 The first persistent acoustic/prosody run completed correctly, but its held-out audit exposed a structural limitation:
 
 ```text
-intra_token_mel_delta_l1_target:     0.29826996
-intra_token_mel_delta_l1_predicted:  0.0
-intra_token_f0_delta_cents_target:   92.1301
+intra_token_mel_delta_l1_target:      0.29826996
+intra_token_mel_delta_l1_predicted:   0.0
+intra_token_f0_delta_cents_target:    92.1301
 intra_token_f0_delta_cents_predicted: 0.0
 ```
 
@@ -30,9 +30,9 @@ Every repeated frame inside a token had exactly the same vector. Because the mel
 
 A temporal convolution alone is not a complete fix: in a sufficiently long constant token interior, a translation-invariant convolution can still see the same local neighborhood. The model needs an explicit frame coordinate as well as temporal context.
 
-## New architecture gate
+## New architecture
 
-New configuration:
+Configuration:
 
 ```text
 frame_context_version: token-progress-conv-v1
@@ -50,15 +50,13 @@ That default is intentional. Old checkpoints that were saved before this field e
 
 ## Frame coordinates
 
-For every regulated frame the new model derives, using tensor-only duration arithmetic:
+For every regulated frame the model derives, using tensor-only duration arithmetic:
 
 1. centered progress inside the owning token;
 2. log duration of the owning token;
 3. normalized progress through the full utterance.
 
-These three features are projected into the acoustic hidden dimension and added to the repeated token representation.
-
-This explicitly breaks the within-token symmetry that caused the held-out failure.
+These three features are projected into the acoustic hidden dimension and added to the repeated token representation. This explicitly breaks the within-token symmetry that caused the held-out failure.
 
 ## Temporal context
 
@@ -87,18 +85,13 @@ Teacher durations may still contain zero-duration structural tokens. The new pos
 
 The old predicted-duration inference rule (`min=1`, `max=80`) remains separate technical debt and must be corrected before unseen-text product inference.
 
-## Mandatory bounded smoke
+## Bounded architecture smoke — passed
 
-Before any new persistent training, run:
-
-```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_acoustic_frame_context_smoke
-```
-
-A pass requires:
+The mandatory CPU smoke passed with:
 
 ```text
 status: pass
+frame_context_version: token-progress-conv-v1
 exact_duration_to_frame_contract: true
 frame_context_gradient_seen: true
 probe_decreased.total: true
@@ -110,12 +103,85 @@ intra_token_mel_motion_pass: true
 intra_token_f0_motion_pass: true
 ```
 
-The smoke deliberately trains from a new random initialization. The rejected v1 `best.pt` is not resumed or fine-tuned.
-
-Expected next gate:
+Observed predicted intra-token motion after the smoke:
 
 ```text
-build_v2_persistent_acoustic_trainer_with_frame_context
+mel delta L1: 0.02298093   target 0.29320355
+F0 delta:    24.1596 c     target 61.0776 c
 ```
 
-Only after that gate passes should LYKENOX build a new exactly-resumable persistent v2 acoustic trainer and train a new checkpoint from scratch.
+This closes the zero-motion structural defect at the bounded architecture level. It does not yet prove persistent held-out quality.
+
+## Persistent v2 trainer
+
+Trainer contract:
+
+```text
+acoustic-frame-context-bounded-resumable-v2
+```
+
+Persistent output directory:
+
+```text
+models/lykenox_identity/training/acoustic_frame_context_v2/
+  last.pt
+  best.pt
+  training_progress.json
+  training_report.json
+```
+
+The trainer starts from a new random initialization and never resumes or fine-tunes the rejected v1 checkpoint. Its run identity includes the frame-context version/layers/kernel plus the existing data and loss contracts.
+
+Default real training remains CPU-bounded and resumable:
+
+```text
+batch size:               2
+max epochs:               36
+early-stop patience:      6
+learning rate:            2e-4
+weight decay:             1e-4
+gradient clip:            5.0
+checkpoint every updates: 16
+wall-clock budget:        70 s
+checkpoint reserve:       8 s
+```
+
+## Mandatory exact-resume gate
+
+Before starting real v2 training, run:
+
+```powershell
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_acoustic_frame_context_resume_smoke
+```
+
+The smoke compares ten uninterrupted updates against three updates plus an exact seven-update resume. A pass requires exact equality for:
+
+- model state;
+- optimizer state;
+- Torch RNG state;
+- epoch/item/global-step position;
+- training metadata/history;
+- run configuration;
+- persistent data provenance;
+- frame-context architecture identity;
+- fixed held-out model outputs.
+
+Expected pass gate:
+
+```text
+next_gate: start_bounded_resumable_acoustic_frame_context_v2_training
+```
+
+Only after this resume-equivalence gate passes should real v2 persistent training start.
+
+## Real v2 training command
+
+After the resume smoke passes:
+
+```powershell
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_acoustic_frame_context_train
+```
+
+If the trainer returns `status: incomplete`, rerun the exact same command without deleting checkpoints or altering parameters.
+
+A completed v2 run must still pass a fresh held-out expressivity/prosody audit before predicted-duration inference or unseen-text synthesis.
