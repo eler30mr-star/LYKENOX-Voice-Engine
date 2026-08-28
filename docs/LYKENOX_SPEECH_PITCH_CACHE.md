@@ -128,6 +128,30 @@ datasets/lykenox/identity_voice/features/speech/pitch-v1/
 
 with `train/`, `val/`, `cache_index.json`, `cache_report.json`, and `cache_progress.json`.
 
+## Accepted local result
+
+The persistent target-cache gate passed on the full owned speech corpus:
+
+```text
+status: pass
+cache_version: speech-pitch-cache-v1
+pitch_target_version: lykenox-pitch-v1
+train_count: 118
+val_count: 14
+total_count: 132
+exact_centered_frame_alignment_count: 132
+indexed_reload_exact_count: 132
+all_targets_exact_mel_length: true
+all_centered_frame_counts_match_mel: true
+mean_voiced_fraction: 0.630613
+min_voiced_f0_hz: 60.0
+max_voiced_f0_hz: 352.9412
+elapsed_seconds: 4.474
+next_gate: add_acoustic_f0_voicing_heads
+```
+
+This closes target generation, frame alignment, indexed reload and provenance. It does not yet prove that the acoustic model can learn those targets.
+
 ## Product boundary
 
 These cached targets are training data only. They do not make reference audio part of inference.
@@ -143,4 +167,4 @@ text
   -> waveform
 ```
 
-After this cache passes locally, the next engineering gate is to add frame-level F0 and voicing heads to the acoustic model and prove with a bounded CPU smoke that their supervised losses decrease without regressing mel/duration behavior.
+The next engineering gate is the bounded acoustic prosody-head smoke. It must prove that mel, duration, F0 and voicing losses can all decrease together on exact aligned real data before persistent acoustic training is built.
