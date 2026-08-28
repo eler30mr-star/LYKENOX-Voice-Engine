@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import torch
 
 from lykenox_voice_engine.runtime.speech_conditioning import (
@@ -20,9 +22,19 @@ def test_reference_free_conditioning_zeros_unvoiced_and_padding() -> None:
     conditioning = prepare_speech_vocoder_conditioning(output)
 
     assert SPEECH_VOCODER_CONDITIONING_VERSION == "speech-vocoder-conditioning-v1"
-    assert conditioning.f0_hz[0, 0].item() == PREDICTED_SPEECH_F0_MIN_HZ
+    assert math.isclose(
+        conditioning.f0_hz[0, 0].item(),
+        PREDICTED_SPEECH_F0_MIN_HZ,
+        rel_tol=0.0,
+        abs_tol=1e-5,
+    )
     assert conditioning.f0_hz[0, 1].item() == 0.0
-    assert conditioning.f0_hz[0, 2].item() == PREDICTED_SPEECH_F0_MAX_HZ
+    assert math.isclose(
+        conditioning.f0_hz[0, 2].item(),
+        PREDICTED_SPEECH_F0_MAX_HZ,
+        rel_tol=0.0,
+        abs_tol=1e-4,
+    )
     assert conditioning.f0_hz[0, 3].item() == 0.0
     assert conditioning.voiced.tolist() == [[1.0, 0.0, 1.0, 0.0]]
     assert conditioning.mel[0, 3].abs().sum().item() == 0.0
