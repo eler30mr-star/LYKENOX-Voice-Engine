@@ -12,6 +12,7 @@ import torch
 
 from lykenox_voice_engine.core.spanish_text_frontend import SpanishTextFrontend
 from lykenox_voice_engine.models.speech import LykenoxSpeechAcousticModel, LykenoxSpeechConfig
+from lykenox_voice_engine.models.speech.config import FRAME_CONTEXT_NONE
 from lykenox_voice_engine.training.speech_aligned_data import EXPECTED_DURATION_CACHE_VERSION
 from lykenox_voice_engine.training.speech_aligner_train import _manifest_path
 from lykenox_voice_engine.training.speech_dataset import LykenoxSpeechDataset
@@ -46,6 +47,23 @@ def json_sha256(payload: object) -> str:
 
 def vocabulary_sha256(vocabulary: dict[str, int]) -> str:
     return json_sha256(vocabulary)
+
+
+def _provenance_speech_config(config: LykenoxSpeechConfig) -> dict[str, object]:
+    """Return a provenance payload compatible with historical v1 checkpoints.
+
+    The first persistent acoustic run predates the frame-context configuration fields.
+    When frame context is explicitly disabled, omit those newly introduced defaults so
+    rebuilding v1 provenance after a code update still matches the already-closed v1
+    checkpoint exactly. Contextual v2 configurations retain every new field in provenance.
+    """
+
+    payload: dict[str, object] = dict(config.to_dict())
+    if config.frame_context_version == FRAME_CONTEXT_NONE:
+        payload.pop("frame_context_version", None)
+        payload.pop("frame_context_layers", None)
+        payload.pop("frame_context_kernel_size", None)
+    return payload
 
 
 def build_acoustic_prosody_provenance(
@@ -89,6 +107,7 @@ def build_acoustic_prosody_provenance(
     if int(pitch_index.get("total_count", -1)) != 132:
         raise RuntimeError("Acoustic prosody provenance requires the complete 132-item pitch cache")
 
+    config_payload = _provenance_speech_config(config)
     return {
         "train_manifest": str(train_manifest),
         "train_manifest_sha256": file_sha256(train_manifest),
@@ -103,8 +122,8 @@ def build_acoustic_prosody_provenance(
         "pitch_target_version": PITCH_TARGET_VERSION,
         "pitch_index": str(pitch_index_path),
         "pitch_index_sha256": file_sha256(pitch_index_path),
-        "speech_config": config.to_dict(),
-        "speech_config_sha256": json_sha256(config.to_dict()),
+        "speech_config": config_payload,
+        "speech_config_sha256": json_sha256(config_payload),
     }
 
 
