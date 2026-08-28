@@ -12,7 +12,11 @@ import math
 import torch
 from torch import nn
 
-from .config import LykenoxSpeechConfig
+from .config import (
+    FRAME_CONTEXT_NONE,
+    FRAME_CONTEXT_TOKEN_PROGRESS_CONV_V1,
+    LykenoxSpeechConfig,
+)
 
 
 class DurationPredictor(nn.Module):
@@ -37,9 +41,6 @@ class DurationPredictor(nn.Module):
             if token_mask is None
             else token_mask.bool()
         )
-        # Transformer padding positions can contain residual activations even when
-        # excluded as attention keys. Zero them before the temporal convolution so
-        # a padded neighbor cannot affect the final valid token in a shorter item.
         masked_encoded = encoded * valid.unsqueeze(-1).to(encoded.dtype)
         x = masked_encoded.transpose(1, 2)
         x = self.net[0](x).transpose(1, 2)
@@ -50,12 +51,7 @@ class DurationPredictor(nn.Module):
 
 
 class FrameProsodyPredictor(nn.Module):
-    """Predict frame-level log-F0 and voicing from regulated acoustic features.
-
-    The F0 projection is initialized to 100 Hz in log space. This is only a stable
-    optimization prior; supervised pitch targets determine the learned contour.
-    Voicing is returned as logits so training can use masked BCEWithLogitsLoss.
-    """
+    """Predict frame-level log-F0 and voicing from regulated acoustic features."""
 
     def __init__(self, hidden_size: int) -> None:
         super().__init__()
@@ -75,35 +71,105 @@ class FrameProsodyPredictor(nn.Module):
         return log_f0, voicing_logits
 
 
+class DepthwiseFrameContextBlock(nn.Module):
+    """CPU-compact residual temporal context over regulated acoustic frames."""
+
+    def __init__(self, hidden_size: int, *, kernel_size: int, dilation: int) -> None:
+        super().__init__()
+        if kernel_size < 3 or kernel_size % 2 == 0:
+            raise ValueError("frame context kernel_size must be odd and >= 3")
+        if dilation < 1:
+            raise ValueError("frame context dilation must be positive")
+        padding = dilation * (kernel_size // 2)
+        self.norm = nn.LayerNorm(hidden_size)
+        self.depthwise = nn.Conv1d(
+            hidden_size,
+            hidden_size,
+            kernel_size=kernel_size,
+            padding=padding,
+            dilation=dilation,
+            groups=hidden_size,
+        )
+        self.pointwise = nn.Conv1d(hidden_size, hidden_size, kernel_size=1)
+        self.activation = nn.GELU()
+
+    def forward(self, x: torch.Tensor, frame_mask: torch.Tensor) -> torch.Tensor:
+        mask = frame_mask.unsqueeze(-1).to(x.dtype)
+        residual = x
+        hidden = self.norm(x) * mask
+        hidden = self.depthwise(hidden.transpose(1, 2))
+        hidden = self.activation(hidden)
+        hidden = self.pointwise(hidden).transpose(1, 2)
+        return (residual + hidden) * mask
+
+
+class PostRegulationFrameContext(nn.Module):
+    """Inject explicit intra-token position plus local temporal context.
+
+    Length regulation repeats one token representation for every acoustic frame owned by
+    that token. Without an additional frame coordinate, a feed-forward decoder is exactly
+    constant inside the token. This module adds three deterministic frame coordinates:
+
+    - centered progress inside the owning token;
+    - log duration of the owning token;
+    - normalized progress through the full utterance.
+
+    Residual depthwise-separable convolutions then model coarticulation across neighboring
+    frames while remaining small enough for the CPU-only product target.
+    """
+
+    FEATURE_COUNT = 3
+
+    def __init__(
+        self,
+        hidden_size: int,
+        *,
+        layers: int,
+        kernel_size: int,
+    ) -> None:
+        super().__init__()
+        if layers < 1:
+            raise ValueError("frame context layers must be positive")
+        self.position_projection = nn.Sequential(
+            nn.Linear(self.FEATURE_COUNT, hidden_size),
+            nn.GELU(),
+            nn.Linear(hidden_size, hidden_size),
+        )
+        self.blocks = nn.ModuleList(
+            [
+                DepthwiseFrameContextBlock(
+                    hidden_size,
+                    kernel_size=kernel_size,
+                    dilation=2**layer,
+                )
+                for layer in range(layers)
+            ]
+        )
+        self.final_norm = nn.LayerNorm(hidden_size)
+
+    def forward(
+        self,
+        expanded: torch.Tensor,
+        position_features: torch.Tensor,
+        frame_mask: torch.Tensor,
+    ) -> torch.Tensor:
+        if position_features.shape != (*expanded.shape[:2], self.FEATURE_COUNT):
+            raise ValueError("position_features do not match regulated frame shape")
+        mask = frame_mask.unsqueeze(-1).to(expanded.dtype)
+        hidden = expanded + self.position_projection(position_features.to(expanded.dtype))
+        hidden = hidden * mask
+        for block in self.blocks:
+            hidden = block(hidden, frame_mask)
+        return self.final_norm(hidden) * mask
+
+
 class LykenoxSpeechAcousticModel(nn.Module):
     """Compact duration-conditioned text-to-acoustics model owned by LYKENOX.
 
-    Inputs:
-      token_ids: [batch, text_steps]
-      token_mask: optional bool tensor [batch, text_steps], True for valid tokens
-      durations: optional integer frame counts [batch, text_steps]
-
-    Outputs:
-      mel: [batch, mel_steps, mel_bins]
-      f0_prediction_hz: [batch, mel_steps], positive F0 hypothesis per frame
-      f0_log_prediction: [batch, mel_steps], log-Hz representation used for training
-      voicing_logits: [batch, mel_steps], binary voiced/unvoiced logits
-      duration_prediction: [batch, text_steps]
-      mel_mask: [batch, mel_steps], True for real regulated frames
-      mel_lengths: [batch], exact regulated frame count per item
-
-    During training, ground-truth durations are supplied by the validated LYKENOX
-    aligner and must be preserved exactly. ``max_duration_frames`` is only an
-    inference safety bound for predicted durations; clipping teacher durations
-    would silently shorten the mel target and corrupt supervision.
-
-    F0/voicing heads operate after length regulation, so their frame grid is exactly
-    the same grid consumed by the accepted LYKENOX v4.1 source-filter vocoder.
-
-    The length regulator is tensorized: it contains no Python loop over batch or
-    token positions and no duration-dependent ``.item()`` calls. This keeps the
-    core path suitable for later dynamic ONNX/export work and makes padded batch
-    behavior explicit through ``mel_mask`` and ``mel_lengths``.
+    Historical checkpoints use ``frame_context_version='none'`` and preserve the original
+    piecewise-constant decoder exactly. New training can select
+    ``token-progress-conv-v1`` to make mel/F0/voicing explicitly frame-expressive after
+    length regulation while retaining the same text, duration and vocoder contracts.
     """
 
     def __init__(self, config: LykenoxSpeechConfig) -> None:
@@ -129,6 +195,19 @@ class LykenoxSpeechAcousticModel(nn.Module):
             nn.Linear(config.hidden_size, config.mel_bins),
         )
         self.frame_prosody_predictor = FrameProsodyPredictor(config.hidden_size)
+
+        if config.frame_context_version == FRAME_CONTEXT_NONE:
+            self.frame_context: PostRegulationFrameContext | None = None
+        elif config.frame_context_version == FRAME_CONTEXT_TOKEN_PROGRESS_CONV_V1:
+            self.frame_context = PostRegulationFrameContext(
+                config.hidden_size,
+                layers=config.frame_context_layers,
+                kernel_size=config.frame_context_kernel_size,
+            )
+        else:
+            raise ValueError(
+                f"Unsupported frame_context_version: {config.frame_context_version}"
+            )
 
     def forward(
         self,
@@ -167,8 +246,6 @@ class LykenoxSpeechAcousticModel(nn.Module):
                 torch.zeros_like(regulated_durations),
             )
         else:
-            # Training/teacher durations are validated at the aligned-dataset
-            # boundary. Never clamp real timing supervision inside the model.
             regulated_durations = torch.where(
                 valid_tokens,
                 durations.to(torch.long),
@@ -179,8 +256,21 @@ class LykenoxSpeechAcousticModel(nn.Module):
             encoded,
             regulated_durations,
         )
-        mel = self.mel_decoder(expanded)
-        f0_log_prediction, voicing_logits = self.frame_prosody_predictor(expanded)
+        frame_hidden = expanded
+        if self.frame_context is not None:
+            position_features = self._regulated_position_features(
+                regulated_durations,
+                mel_mask,
+                mel_lengths,
+            )
+            frame_hidden = self.frame_context(
+                expanded,
+                position_features,
+                mel_mask,
+            )
+
+        mel = self.mel_decoder(frame_hidden)
+        f0_log_prediction, voicing_logits = self.frame_prosody_predictor(frame_hidden)
         f0_prediction_hz = torch.exp(f0_log_prediction)
 
         frame_mask = mel_mask.to(mel.dtype)
@@ -199,18 +289,75 @@ class LykenoxSpeechAcousticModel(nn.Module):
         }
 
     @staticmethod
+    def _regulated_token_indices(
+        durations: torch.Tensor,
+        frame_count: torch.Tensor | int,
+    ) -> torch.Tensor:
+        frame_positions = torch.arange(
+            frame_count,
+            device=durations.device,
+            dtype=torch.long,
+        )
+        cumulative_ends = torch.cumsum(durations.to(torch.long), dim=1)
+        token_indices = torch.sum(
+            frame_positions.view(1, -1, 1)
+            >= cumulative_ends.unsqueeze(1),
+            dim=-1,
+        )
+        return torch.clamp(token_indices, max=durations.shape[1] - 1)
+
+    @classmethod
+    def _regulated_position_features(
+        cls,
+        durations: torch.Tensor,
+        mel_mask: torch.Tensor,
+        mel_lengths: torch.Tensor,
+    ) -> torch.Tensor:
+        """Create tensor-only frame coordinates aligned to the length regulator."""
+
+        if durations.ndim != 2:
+            raise ValueError("durations must have shape [batch, text_steps]")
+        if mel_mask.ndim != 2 or mel_mask.shape[0] != durations.shape[0]:
+            raise ValueError("mel_mask batch dimension must match durations")
+        if mel_lengths.ndim != 1 or mel_lengths.shape[0] != durations.shape[0]:
+            raise ValueError("mel_lengths must have shape [batch]")
+
+        frame_count = mel_mask.shape[1]
+        token_indices = cls._regulated_token_indices(durations, frame_count)
+        durations_long = durations.to(torch.long)
+        cumulative_ends = torch.cumsum(durations_long, dim=1)
+        cumulative_starts = cumulative_ends - durations_long
+        owning_duration = torch.gather(durations_long, 1, token_indices).clamp_min(1)
+        owning_start = torch.gather(cumulative_starts, 1, token_indices)
+
+        frame_positions = torch.arange(
+            frame_count,
+            device=durations.device,
+            dtype=torch.long,
+        ).unsqueeze(0)
+        offset = frame_positions - owning_start
+        token_progress = (
+            (offset.to(torch.float32) + 0.5) / owning_duration.to(torch.float32)
+        )
+        centered_token_progress = token_progress * 2.0 - 1.0
+        duration_feature = torch.log1p(owning_duration.to(torch.float32)) / math.log(128.0)
+        utterance_progress = (
+            (frame_positions.to(torch.float32) + 0.5)
+            / mel_lengths.clamp_min(1).unsqueeze(1).to(torch.float32)
+        )
+        features = torch.stack(
+            (centered_token_progress, duration_feature, utterance_progress),
+            dim=-1,
+        )
+        return features * mel_mask.unsqueeze(-1).to(features.dtype)
+
+    @classmethod
     def _length_regulate(
+        cls,
         encoded: torch.Tensor,
         durations: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Expand encoded tokens into frames with tensor-only indexing.
-
-        ``durations`` may contain zero-duration structural/padded tokens. For each
-        frame position, the first cumulative token boundary strictly greater than
-        that position determines the owning token. The implementation is batch
-        vectorized and therefore does not bake Python-side sequence lengths into
-        the graph.
-        """
+        """Expand encoded tokens into frames with tensor-only indexing."""
 
         if encoded.ndim != 3:
             raise ValueError("encoded must have shape [batch, text_steps, hidden]")
@@ -225,16 +372,7 @@ class LykenoxSpeechAcousticModel(nn.Module):
             device=encoded.device,
             dtype=torch.long,
         )
-        cumulative_ends = torch.cumsum(durations, dim=1)
-
-        # Count how many token ends are <= each frame position. Zero-duration
-        # tokens naturally disappear because their cumulative boundary repeats.
-        token_indices = torch.sum(
-            frame_positions.view(1, -1, 1)
-            >= cumulative_ends.unsqueeze(1),
-            dim=-1,
-        )
-        token_indices = torch.clamp(token_indices, max=encoded.shape[1] - 1)
+        token_indices = cls._regulated_token_indices(durations, max_frames)
         gather_index = token_indices.unsqueeze(-1).expand(
             -1,
             -1,
