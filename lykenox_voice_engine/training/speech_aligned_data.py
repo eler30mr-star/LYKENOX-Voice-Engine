@@ -2,7 +2,8 @@
 
 Long acoustic training must consume only a clean alignment-v3 timing cache. This module
 centralizes that boundary so trainers do not reimplement ad-hoc duration loading, padding,
-or masking logic.
+or masking logic. Frame-level F0/voicing targets are optional and, when requested, are
+loaded only through the completed versioned pitch cache index.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from torch.utils.data import Dataset
 from lykenox_voice_engine.models.speech import LykenoxSpeechConfig
 from lykenox_voice_engine.training.speech_aligner_train import _dataset
 from lykenox_voice_engine.training.speech_duration_cache import DURATION_CACHE_VERSION
+from lykenox_voice_engine.training.speech_pitch_cache import load_indexed_pitch_target
 
 
 EXPECTED_DURATION_CACHE_VERSION = "alignment-v3"
@@ -35,6 +37,8 @@ class AlignedSpeechBatch:
     mel_mask: torch.Tensor
     token_lengths: torch.Tensor
     mel_lengths: torch.Tensor
+    f0_hz: torch.Tensor | None = None
+    voiced: torch.Tensor | None = None
 
     def to(self, device: torch.device | str) -> "AlignedSpeechBatch":
         return AlignedSpeechBatch(
@@ -47,6 +51,8 @@ class AlignedSpeechBatch:
             mel_mask=self.mel_mask.to(device),
             token_lengths=self.token_lengths.to(device),
             mel_lengths=self.mel_lengths.to(device),
+            f0_hz=None if self.f0_hz is None else self.f0_hz.to(device),
+            voiced=None if self.voiced is None else self.voiced.to(device),
         )
 
 
@@ -147,7 +153,12 @@ def validate_aligned_record(
 
 
 class LykenoxAlignedSpeechDataset(Dataset[dict[str, object]]):
-    """Real mel/text examples paired with exact cleaned alignment-v3 durations."""
+    """Real mel/text examples paired with exact cleaned alignment-v3 durations.
+
+    Set ``include_pitch_targets=True`` only after ``speech-pitch-cache-v1`` has passed.
+    Pitch targets are then loaded by utterance ID through its hashed completed index;
+    this dataset never re-runs waveform pitch extraction.
+    """
 
     def __init__(
         self,
@@ -156,10 +167,12 @@ class LykenoxAlignedSpeechDataset(Dataset[dict[str, object]]):
         config: LykenoxSpeechConfig,
         *,
         duration_root: Path | None = None,
+        include_pitch_targets: bool = False,
     ) -> None:
         self.root = Path(root).resolve()
         self.split = split
         self.config = config
+        self.include_pitch_targets = bool(include_pitch_targets)
         self.duration_root = (
             Path(duration_root).resolve()
             if duration_root is not None
@@ -187,13 +200,27 @@ class LykenoxAlignedSpeechDataset(Dataset[dict[str, object]]):
             token_ids=token_ids,
             mel_frames=int(mel.shape[0]),
         )
-        return {
+        result: dict[str, object] = {
             "utterance_id": utterance_id,
             "text": str(item["text"]),
             "token_ids": token_ids,
             "durations": durations,
             "mel": mel,
         }
+        if self.include_pitch_targets:
+            pitch = load_indexed_pitch_target(
+                self.root,
+                split=self.split,
+                utterance_id=utterance_id,
+            )
+            if int(pitch.f0_hz.numel()) != int(mel.shape[0]):
+                raise RuntimeError(
+                    f"Pitch/mel length mismatch for {utterance_id}: "
+                    f"{pitch.f0_hz.numel()} != {mel.shape[0]}"
+                )
+            result["f0_hz"] = pitch.f0_hz.to(torch.float32)
+            result["voiced"] = pitch.voiced.to(torch.float32)
+        return result
 
 
 def collate_aligned_speech(
@@ -218,11 +245,26 @@ def collate_aligned_speech(
     max_mel = int(mel_lengths.max().item())
     mel_bins = int(items[0]["mel"].shape[1])
 
+    pitch_flags = ["f0_hz" in item or "voiced" in item for item in items]
+    if any(pitch_flags) and not all(pitch_flags):
+        raise RuntimeError("A batch cannot mix items with and without pitch targets")
+    include_pitch = all(pitch_flags)
+
     token_ids = torch.full((batch_size, max_tokens), pad_id, dtype=torch.long)
     token_mask = torch.zeros((batch_size, max_tokens), dtype=torch.bool)
     durations = torch.zeros((batch_size, max_tokens), dtype=torch.long)
     mel = torch.zeros((batch_size, max_mel, mel_bins), dtype=torch.float32)
     mel_mask = torch.zeros((batch_size, max_mel), dtype=torch.bool)
+    f0_hz = (
+        torch.zeros((batch_size, max_mel), dtype=torch.float32)
+        if include_pitch
+        else None
+    )
+    voiced = (
+        torch.zeros((batch_size, max_mel), dtype=torch.float32)
+        if include_pitch
+        else None
+    )
 
     utterance_ids: list[str] = []
     texts: list[str] = []
@@ -244,6 +286,18 @@ def collate_aligned_speech(
         durations[batch_index, :token_count] = teacher
         mel[batch_index, :mel_count] = target
         mel_mask[batch_index, :mel_count] = True
+
+        if include_pitch:
+            assert f0_hz is not None and voiced is not None
+            item_f0 = item["f0_hz"].to(torch.float32)
+            item_voiced = item["voiced"].to(torch.float32)
+            if item_f0.shape != (mel_count,) or item_voiced.shape != (mel_count,):
+                raise RuntimeError("Pitch targets must match mel frames before padding")
+            if not bool((item_f0[item_voiced < 0.5] == 0.0).all()):
+                raise RuntimeError("Unvoiced cached F0 must be exactly zero")
+            f0_hz[batch_index, :mel_count] = item_f0
+            voiced[batch_index, :mel_count] = item_voiced
+
         utterance_ids.append(str(item["utterance_id"]))
         texts.append(str(item["text"]))
 
@@ -260,4 +314,6 @@ def collate_aligned_speech(
         mel_mask=mel_mask,
         token_lengths=token_lengths,
         mel_lengths=mel_lengths,
+        f0_hz=f0_hz,
+        voiced=voiced,
     )
