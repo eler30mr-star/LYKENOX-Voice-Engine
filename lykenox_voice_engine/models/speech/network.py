@@ -7,6 +7,8 @@ waveform generation belongs to a separate LYKENOX vocoder stage.
 
 from __future__ import annotations
 
+import math
+
 import torch
 from torch import nn
 
@@ -47,8 +49,34 @@ class DurationPredictor(nn.Module):
         return torch.where(valid, prediction, torch.zeros_like(prediction))
 
 
+class FrameProsodyPredictor(nn.Module):
+    """Predict frame-level log-F0 and voicing from regulated acoustic features.
+
+    The F0 projection is initialized to 100 Hz in log space. This is only a stable
+    optimization prior; supervised pitch targets determine the learned contour.
+    Voicing is returned as logits so training can use masked BCEWithLogitsLoss.
+    """
+
+    def __init__(self, hidden_size: int) -> None:
+        super().__init__()
+        self.trunk = nn.Sequential(
+            nn.Linear(hidden_size, hidden_size),
+            nn.GELU(),
+        )
+        self.log_f0_proj = nn.Linear(hidden_size, 1)
+        self.voicing_proj = nn.Linear(hidden_size, 1)
+        nn.init.zeros_(self.log_f0_proj.weight)
+        nn.init.constant_(self.log_f0_proj.bias, math.log(100.0))
+
+    def forward(self, expanded: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        hidden = self.trunk(expanded)
+        log_f0 = self.log_f0_proj(hidden).squeeze(-1)
+        voicing_logits = self.voicing_proj(hidden).squeeze(-1)
+        return log_f0, voicing_logits
+
+
 class LykenoxSpeechAcousticModel(nn.Module):
-    """Compact duration-conditioned text-to-mel model owned by LYKENOX.
+    """Compact duration-conditioned text-to-acoustics model owned by LYKENOX.
 
     Inputs:
       token_ids: [batch, text_steps]
@@ -57,6 +85,9 @@ class LykenoxSpeechAcousticModel(nn.Module):
 
     Outputs:
       mel: [batch, mel_steps, mel_bins]
+      f0_prediction_hz: [batch, mel_steps], positive F0 hypothesis per frame
+      f0_log_prediction: [batch, mel_steps], log-Hz representation used for training
+      voicing_logits: [batch, mel_steps], binary voiced/unvoiced logits
       duration_prediction: [batch, text_steps]
       mel_mask: [batch, mel_steps], True for real regulated frames
       mel_lengths: [batch], exact regulated frame count per item
@@ -65,6 +96,9 @@ class LykenoxSpeechAcousticModel(nn.Module):
     aligner and must be preserved exactly. ``max_duration_frames`` is only an
     inference safety bound for predicted durations; clipping teacher durations
     would silently shorten the mel target and corrupt supervision.
+
+    F0/voicing heads operate after length regulation, so their frame grid is exactly
+    the same grid consumed by the accepted LYKENOX v4.1 source-filter vocoder.
 
     The length regulator is tensorized: it contains no Python loop over batch or
     token positions and no duration-dependent ``.item()`` calls. This keeps the
@@ -94,6 +128,7 @@ class LykenoxSpeechAcousticModel(nn.Module):
             nn.GELU(),
             nn.Linear(config.hidden_size, config.mel_bins),
         )
+        self.frame_prosody_predictor = FrameProsodyPredictor(config.hidden_size)
 
     def forward(
         self,
@@ -145,9 +180,19 @@ class LykenoxSpeechAcousticModel(nn.Module):
             regulated_durations,
         )
         mel = self.mel_decoder(expanded)
-        mel = mel * mel_mask.unsqueeze(-1).to(mel.dtype)
+        f0_log_prediction, voicing_logits = self.frame_prosody_predictor(expanded)
+        f0_prediction_hz = torch.exp(f0_log_prediction)
+
+        frame_mask = mel_mask.to(mel.dtype)
+        mel = mel * frame_mask.unsqueeze(-1)
+        f0_prediction_hz = f0_prediction_hz * frame_mask
+        f0_log_prediction = f0_log_prediction * frame_mask
+        voicing_logits = voicing_logits * frame_mask
         return {
             "mel": mel,
+            "f0_prediction_hz": f0_prediction_hz,
+            "f0_log_prediction": f0_log_prediction,
+            "voicing_logits": voicing_logits,
             "duration_prediction": duration_prediction,
             "mel_mask": mel_mask,
             "mel_lengths": mel_lengths,
