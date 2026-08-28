@@ -1,12 +1,14 @@
 # LYKENOX Vocoder v4.1 — persistent acceptance record
 
-## Decision
+> **Superseded by later full-utterance evidence.**  The record below is preserved as the historical decision made after the original short held-out gate.  Subsequent reference-free and oracle full-utterance audits reproduced a persistent periodic metallic/insect-like buzz even with target mel + target F0/voicing + teacher durations.  Harmonic-gain and source-shape ablations did not identify a safe runtime tweak.  Therefore v4.1 remains a valuable trained diagnostic checkpoint, but it is **not accepted for product runtime or final perceptual release**.  The active corrective gate is `docs/LYKENOX_VOCODER_V4_2.md`.  Do not continue v4.1 training by inertia.
 
-`lykenox_pitch_source_filter_v4_1` is accepted as the **persistent LYKENOX Speech vocoder architecture** for the next end-to-end development stage.
+## Historical decision
 
-This closes the architecture/probe/checkpoint/resume/persistent-training/listening gate. It does **not** mean final product audio quality is frozen: end-to-end unseen-text synthesis still has to be audited after the acoustic model predicts F0/voicing instead of receiving waveform-derived oracle targets.
+`lykenox_pitch_source_filter_v4_1` was accepted as the **persistent LYKENOX Speech vocoder architecture** for the next end-to-end development stage based on the evidence available at that time.
 
-The product boundary remains:
+That historical gate closed the architecture/probe/checkpoint/resume/persistent-training/listening stage. It did **not** mean final product audio quality was frozen: end-to-end unseen-text synthesis still had to be audited after the acoustic model predicted F0/voicing instead of receiving waveform-derived oracle targets.
+
+The product boundary remained:
 
 ```text
 text
@@ -45,22 +47,20 @@ Best checkpoint:
 models/lykenox_identity/training/vocoder_source_filter_v4_1/best.pt
 ```
 
-## Final held-out generated/reference review
+## Original held-out generated/reference review
 
 Three validation pairs produced from the final best checkpoint were reviewed after the run.
 
-Independent measurements on those final WAVs show that the persistent run materially improved the earlier v4.1 probe:
+Independent measurements on those final WAVs showed that the persistent run materially improved the earlier v4.1 probe:
 
-- generated RMS is approximately 87.3-87.8% of the paired reference RMS across all three pairs;
-- pairs 1 and 3 have strong RMS-envelope correspondence (about 0.95 and 0.93 respectively) and strong flattened log-mel correlation (about 0.87 in both cases);
-- the low-energy second pair is a weaker temporal-envelope discriminator, but its centroid, flatness, RMS and broad spectral-band distribution remain close to its reference;
-- spectral centroid is now close to the paired reference rather than systematically several hundred hertz too high;
-- spectral flatness is also much closer to the references than in the bounded probe;
+- generated RMS was approximately 87.3-87.8% of the paired reference RMS across all three pairs;
+- pairs 1 and 3 had strong RMS-envelope correspondence (about 0.95 and 0.93 respectively) and strong flattened log-mel correlation (about 0.87 in both cases);
+- the low-energy second pair was a weaker temporal-envelope discriminator, but its centroid, flatness, RMS and broad spectral-band distribution remained close to its reference;
+- spectral centroid was close to the paired reference rather than systematically several hundred hertz too high;
+- spectral flatness was also much closer to the references than in the bounded probe;
 - no frame-grid carrier, sub-bass/silence collapse, or missing-upper-band failure was detected by the established automatic gates.
 
-The remaining quality debt is local rather than architectural. The generated signals still tend to under-represent the highest speech band (roughly above 3 kHz) relative to the references, and some segments remain spectrally smoother/noisier than the target. Those issues are appropriate targets for later end-to-end quality work; they do not justify another vocoder architecture reset.
-
-The acceptance criterion is met: at least two of three held-out examples preserve clear vocal temporal/spectral structure without reintroducing the rejected structural artifacts, while the automatic artifact gate is clean.
+At that point the remaining quality debt appeared local rather than architectural. The later full-utterance oracle evidence invalidated that assumption: the short listening gate did not expose the persistent buzz strongly enough.  This is precisely why full held-out utterances are now mandatory for v4.2 acceptance.
 
 ## Training-only oracle boundary
 
@@ -68,23 +68,14 @@ F0 and voicing used during the isolated vocoder run are extracted from the owned
 
 The acoustic model must predict the same F0/voicing contract from text/prosody before product inference is considered complete.
 
-## Current engineering gate
+## Current engineering state
 
-The persistent F0/voicing cache implementation is now defined by `speech-pitch-cache-v1`. It records one target per speech mel frame, hashes the owned source WAV and manifests, verifies centered mel/wave frame alignment, writes per-target artifact hashes, and exposes an indexed loader for the future acoustic dataset.
+The pitch cache, acoustic F0/voicing heads, frame-context acoustic v2, and predicted-duration semantics remain separate completed gates.  The current waveform-stage blocker is the v4.1 full-utterance perceptual failure, and the active corrective architecture is the bounded v4.2 candidate.
 
-Run the bounded/resumable cache builder:
+Run only the v4.2 architecture smoke at this stage:
 
 ```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_pitch_cache
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_v4_2_architecture_smoke
 ```
 
-If it returns `status: incomplete`, rerun the identical command. The pitch-cache gate is closed only when every train/val utterance reloads exactly through the completed index and the report returns:
-
-```text
-status: pass
-all_targets_exact_mel_length: true
-all_centered_frame_counts_match_mel: true
-next_gate: add_acoustic_f0_voicing_heads
-```
-
-Only after that local pass should the acoustic model gain frame-level F0 and voicing prediction heads.
+Persistent v4.2 training is not authorized until that bounded gate passes.
