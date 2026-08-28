@@ -22,6 +22,10 @@ class LykenoxSpeechConfig:
     their original piecewise-constant post-regulation architecture exactly. New acoustic
     training may opt into ``token-progress-conv-v1`` without making those checkpoints
     silently incompatible.
+
+    ``feature_cache_dict`` intentionally preserves the exact pre-frame-context config
+    payload used by existing mel-v1 and pitch-v1 cache identities. Acoustic architecture
+    choices must not invalidate deterministic waveform-derived feature caches.
     """
 
     vocab_size: int = 128
@@ -41,3 +45,25 @@ class LykenoxSpeechConfig:
 
     def to_dict(self) -> dict[str, int | float | str]:
         return asdict(self)
+
+    def feature_cache_dict(self) -> dict[str, int | float]:
+        """Return the historical config payload that owns mel/pitch cache identity.
+
+        The first mel-v1 cache used the full then-current speech config, before frame
+        context fields existed. Reconstruct that exact payload so the accepted caches are
+        reused across acoustic architecture revisions instead of being duplicated.
+        """
+
+        return {
+            "vocab_size": self.vocab_size,
+            "hidden_size": self.hidden_size,
+            "encoder_layers": self.encoder_layers,
+            "encoder_heads": self.encoder_heads,
+            "ff_multiplier": self.ff_multiplier,
+            "dropout": self.dropout,
+            "mel_bins": self.mel_bins,
+            "max_duration_frames": self.max_duration_frames,
+            "sample_rate": self.sample_rate,
+            "hop_length": self.hop_length,
+            "n_fft": self.n_fft,
+        }
