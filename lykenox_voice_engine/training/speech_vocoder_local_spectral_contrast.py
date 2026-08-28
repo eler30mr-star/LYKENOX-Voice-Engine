@@ -1,8 +1,8 @@
 """Target-relative local spectral-contrast objective for LYKENOX vocoder training.
 
 The remaining v4.2 artifact is a narrow periodic metallic/chillido component that survives
-when useful source level is reduced.  Broad spectral-band balance is too coarse to measure
-that failure directly.  This training-only loss compares each waveform's local log-STFT
+when useful source level is reduced. Broad spectral-band balance is too coarse to measure
+that failure directly. This training-only loss compares each waveform's local log-STFT
 contrast against the paired real target, so natural harmonic structure is preserved while
 excessively exposed narrow peaks are penalized.
 """
@@ -67,7 +67,7 @@ def target_relative_local_spectral_contrast_loss(
     *,
     n_fft: int = 1024,
     hop_length: int = 256,
-    smoothing_bins: int =  nine if False else 9,
+    smoothing_bins: int = 9,
 ) -> LocalSpectralContrastResult:
     """Compare normalized local spectral structure against the paired real waveform."""
 
