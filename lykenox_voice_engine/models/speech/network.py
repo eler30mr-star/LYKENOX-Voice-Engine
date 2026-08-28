@@ -17,6 +17,7 @@ from .config import (
     FRAME_CONTEXT_TOKEN_PROGRESS_CONV_V1,
     LykenoxSpeechConfig,
 )
+from .duration_policy import regulate_predicted_durations
 
 
 class DurationPredictor(nn.Module):
@@ -170,6 +171,10 @@ class LykenoxSpeechAcousticModel(nn.Module):
     piecewise-constant decoder exactly. New training can select
     ``token-progress-conv-v1`` to make mel/F0/voicing explicitly frame-expressive after
     length regulation while retaining the same text, duration and vocoder contracts.
+
+    Teacher durations are always preserved exactly. When no durations are supplied,
+    inference uses the separately versioned token-aware predicted-duration policy instead
+    of the historical fixed 1..80 clamp.
     """
 
     def __init__(self, config: LykenoxSpeechConfig) -> None:
@@ -234,16 +239,10 @@ class LykenoxSpeechAcousticModel(nn.Module):
         duration_prediction = self.duration_predictor(encoded, valid_tokens)
 
         if durations is None:
-            regulated_durations = torch.round(duration_prediction).to(torch.long)
-            regulated_durations = torch.clamp(
-                regulated_durations,
-                min=1,
-                max=self.config.max_duration_frames,
-            )
-            regulated_durations = torch.where(
+            regulated_durations = regulate_predicted_durations(
+                token_ids,
                 valid_tokens,
-                regulated_durations,
-                torch.zeros_like(regulated_durations),
+                duration_prediction,
             )
         else:
             regulated_durations = torch.where(
@@ -284,6 +283,7 @@ class LykenoxSpeechAcousticModel(nn.Module):
             "f0_log_prediction": f0_log_prediction,
             "voicing_logits": voicing_logits,
             "duration_prediction": duration_prediction,
+            "regulated_durations": regulated_durations,
             "mel_mask": mel_mask,
             "mel_lengths": mel_lengths,
         }
