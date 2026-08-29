@@ -109,9 +109,9 @@ benchmark_inference_seconds_median: 1.7901
 benchmark_rtf: 1.7482
 ```
 
-The architecture is therefore structurally viable as a corrective candidate, but it is currently slower than real time on the local CPU. Runtime optimization is not a release blocker yet because perceptual acceptance comes first.
+The architecture is structurally viable as a corrective candidate, but it is currently slower than real time on the local CPU. Runtime optimization remains secondary to perceptual acceptance.
 
-## Bounded resumable trainer candidate
+## Bounded resumable trainer
 
 Implemented files:
 
@@ -127,13 +127,27 @@ Trainer identity:
 v4-4-bounded-resumable-v1
 ```
 
-Default persistent artifact directory, once authorized:
+Persistent artifact directory:
 
 ```text
 models/lykenox_identity/training/vocoder_dynamic_filter_hybrid_v4_4/
 ```
 
-The stable target-referenced validation selection score is:
+Default persistent configuration:
+
+```text
+segment_mel_frames: 48
+train_items: 118
+val_items: 14
+max_epochs: 28
+warmup_epochs: 4
+patience: 6
+generator_lr: 2e-4
+discriminator_lr: 1e-4
+checkpoint_every_updates: 4
+```
+
+Stable target-referenced validation selection score:
 
 ```text
 reconstruction
@@ -145,21 +159,11 @@ reconstruction
 
 Adversarial and feature-matching terms may train the generator after warmup, but they are excluded from checkpoint selection.
 
-Because v4.4 is materially slower than v4.3, the default persistent crop is 48 mel frames and the default invocation budget is 82 seconds, with checkpoint and validation reserves chosen to stay below the local two-minute command ceiling. Checkpoints are written every four updates and can resume exactly.
+Because v4.4 is materially slower than v4.3, the default persistent crop is 48 mel frames and the invocation budget is bounded so each command can checkpoint and exit safely under the local command ceiling.
 
-## Current gate — exact resume
+## Exact-resume gate — PASSED
 
-Persistent v4.4 training is **not authorized yet**. First prove exact interruption/resume semantics.
-
-Run only:
-
-```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_v4_4_resume_smoke
-```
-
-The smoke executes the same four deterministic updates as `4` versus `2 + checkpoint/reload + 2`, with adversarial training active, and requires equality of generator, discriminator, both optimizers, RNG, epoch, item offset, global step and run config. It also hashes the historical v4.3 best checkpoint before and after.
-
-Required result:
+The exact-resume CPU smoke passed locally after comparing the same four deterministic updates as `4` versus `2 + checkpoint/reload + 2` with adversarial training active:
 
 ```text
 status: pass
@@ -179,14 +183,37 @@ persistent_v4_4_training_started: false
 next_gate: start_bounded_resumable_v4_4_persistent_training
 ```
 
-Only after that pass is the persistent v4.4 run authorized.
+This closes the resume contract gate. Persistent v4.4 training is now authorized.
+
+Run:
+
+```powershell
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_v4_4_train
+```
+
+If an invocation reports:
+
+```text
+status: incomplete
+next_gate: rerun_same_command_to_resume
+```
+
+rerun exactly the same command. Do not change training hyperparameters and do not delete `last.pt`.
+
+Persistent training is complete only when the report sets:
+
+```text
+persistent_training_complete: true
+```
+
+A numerical training pass does not grant perceptual or product acceptance. No additional training is authorized after completion by inertia; the next gate is full-utterance oracle listening.
 
 ## Remaining order
 
 ```text
 v4.4 architecture smoke          [PASS]
-  -> exact-resume trainer gate   [CURRENT]
-  -> bounded persistent v4.4 training
+  -> exact-resume trainer gate   [PASS]
+  -> bounded persistent v4.4 training   [AUTHORIZED]
   -> full-utterance oracle listening acceptance
   -> predicted-duration calibration
   -> reference-free text-to-waveform perceptual gate
