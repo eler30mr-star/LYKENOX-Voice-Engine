@@ -84,7 +84,7 @@ benchmark_rtf: 0.6818
 
 V5 is therefore both structurally viable and faster than real time in the bounded CPU smoke.
 
-## Bounded resumable trainer candidate
+## Bounded resumable trainer
 
 Implemented:
 
@@ -106,13 +106,13 @@ Trainer contract:
 v5-bounded-resumable-v1
 ```
 
-Default future persistent artifact directory:
+Persistent artifact directory:
 
 ```text
 models/lykenox_identity/training/vocoder_stochastic_glottal_filter_v5/
 ```
 
-Default persistent schedule, once authorized:
+Default persistent schedule:
 
 ```text
 segment_mel_frames: 48
@@ -138,17 +138,11 @@ reconstruction
 
 Adversarial and feature-matching losses are training-only after warmup and do not control best-checkpoint selection.
 
-## Current gate — exact resume only
+## Exact-resume gate — PASSED
 
-Persistent v5 training is **not authorized yet**. First run:
+The bounded exact-resume smoke passed locally. It compared the same four deterministic updates as `4` versus `2 + checkpoint/reload + 2`, with adversarial training active.
 
-```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_v5_resume_smoke
-```
-
-The smoke compares the same four deterministic updates as `4` versus `2 + checkpoint/reload + 2`, with adversarial training active. It requires bit-exact generator, discriminator, both optimizer states, torch RNG, epoch, item offset, global step and run config. It also verifies source-family identity, zero deterministic harmonics, absence of a sinusoidal carrier and hashes the historical v4.2/v4.3/v4.4 best checkpoints before/after.
-
-Required state:
+Confirmed state:
 
 ```text
 status: pass
@@ -171,15 +165,44 @@ persistent_v5_training_started: false
 next_gate: start_bounded_resumable_v5_persistent_training
 ```
 
-A pass authorizes persistent v5 training. A failure requires fixing resume semantics before any long run.
+Historical v4.2, v4.3 and v4.4 best checkpoints were present and remained unchanged.
+
+This closes the resume-contract gate. Persistent v5 training is now authorized.
+
+## Current gate — bounded persistent training
+
+Run:
+
+```powershell
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_v5_train
+```
+
+If an invocation reports:
+
+```text
+status: incomplete
+next_gate: rerun_same_command_to_resume
+```
+
+rerun exactly the same command. Do not change hyperparameters and do not delete `last.pt`.
+
+Persistent training is complete only when the final report sets:
+
+```text
+persistent_training_complete: true
+```
+
+The run is considered a numerical training pass only if a valid `best.pt` is selected and both the stable selection score and held-out envelope improve over initialization. A numerical pass does not grant perceptual or product acceptance.
+
+No additional v5 training is authorized by inertia after the persistent run closes. The immediate next gate after completion is full-utterance oracle listening acceptance.
 
 ## Remaining order
 
 ```text
 v4.4 path attribution                     [CLOSED: periodic path implicated]
   -> v5 non-sinusoidal architecture smoke [PASS]
-  -> exact-resume v5 trainer gate          [CURRENT]
-  -> bounded persistent v5 training
+  -> exact-resume v5 trainer gate          [PASS]
+  -> bounded persistent v5 training        [AUTHORIZED / CURRENT]
   -> full-utterance oracle listening acceptance
   -> predicted-duration calibration
   -> reference-free text-to-waveform perceptual gate
