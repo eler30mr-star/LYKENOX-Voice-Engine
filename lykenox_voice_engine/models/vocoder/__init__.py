@@ -35,6 +35,10 @@ from .network_v4_3 import (
     VOCODER_GENERATOR_V4_3_ARCHITECTURE,
     LykenoxVocoderGeneratorV43,
 )
+from .network_v4_4 import (
+    VOCODER_GENERATOR_V4_4_ARCHITECTURE,
+    LykenoxVocoderGeneratorV44,
+)
 
 __all__ = [
     "DISCRIMINATOR_ARCHITECTURE",
@@ -56,4 +60,6 @@ __all__ = [
     "LykenoxVocoderGeneratorV42",
     "VOCODER_GENERATOR_V4_3_ARCHITECTURE",
     "LykenoxVocoderGeneratorV43",
+    "VOCODER_GENERATOR_V4_4_ARCHITECTURE",
+    "LykenoxVocoderGeneratorV44",
 ]
