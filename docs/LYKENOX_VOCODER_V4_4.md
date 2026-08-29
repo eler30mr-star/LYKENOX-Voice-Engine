@@ -55,7 +55,7 @@ mel != 0
 => waveform == 0 exactly
 ```
 
-This preserves the useful anti-shortcut property learned from v4.2/v4.3 while giving mel substantially richer spectral-filter authority than v4.3's scalar multiplicative gains.
+This preserves the anti-shortcut property learned from v4.2/v4.3 while giving mel substantially richer spectral-filter authority than v4.3's scalar multiplicative gains.
 
 ## F0-locked harmonic exposure loss
 
@@ -75,17 +75,9 @@ Loss identity:
 vocoder-harmonic-exposure-v1
 ```
 
-## Current gate
+## Architecture smoke — PASSED
 
-No persistent v4.4 training is authorized.
-
-Run only:
-
-```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_v4_4_architecture_smoke
-```
-
-Required structural/optimization state includes:
+The bounded CPU architecture smoke passed locally:
 
 ```text
 status: pass
@@ -103,16 +95,97 @@ envelope_decreased: true
 harmonic_exposure_decreased: true
 parameter_budget_pass: true
 receptive_field_pass: true
-next_gate: build_bounded_resumable_v4_4_training_candidate
 ```
 
-The smoke also reports local CPU update time and inference RTF. A pass authorizes only construction of the exact-resume trainer gate; it does not authorize long training by itself.
+Measured local CPU cost:
+
+```text
+parameters: 578432
+receptive_field_ms: 64.958
+mean_seconds_per_step: 2.9666
+max_seconds_per_step: 3.9201
+benchmark_audio_seconds: 1.024
+benchmark_inference_seconds_median: 1.7901
+benchmark_rtf: 1.7482
+```
+
+The architecture is therefore structurally viable as a corrective candidate, but it is currently slower than real time on the local CPU. Runtime optimization is not a release blocker yet because perceptual acceptance comes first.
+
+## Bounded resumable trainer candidate
+
+Implemented files:
+
+```text
+lykenox_voice_engine/training/speech_vocoder_v4_4_artifact.py
+lykenox_voice_engine/training/speech_vocoder_v4_4_train.py
+lykenox_voice_engine/training/speech_vocoder_v4_4_resume_smoke.py
+```
+
+Trainer identity:
+
+```text
+v4-4-bounded-resumable-v1
+```
+
+Default persistent artifact directory, once authorized:
+
+```text
+models/lykenox_identity/training/vocoder_dynamic_filter_hybrid_v4_4/
+```
+
+The stable target-referenced validation selection score is:
+
+```text
+reconstruction
++ 0.50 * envelope
++ 0.25 * spectral_balance
++ 0.15 * local_spectral_contrast
++ 0.25 * harmonic_exposure
+```
+
+Adversarial and feature-matching terms may train the generator after warmup, but they are excluded from checkpoint selection.
+
+Because v4.4 is materially slower than v4.3, the default persistent crop is 48 mel frames and the default invocation budget is 82 seconds, with checkpoint and validation reserves chosen to stay below the local two-minute command ceiling. Checkpoints are written every four updates and can resume exactly.
+
+## Current gate — exact resume
+
+Persistent v4.4 training is **not authorized yet**. First prove exact interruption/resume semantics.
+
+Run only:
+
+```powershell
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_v4_4_resume_smoke
+```
+
+The smoke executes the same four deterministic updates as `4` versus `2 + checkpoint/reload + 2`, with adversarial training active, and requires equality of generator, discriminator, both optimizers, RNG, epoch, item offset, global step and run config. It also hashes the historical v4.3 best checkpoint before and after.
+
+Required result:
+
+```text
+status: pass
+trainer_contract_version: v4-4-bounded-resumable-v1
+global_step_exact: true
+epoch_exact: true
+next_item_offset_exact: true
+generator_state_exact: true
+discriminator_state_exact: true
+generator_optimizer_exact: true
+discriminator_optimizer_exact: true
+torch_rng_state_exact: true
+run_config_exact: true
+v4_3_checkpoint_unchanged: true
+temporary_artifacts_removed: true
+persistent_v4_4_training_started: false
+next_gate: start_bounded_resumable_v4_4_persistent_training
+```
+
+Only after that pass is the persistent v4.4 run authorized.
 
 ## Remaining order
 
 ```text
-v4.4 architecture smoke
-  -> exact-resume trainer gate
+v4.4 architecture smoke          [PASS]
+  -> exact-resume trainer gate   [CURRENT]
   -> bounded persistent v4.4 training
   -> full-utterance oracle listening acceptance
   -> predicted-duration calibration
