@@ -6,10 +6,10 @@ V4.3 completed numerical training and passed its structural oracle audit, but li
 
 A bounded post-training carrier ablation then compared the exact 24-harmonic v4.3 baseline against 16, 12 and 8 active harmonics at approximately equal harmonic RMS, plus higher voiced-noise floors. Listening found the 8-harmonic variant to be the best of the tested candidates, but not solved.
 
-This establishes two facts:
+This established two facts:
 
-1. the 24-harmonic deterministic carrier is too coherent/exposed for the trained v4.3 filter;
-2. reducing carrier complexity alone is insufficient, so v4.3's scalar multiplicative-only mel control is also too restrictive.
+1. the 24-harmonic deterministic carrier was too coherent/exposed for the trained v4.3 filter;
+2. reducing carrier complexity alone was insufficient, so v4.3's scalar multiplicative-only mel control was also too restrictive.
 
 V4.3 remains rejected for product use. No further v4.3 training is authorized.
 
@@ -47,7 +47,7 @@ There is no raw periodic source bypass and no mel-only waveform branch.
 
 ## Structural invariant
 
-Every audible path is excitation-dependent. The architecture smoke explicitly requires:
+Every audible path is excitation-dependent:
 
 ```text
 excitation_scale = 0
@@ -111,15 +111,7 @@ benchmark_rtf: 1.7482
 
 The architecture is structurally viable as a corrective candidate, but it is currently slower than real time on the local CPU. Runtime optimization remains secondary to perceptual acceptance.
 
-## Bounded resumable trainer
-
-Implemented files:
-
-```text
-lykenox_voice_engine/training/speech_vocoder_v4_4_artifact.py
-lykenox_voice_engine/training/speech_vocoder_v4_4_train.py
-lykenox_voice_engine/training/speech_vocoder_v4_4_resume_smoke.py
-```
+## Exact-resume gate — PASSED
 
 Trainer identity:
 
@@ -127,27 +119,56 @@ Trainer identity:
 v4-4-bounded-resumable-v1
 ```
 
+The exact-resume CPU smoke passed after comparing the same four deterministic updates as `4` versus `2 + checkpoint/reload + 2` with adversarial training active. Generator, discriminator, both optimizers, RNG, epoch, item offset, global step and run config all matched exactly. The historical v4.3 checkpoint remained unchanged.
+
+## Persistent training — COMPLETE / NUMERICAL PASS
+
 Persistent artifact directory:
 
 ```text
 models/lykenox_identity/training/vocoder_dynamic_filter_hybrid_v4_4/
 ```
 
-Default persistent configuration:
+The bounded resumable run completed and is closed. No further v4.4 training is authorized by inertia.
 
 ```text
-segment_mel_frames: 48
-train_items: 118
-val_items: 14
-max_epochs: 28
-warmup_epochs: 4
-patience: 6
-generator_lr: 2e-4
-discriminator_lr: 1e-4
-checkpoint_every_updates: 4
+status: pass
+stop_reason: max_epochs
+persistent_training_complete: true
+architecture: lykenox_dynamic_filter_hybrid_v4_4
+trainer_contract_version: v4-4-bounded-resumable-v1
+epochs_completed: 28
+global_step: 3304
+best_epoch: 27
+training_improved: true
+envelope_improved: true
+harmonic_exposure_improved: true
+v4_3_checkpoint_mutated: false
 ```
 
-Stable target-referenced validation selection score:
+Initial validation:
+
+```text
+reconstruction: 3.602273
+envelope: 3.558446
+spectral_balance: 2.304265
+local_spectral_contrast: 0.313305
+harmonic_exposure: 0.47218
+selection_score: 6.122603
+```
+
+Best validation:
+
+```text
+reconstruction: 1.276072
+envelope: 0.684056
+spectral_balance: 0.09466
+local_spectral_contrast: 0.286187
+harmonic_exposure: 0.358537
+selection_score: 1.774328
+```
+
+The stable target-referenced checkpoint selection score was:
 
 ```text
 reconstruction
@@ -157,64 +178,60 @@ reconstruction
 + 0.25 * harmonic_exposure
 ```
 
-Adversarial and feature-matching terms may train the generator after warmup, but they are excluded from checkpoint selection.
+This numerical pass does **not** grant perceptual or product acceptance.
 
-Because v4.4 is materially slower than v4.3, the default persistent crop is 48 mel frames and the invocation budget is bounded so each command can checkpoint and exit safely under the local command ceiling.
+## Current gate — full-utterance oracle listening
 
-## Exact-resume gate — PASSED
-
-The exact-resume CPU smoke passed locally after comparing the same four deterministic updates as `4` versus `2 + checkpoint/reload + 2` with adversarial training active:
+Implemented audit:
 
 ```text
-status: pass
-trainer_contract_version: v4-4-bounded-resumable-v1
-global_step_exact: true
-epoch_exact: true
-next_item_offset_exact: true
-generator_state_exact: true
-discriminator_state_exact: true
-generator_optimizer_exact: true
-discriminator_optimizer_exact: true
-torch_rng_state_exact: true
-run_config_exact: true
-v4_3_checkpoint_unchanged: true
-temporary_artifacts_removed: true
-persistent_v4_4_training_started: false
-next_gate: start_bounded_resumable_v4_4_persistent_training
+lykenox_voice_engine/training/speech_vocoder_v4_4_full_utterance_oracle_acceptance.py
 ```
 
-This closes the resume contract gate. Persistent v4.4 training is now authorized.
+The audit uses the same three fixed held-out validation utterances and preserves both historical baselines because v4.3 was perceptually worse than v4.2:
+
+```text
+reference -> v4.2 oracle -> v4.3 oracle -> v4.4 oracle
+```
+
+All synthesized candidates receive the same target mel + target F0 + target voicing on the teacher frame grid. Reference waveform and target pitch are audit-only inputs. No training, checkpoint mutation, gain normalization, source speaker or product-time reference audio is introduced.
+
+The report compares:
+
+```text
+reconstruction
+envelope
+spectral_balance
+local_spectral_contrast
+harmonic_exposure over harmonics 1..8
+RMS / spectral-band diagnostics
+```
 
 Run:
 
 ```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_v4_4_train
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_v4_4_full_utterance_oracle_acceptance
 ```
 
-If an invocation reports:
+Expected pre-listening state:
 
 ```text
-status: incomplete
-next_gate: rerun_same_command_to_resume
-```
-
-rerun exactly the same command. Do not change training hyperparameters and do not delete `last.pt`.
-
-Persistent training is complete only when the report sets:
-
-```text
+status: needs_listening
+structural_gate_pass: true
 persistent_training_complete: true
+full_utterance_perceptual_acceptance: false
+next_gate: listen_v4_4_full_utterance_oracle_sets_and_accept_or_revise_vocoder
 ```
 
-A numerical training pass does not grant perceptual or product acceptance. No additional training is authorized after completion by inertia; the next gate is full-utterance oracle listening.
+Perceptual acceptance requires the radio-mistuned / metallic carrier interference to be absent or materially resolved on all three complete held-out utterances, while preserving intelligibility, consonants/formants and usable level. Improvement versus rejected v4.3 alone is insufficient: v4.4 must also be perceptually no worse than the stronger historical v4.2 baseline.
 
 ## Remaining order
 
 ```text
-v4.4 architecture smoke          [PASS]
-  -> exact-resume trainer gate   [PASS]
-  -> bounded persistent v4.4 training   [AUTHORIZED]
-  -> full-utterance oracle listening acceptance
+v4.4 architecture smoke                [PASS]
+  -> exact-resume trainer gate         [PASS]
+  -> bounded persistent v4.4 training  [PASS / CLOSED]
+  -> full-utterance oracle listening acceptance  [CURRENT]
   -> predicted-duration calibration
   -> reference-free text-to-waveform perceptual gate
 ```
