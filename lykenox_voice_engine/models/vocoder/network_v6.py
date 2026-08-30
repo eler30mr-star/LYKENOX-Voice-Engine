@@ -1,15 +1,15 @@
 """LYKENOX vocoder v6: direct conditional waveform decoder.
 
 V5 proved that removing a sinusoidal bank is not enough when the entire audible waveform is
-still forced through an explicit stochastic voiced source.  V6 removes the source/filter
-factorization itself.  Mel, F0 and voicing are conditioning features for a learned waveform
+still forced through an explicit stochastic voiced source. V6 removes the source/filter
+factorization itself. Mel, F0 and voicing are conditioning features for a learned waveform
 decoder; there is no voiced noise source, harmonic bank, pulse train, or raw excitation
 bypass.
 
-A deterministic unvoiced-noise *feature* is supplied only where voicing is low so fricative
-capacity is not forced to come from frame interpolation.  It is concatenated with the
-conditioning state and must pass through the learned decoder; it is never added to the
-waveform directly.
+Revision 2 also separates waveform *shape* from slow amplitude control. The sample decoder
+cannot win reconstruction losses by collapsing its raw scale because its output is locally
+RMS-normalized before a mel-conditioned frame-RMS envelope is applied. This is an internal
+learned level path, not inference-time normalization of the final waveform.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ import torch.nn.functional as F
 from .config import LykenoxVocoderConfig
 
 
-VOCODER_GENERATOR_V6_ARCHITECTURE = "lykenox_direct_conditional_waveform_v6"
+VOCODER_GENERATOR_V6_ARCHITECTURE = "lykenox_direct_conditional_waveform_v6_level_decoupled"
 
 
 class _GatedDepthwiseResidual(nn.Module):
@@ -83,7 +83,7 @@ class _ResizeRefineStage(nn.Module):
 
 
 class LykenoxVocoderGeneratorV6(nn.Module):
-    """Direct mel/F0/voicing-to-waveform decoder with no explicit audible source."""
+    """Direct mel/F0/voicing-to-waveform decoder with decoupled learned level control."""
 
     architecture = VOCODER_GENERATOR_V6_ARCHITECTURE
     source_family = "direct_conditional_waveform_decoder"
@@ -93,6 +93,8 @@ class LykenoxVocoderGeneratorV6(nn.Module):
     voiced_noise_source = False
     raw_source_bypass = False
     conditioning_only_waveform = True
+    waveform_shape_level_decoupled = True
+    level_control_family = "mel_conditioned_frame_rms_envelope"
 
     def __init__(
         self,
@@ -103,6 +105,9 @@ class LykenoxVocoderGeneratorV6(nn.Module):
         sample_channels: int = 48,
         upsample_factors: tuple[int, ...] = (4, 4, 4, 4),
         sample_dilations: tuple[int, ...] = (1, 2, 4, 8, 16, 32, 64, 128),
+        initial_frame_rms: float = 0.012,
+        min_frame_rms: float = 1e-4,
+        max_frame_rms: float = 0.35,
     ) -> None:
         super().__init__()
         self.config = config or LykenoxVocoderConfig()
@@ -112,6 +117,8 @@ class LykenoxVocoderGeneratorV6(nn.Module):
             raise ValueError("v6 channel/factor schedule length mismatch")
         if frame_channels < 64 or sample_channels < 32:
             raise ValueError("v6 channel schedule is below supported capacity")
+        if not (0.0 < min_frame_rms < initial_frame_rms < max_frame_rms < 1.0):
+            raise ValueError("v6 frame-RMS bounds/initialization are invalid")
 
         self.frame_channels = int(frame_channels)
         self.upsample_channels = tuple(int(value) for value in upsample_channels)
@@ -120,6 +127,8 @@ class LykenoxVocoderGeneratorV6(nn.Module):
         self.sample_dilations = tuple(int(value) for value in sample_dilations)
         self.frame_feature_channels = self.config.mel_bins + 2  # mel + log-F0 + voiced
         self.sample_control_channels = 5  # phase aperture, phase, voiced, log-F0, UV detail
+        self.min_frame_rms = float(min_frame_rms)
+        self.max_frame_rms = float(max_frame_rms)
 
         self.frame_pre = nn.Conv1d(
             self.frame_feature_channels,
@@ -162,11 +171,23 @@ class LykenoxVocoderGeneratorV6(nn.Module):
             nn.Conv1d(32, 1, kernel_size=7, padding=3),
         )
 
-        # A trainable global level degree of freedom is intentional.  It is optimized by
-        # target-relative level losses rather than by post-hoc runtime normalization.
-        initial_gain_parameter = math.log(math.expm1(1.0))
-        self.output_gain_parameter = nn.Parameter(
-            torch.tensor(initial_gain_parameter, dtype=torch.float32)
+        # This path owns slow waveform level. The decoder's raw amplitude is normalized
+        # before this envelope is applied, so decoder scale and level scale cannot cancel.
+        self.frame_level_head = nn.Conv1d(
+            frame_channels,
+            1,
+            kernel_size=3,
+            padding=1,
+            bias=False,
+        )
+        nn.init.zeros_(self.frame_level_head.weight)
+        initial_ratio = (
+            (float(initial_frame_rms) - self.min_frame_rms)
+            / (self.max_frame_rms - self.min_frame_rms)
+        )
+        initial_logit = math.log(initial_ratio / (1.0 - initial_ratio))
+        self.level_logit_bias_parameter = nn.Parameter(
+            torch.tensor(initial_logit, dtype=torch.float32)
         )
 
     @staticmethod
@@ -182,8 +203,21 @@ class LykenoxVocoderGeneratorV6(nn.Module):
         noise = (raw - torch.floor(raw)) * 2.0 - 1.0
         return noise.view(1, 1, samples).expand(batch, 1, samples)
 
+    def _rms_from_logits(self, logits: torch.Tensor) -> torch.Tensor:
+        span = self.max_frame_rms - self.min_frame_rms
+        return self.min_frame_rms + span * torch.sigmoid(logits)
+
+    def nominal_output_rms(self) -> torch.Tensor:
+        """Return the learned frame-RMS baseline before mel-conditioned residuals."""
+        return self._rms_from_logits(self.level_logit_bias_parameter)
+
     def output_gain(self) -> torch.Tensor:
-        return F.softplus(self.output_gain_parameter) + 1e-4
+        """Backward-compatible diagnostic alias for the nominal learned output RMS."""
+        return self.nominal_output_rms()
+
+    def level_parameters(self) -> tuple[nn.Parameter, ...]:
+        """Parameters dedicated to slow level control for optimizer grouping."""
+        return (self.level_logit_bias_parameter, *tuple(self.frame_level_head.parameters()))
 
     def _validate_inputs(
         self,
@@ -249,6 +283,37 @@ class LykenoxVocoderGeneratorV6(nn.Module):
             dim=1,
         )
 
+    def _level_envelope(
+        self,
+        frame_state: torch.Tensor,
+        samples: int,
+    ) -> torch.Tensor:
+        frame_logits = (
+            self.frame_level_head(frame_state)
+            + self.level_logit_bias_parameter.view(1, 1, 1)
+        )
+        frame_rms = self._rms_from_logits(frame_logits)
+        return F.interpolate(
+            frame_rms,
+            size=samples,
+            mode="linear",
+            align_corners=False,
+        )
+
+    def _normalized_waveform_shape(self, raw: torch.Tensor) -> torch.Tensor:
+        """Remove slow mean/scale so only the dedicated level path owns amplitude."""
+        radius = int(self.config.hop_length)
+        kernel_size = 2 * radius + 1
+        padded = F.pad(raw, (radius, radius), mode="replicate")
+        local_mean = F.avg_pool1d(padded, kernel_size=kernel_size, stride=1)
+        centered = raw - local_mean
+
+        squared = F.pad(centered.square(), (radius, radius), mode="replicate")
+        local_power = F.avg_pool1d(squared, kernel_size=kernel_size, stride=1)
+        shape = centered / torch.sqrt(local_power.clamp_min(1e-6))
+        global_rms = torch.sqrt(shape.square().mean(dim=-1, keepdim=True).clamp_min(1e-6))
+        return shape / global_rms
+
     def forward(
         self,
         mel: torch.Tensor,
@@ -259,8 +324,10 @@ class LykenoxVocoderGeneratorV6(nn.Module):
         batch, frames, _ = mel.shape
         expected_samples = int(frames) * self.config.hop_length
 
-        x = self.frame_pre(self._frame_features(mel, f0_hz, voiced))
-        x = self.frame_context(x)
+        frame_state = self.frame_context(
+            self.frame_pre(self._frame_features(mel, f0_hz, voiced))
+        )
+        x = frame_state
         for stage in self.upsampling:
             x = stage(x)
         if int(x.shape[-1]) != expected_samples:
@@ -271,7 +338,10 @@ class LykenoxVocoderGeneratorV6(nn.Module):
         x = self.sample_pre(x)
         x = self.sample_decoder(x)
         raw = self.post(F.leaky_relu(x, negative_slope=0.1))
-        waveform = torch.tanh(raw * self.output_gain()).squeeze(1)
+
+        shape = self._normalized_waveform_shape(raw)
+        level = self._level_envelope(frame_state, expected_samples)
+        waveform = torch.tanh(shape * level).squeeze(1)
         if tuple(waveform.shape) != (batch, expected_samples):
             raise RuntimeError("LYKENOX v6 output length contract failed")
         return waveform
