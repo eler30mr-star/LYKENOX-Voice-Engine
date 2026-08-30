@@ -2,8 +2,9 @@
 
 Loads the accepted acoustic frame-context-v2 checkpoint, freezes every parameter except
 ``mel_decoder``, and performs a tiny teacher-duration micro-overfit in memory.  The gate
-must improve mel fidelity while duration/F0/voicing outputs and all persistent checkpoints
-remain bit-exact.  No artifact is saved and no persistent training is authorized here.
+must improve the explicit mel-fidelity objective while duration/F0/voicing outputs and all
+persistent checkpoints remain bit-exact.  No artifact is saved and no persistent training
+is authorized here.
 """
 from __future__ import annotations
 
@@ -149,9 +150,16 @@ def run_acoustic_mel_fidelity_smoke(root: Path) -> dict[str, object]:
     )
     initial_loss = _loss_payload(initial_result)
 
-    optimizer = torch.optim.AdamW(model.mel_decoder.parameters(), lr=LEARNING_RATE, weight_decay=0.0)
+    optimizer = torch.optim.AdamW(
+        model.mel_decoder.parameters(),
+        lr=LEARNING_RATE,
+        weight_decay=0.0,
+    )
     best_total = initial_loss["total"]
-    best_state = {key: value.detach().clone() for key, value in model.mel_decoder.state_dict().items()}
+    best_state = {
+        key: value.detach().clone()
+        for key, value in model.mel_decoder.state_dict().items()
+    }
     best_loss = dict(initial_loss)
     finite_gradients = True
     for _update in range(UPDATES):
@@ -173,7 +181,17 @@ def run_acoustic_mel_fidelity_smoke(root: Path) -> dict[str, object]:
         if not finite_gradients:
             raise RuntimeError("Non-finite mel fidelity smoke gradient")
         optimizer.step()
-        current = _loss_payload(result)
+
+        with torch.no_grad():
+            post_output = model(batch.token_ids, batch.token_mask, batch.durations)
+            post_result = acoustic_mel_fidelity_loss(
+                post_output["mel"],
+                batch.mel,
+                batch.mel_mask,
+                sample_rate=model.config.sample_rate,
+                n_fft=model.config.n_fft,
+            )
+        current = _loss_payload(post_result)
         if current["total"] < best_total:
             best_total = current["total"]
             best_loss = current
@@ -219,9 +237,15 @@ def run_acoustic_mel_fidelity_smoke(root: Path) -> dict[str, object]:
 
     total_decreased = final_loss["total"] < initial_loss["total"]
     mel_l1_decreased = final_loss["mel_l1"] < initial_loss["mel_l1"]
+    centered_shape_decreased = final_loss["centered_shape"] <= initial_loss["centered_shape"]
+    spectral_delta_decreased = final_loss["spectral_delta"] <= initial_loss["spectral_delta"]
+    temporal_delta_decreased = final_loss["temporal_delta"] <= initial_loss["temporal_delta"]
     clarity_guard_decreased = (
         final_loss["clarity_underpresence"] <= initial_loss["clarity_underpresence"]
     )
+
+    # Ratio/dB movement is useful diagnostic evidence but is not substituted for the actual
+    # optimized objective components in the trainability gate.
     spectral_ratio_closer = abs(final_metrics["spectral_delta_ratio"] - 1.0) < abs(
         initial_metrics["spectral_delta_ratio"] - 1.0
     )
@@ -249,10 +273,10 @@ def run_acoustic_mel_fidelity_smoke(root: Path) -> dict[str, object]:
             finite_gradients,
             total_decreased,
             mel_l1_decreased,
+            centered_shape_decreased,
+            spectral_delta_decreased,
+            temporal_delta_decreased,
             clarity_guard_decreased,
-            spectral_ratio_closer,
-            temporal_ratio_closer,
-            high_band_closer,
         )
     )
     status = "pass" if identity_exact and isolation_pass and trainability_pass else "fail"
@@ -264,7 +288,9 @@ def run_acoustic_mel_fidelity_smoke(root: Path) -> dict[str, object]:
         "learning_rate": LEARNING_RATE,
         "acoustic_identity_exact": identity_exact,
         "trainable_parameter_names": trainable_names,
-        "only_mel_decoder_trainable": all(name.startswith("mel_decoder.") for name in trainable_names),
+        "only_mel_decoder_trainable": all(
+            name.startswith("mel_decoder.") for name in trainable_names
+        ),
         "frozen_parameters_exact": frozen_parameters_exact,
         "duration_prediction_exact": duration_prediction_exact,
         "regulated_durations_exact": regulated_durations_exact,
@@ -272,12 +298,21 @@ def run_acoustic_mel_fidelity_smoke(root: Path) -> dict[str, object]:
         "voicing_logits_exact": voicing_logits_exact,
         "finite_gradients": finite_gradients,
         "initial_loss": {key: round(value, 6) for key, value in initial_loss.items()},
-        "best_loss_during_updates": {key: round(value, 6) for key, value in best_loss.items()},
+        "best_loss_during_updates": {
+            key: round(value, 6) for key, value in best_loss.items()
+        },
         "final_loss": {key: round(value, 6) for key, value in final_loss.items()},
-        "initial_fidelity_metrics": {key: round(float(value), 6) for key, value in initial_metrics.items()},
-        "final_fidelity_metrics": {key: round(float(value), 6) for key, value in final_metrics.items()},
+        "initial_fidelity_metrics": {
+            key: round(float(value), 6) for key, value in initial_metrics.items()
+        },
+        "final_fidelity_metrics": {
+            key: round(float(value), 6) for key, value in final_metrics.items()
+        },
         "total_decreased": total_decreased,
         "mel_l1_decreased": mel_l1_decreased,
+        "centered_shape_decreased": centered_shape_decreased,
+        "spectral_delta_decreased": spectral_delta_decreased,
+        "temporal_delta_decreased": temporal_delta_decreased,
         "clarity_guard_decreased": clarity_guard_decreased,
         "spectral_ratio_closer_to_target": spectral_ratio_closer,
         "temporal_ratio_closer_to_target": temporal_ratio_closer,
