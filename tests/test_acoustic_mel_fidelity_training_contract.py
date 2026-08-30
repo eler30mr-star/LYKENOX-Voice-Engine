@@ -74,6 +74,11 @@ class AcousticMelFidelityTrainingContractTests(unittest.TestCase):
         self.assertIn('"epoch2_training_blocked": True', trainer_source)
         self.assertIn('if epoch > HARD_EPOCH_LIMIT or history:', trainer_source)
         self.assertIn("require_frozen_state_exact", trainer_source)
+        self.assertIn(
+            "model, _candidate_payload = load_acoustic_prosody_checkpoint(base_path)",
+            trainer_source,
+        )
+        self.assertNotIn("model = base_model", trainer_source)
         self.assertNotIn("model.parameters(), lr=learning_rate", trainer_source)
 
         self.assertEqual(SMOKE_VERSION, "acoustic-mel-fidelity-exact-resume-smoke-v1")
