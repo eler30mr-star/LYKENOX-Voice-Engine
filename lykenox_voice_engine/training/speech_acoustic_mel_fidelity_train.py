@@ -296,9 +296,10 @@ def run_isolated_mel_fidelity_training(
         accumulator = dict(metadata.get("epoch_accumulator", _empty_accumulator()))
     else:
         torch.manual_seed(seed)
-        model = base_model
+        model, _candidate_payload = load_acoustic_prosody_checkpoint(base_path)
         freeze_except_mel_decoder(model)
         model.cpu().eval()
+        require_frozen_state_exact(model, base_model)
         optimizer = torch.optim.AdamW(model.mel_decoder.parameters(), lr=learning_rate, weight_decay=0.0)
         initial_validation = _validation(model, val_dataset, batch_size=batch_size)
         best_validation = dict(initial_validation)
