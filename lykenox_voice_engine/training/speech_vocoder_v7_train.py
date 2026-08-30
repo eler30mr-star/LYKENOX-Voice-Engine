@@ -28,6 +28,13 @@ DEFAULT_TIME_BUDGET_SECONDS = 80.0
 DEFAULT_CHECKPOINT_RESERVE_SECONDS = 10.0
 DEFAULT_VALIDATION_RESERVE_SECONDS = 20.0
 DEFAULT_VALIDATION_SEED_OFFSET = 100_003
+V7_FIRST_EPOCH_GENERATOR_KWARGS = {
+    "frame_channels": 96,
+    "upsample_channels": (80, 56, 40),
+    "upsample_factors": (8, 8, 4),
+    "residual_kernels": (3, 7),
+    "residual_dilations": (1, 3),
+}
 
 
 def _atomic_json(path: Path, payload: dict[str, object]) -> None:
@@ -84,7 +91,7 @@ def _validate(generator, content_loss, items, *, content_weight: float, level_we
 
 
 def _run_config(**kwargs: object) -> dict[str, object]:
-    return {"trainer_contract_version": TRAINER_CONTRACT_VERSION, "generator_architecture": VOCODER_GENERATOR_V7_ARCHITECTURE, "source_free": True, "sample_phase_conditioning": False, "sample_rate_pitch_features": False, "pitch_conditioning_scope": "frame_latent_only", "deterministic_noise_conditioning": False, "level_rescue_branch": False, "v7_content_loss_version": VOCODER_V7_CONTENT_LOSS_VERSION, "train_segment_schedule_version": TRAIN_SEGMENT_SCHEDULE_VERSION, "hard_epoch_limit": 1, **kwargs}
+    return {"trainer_contract_version": TRAINER_CONTRACT_VERSION, "generator_architecture": VOCODER_GENERATOR_V7_ARCHITECTURE, "generator_hyperparameters": dict(V7_FIRST_EPOCH_GENERATOR_KWARGS), "source_free": True, "sample_phase_conditioning": False, "sample_rate_pitch_features": False, "pitch_conditioning_scope": "frame_latent_only", "deterministic_noise_conditioning": False, "level_rescue_branch": False, "v7_content_loss_version": VOCODER_V7_CONTENT_LOSS_VERSION, "train_segment_schedule_version": TRAIN_SEGMENT_SCHEDULE_VERSION, "hard_epoch_limit": 1, **kwargs}
 
 
 def _metadata(run_config, history, initial, best, best_epoch, partial, resumed):
@@ -115,13 +122,13 @@ def run_bounded_resumable_v7_first_epoch(root: Path, *, segment_mel_frames: int 
         if not isinstance(meta, dict) or meta.get("run_config") != run_config: raise RuntimeError("Existing v7 checkpoint configuration differs from this command")
         history = list(meta.get("history", []))
         if history:
-            return {"status": "gate_reached", "trainer_contract_version": TRAINER_CONTRACT_VERSION, "architecture": VOCODER_GENERATOR_V7_ARCHITECTURE, "epochs_completed": 1, "current_epoch": 2, "next_item_offset": 0, "global_step": int(resumed_payload["global_step"]), "best_epoch": int(meta.get("best_epoch", 1)), "persistent_training_complete": False, "full_utterance_perceptual_acceptance": False, "next_gate": "run_v7_full_utterance_oracle_vs_v4_2_before_any_epoch2"}
+            return {"status": "gate_reached", "trainer_contract_version": TRAINER_CONTRACT_VERSION, "architecture": VOCODER_GENERATOR_V7_ARCHITECTURE, "epochs_completed": 1, "current_epoch": 2, "next_item_offset": 0, "global_step": int(resumed_payload["global_step"]), "best_epoch": int(meta.get("best_epoch", 1)), "persistent_training_complete": False, "full_utterance_perceptual_acceptance": False, "epoch2_training_blocked": True, "next_gate": "run_v7_full_utterance_oracle_vs_v4_2_before_any_epoch2"}
         epoch = int(resumed_payload["epoch"]); step = int(resumed_payload["global_step"]); offset = int(resumed_payload["next_item_offset"]); initial = dict(meta["initial_validation"]); best = dict(meta["best_validation"]); best_epoch = int(meta.get("best_epoch", 0)); partial = meta.get("partial_epoch_state"); accum = dict(partial) if isinstance(partial, dict) else {"epoch": 1, "updates": 0, "total_sum": 0.0}; resumed = int(meta.get("resumed_invocations", 0)) + 1
-        rng = resumed_payload.get("torch_rng_state");
+        rng = resumed_payload.get("torch_rng_state")
         if not isinstance(rng, torch.Tensor): raise RuntimeError("Cannot exactly resume v7 without torch RNG state")
         torch.set_rng_state(rng); generator.train()
     else:
-        torch.manual_seed(seed); generator = LykenoxVocoderGeneratorV7().cpu().train(); initial = _validate(generator, content_loss, val, content_weight=content_weight, level_weight=level_weight); best = dict(initial); best_epoch = 0; epoch = 1; step = 0; offset = 0; history = []; accum = {"epoch": 1, "updates": 0, "total_sum": 0.0}; resumed = 0
+        torch.manual_seed(seed); generator = LykenoxVocoderGeneratorV7(**V7_FIRST_EPOCH_GENERATOR_KWARGS).cpu().train(); initial = _validate(generator, content_loss, val, content_weight=content_weight, level_weight=level_weight); best = dict(initial); best_epoch = 0; epoch = 1; step = 0; offset = 0; history = []; accum = {"epoch": 1, "updates": 0, "total_sum": 0.0}; resumed = 0
     optimizer = torch.optim.AdamW(generator.parameters(), lr=generator_lr, weight_decay=1e-5)
     if resumed_payload is not None:
         state = resumed_payload.get("generator_optimizer_state")
@@ -131,7 +138,7 @@ def run_bounded_resumable_v7_first_epoch(root: Path, *, segment_mel_frames: int 
     def meta(partial): return _metadata(run_config, history, initial, best, best_epoch, partial, resumed)
     def interrupt(reason: str):
         current = dict(history[-1]["validation"]) if history else dict(initial); _save(last_path, generator, optimizer, epoch, step, offset, provenance, meta(accum if offset > 0 else None), current)
-        out = {"status": "incomplete", "stop_reason": reason, "trainer_contract_version": TRAINER_CONTRACT_VERSION, "architecture": VOCODER_GENERATOR_V7_ARCHITECTURE, "epochs_completed": len(history), "current_epoch": epoch, "next_item_offset": offset, "global_step": step, "updates_this_run": updates_this_run, "best_epoch": best_epoch, "best_validation_selection_score": round(float(best["selection_score"]), 6), "best_validation_rms_error_db": round(float(best["rms_error_db"]), 6), "best_validation_presence_error_db": round(float(best["presence_1k_8k_error_db"]), 6), "elapsed_seconds": round(time.perf_counter() - started, 3), "last_checkpoint": str(last_path), "best_checkpoint": str(best_path) if best_path.exists() else None, "persistent_training_complete": False, "full_utterance_perceptual_acceptance": False, "next_gate": "rerun_same_command_to_resume_first_epoch"}
+        out = {"status": "incomplete", "stop_reason": reason, "trainer_contract_version": TRAINER_CONTRACT_VERSION, "architecture": VOCODER_GENERATOR_V7_ARCHITECTURE, "epochs_completed": len(history), "current_epoch": epoch, "next_item_offset": offset, "global_step": step, "updates_this_run": updates_this_run, "best_epoch": best_epoch, "best_validation_selection_score": round(float(best["selection_score"]), 6), "best_validation_rms_error_db": round(float(best["rms_error_db"]), 6), "best_validation_presence_error_db": round(float(best["presence_1k_8k_error_db"]), 6), "elapsed_seconds": round(time.perf_counter() - started, 3), "last_checkpoint": str(last_path), "best_checkpoint": str(best_path) if best_path.exists() else None, "persistent_training_complete": False, "full_utterance_perceptual_acceptance": False, "epoch2_training_blocked": True, "next_gate": "rerun_same_command_to_resume_first_epoch"}
         _atomic_json(progress_path, out); return out
     items, train_skipped = _epoch_items(root, 1, seed, segment_mel_frames, train_items)
     if offset > len(items): raise RuntimeError("v7 resume offset exceeds deterministic epoch length")
@@ -150,7 +157,7 @@ def run_bounded_resumable_v7_first_epoch(root: Path, *, segment_mel_frames: int 
     if validation["selection_score"] < best["selection_score"] - min_delta: best = dict(validation); best_epoch = 1
     epoch = 2; offset = 0; final_meta = meta(None); _save(last_path, generator, optimizer, epoch, step, offset, provenance, final_meta, validation)
     if best_epoch == 1: _save(best_path, generator, optimizer, epoch, step, offset, provenance, final_meta, validation)
-    out = {"status": "gate_reached", "trainer_contract_version": TRAINER_CONTRACT_VERSION, "architecture": VOCODER_GENERATOR_V7_ARCHITECTURE, "epochs_completed": 1, "current_epoch": 2, "next_item_offset": 0, "global_step": step, "updates_this_run": updates_this_run, "best_epoch": best_epoch, "initial_validation": initial, "epoch1_validation": validation, "train_total": train_mean, "train_skipped": train_skipped, "val_skipped": val_skipped, "last_checkpoint": str(last_path), "best_checkpoint": str(best_path) if best_path.exists() else None, "persistent_training_complete": False, "full_utterance_perceptual_acceptance": False, "epoch2_training_blocked": True, "predicted_duration_modified": False, "posthoc_gain_normalization_used": False, "posthoc_eq_used": False, "posthoc_denoising_used": False, "next_gate": "run_v7_full_utterance_oracle_vs_v4_2_before_any_epoch2"}
+    out = {"status": "gate_reached", "trainer_contract_version": TRAINER_CONTRACT_VERSION, "architecture": VOCODER_GENERATOR_V7_ARCHITECTURE, "generator_hyperparameters": dict(V7_FIRST_EPOCH_GENERATOR_KWARGS), "epochs_completed": 1, "current_epoch": 2, "next_item_offset": 0, "global_step": step, "updates_this_run": updates_this_run, "best_epoch": best_epoch, "initial_validation": initial, "epoch1_validation": validation, "train_total": train_mean, "train_skipped": train_skipped, "val_skipped": val_skipped, "last_checkpoint": str(last_path), "best_checkpoint": str(best_path) if best_path.exists() else None, "persistent_training_complete": False, "full_utterance_perceptual_acceptance": False, "epoch2_training_blocked": True, "predicted_duration_modified": False, "posthoc_gain_normalization_used": False, "posthoc_eq_used": False, "posthoc_denoising_used": False, "next_gate": "run_v7_full_utterance_oracle_vs_v4_2_before_any_epoch2"}
     _atomic_json(progress_path, out); return out
 
 
