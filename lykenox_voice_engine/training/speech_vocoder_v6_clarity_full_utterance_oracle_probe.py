@@ -1,13 +1,13 @@
 """Early full-utterance listening probe for the V6 clarity-guard vocoder.
 
-This diagnostic intentionally runs before persistent V6 training is complete.  Its purpose
+This diagnostic intentionally runs before persistent V6 training is complete. Its purpose
 is to answer the perceptual question that crop metrics cannot: does the current best V6
 clarity checkpoint actually sound cleaner, less nasal/muffled, and usefully loud on complete
 held-out utterances?
 
 For three fixed validation items it writes the real reference, the accepted v4.2 baseline,
-and the current V6 clarity-guard best checkpoint.  It uses target mel + target F0 + target
-voicing only for this oracle audit.  It never applies gain normalization, EQ, denoising, or
+and the current V6 clarity-guard best checkpoint. It uses target mel + target F0 + target
+voicing only for this oracle audit. It never applies gain normalization, EQ, denoising, or
 predicted-duration changes, and it never mutates training checkpoints.
 """
 
@@ -146,7 +146,7 @@ def _quality_metrics(
         "reconstruction_loss": round(float(reconstruction.detach()), 6),
         "envelope_loss": round(float(envelope.total.detach()), 6),
         "spectral_balance_loss": round(float(balance.loss.detach()), 6),
-        "local_spectral_contrast_loss": round(float(contrast.detach()), 6),
+        "local_spectral_contrast_loss": round(float(contrast.loss.detach()), 6),
         "level_loss": round(float(level.loss.detach()), 6),
         "rms_error_db": round(float(level.rms_error_db.detach()), 6),
         "rms_relative_to_reference_db": round(
