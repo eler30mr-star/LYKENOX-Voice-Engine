@@ -4,6 +4,9 @@ from pathlib import Path
 import unittest
 
 from lykenox_voice_engine.models.vocoder import LykenoxVocoderGeneratorV6
+from lykenox_voice_engine.training.speech_vocoder_v6_architecture_smoke import (
+    run_v6_architecture_smoke,
+)
 from lykenox_voice_engine.training.speech_vocoder_v6_clarity_train import (
     run_v6_clarity_guard_training,
 )
@@ -38,6 +41,14 @@ class VocoderV6PerceptualRejectionTests(unittest.TestCase):
             run_bounded_resumable_v6_training(impossible_root)
         with self.assertRaisesRegex(RuntimeError, "perceptually rejected"):
             run_v6_clarity_guard_training(impossible_root)
+
+    def test_retired_architecture_smoke_reports_rejection_without_data_access(self) -> None:
+        result = run_v6_architecture_smoke(Path("this-path-must-never-be-read"))
+        self.assertEqual(result["status"], "rejected")
+        self.assertFalse(result["source_free"])
+        self.assertTrue(result["perceptually_rejected"])
+        self.assertFalse(result["persistent_training_started"])
+        self.assertFalse(result["historical_checkpoints_mutated"])
 
 
 if __name__ == "__main__":
