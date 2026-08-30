@@ -7,7 +7,7 @@ reliably prevent:
 2. nasal or muffled spectral collapse caused by excessive low-frequency concentration and
    insufficient 1-8 kHz formant/consonant energy.
 
-They compare prediction against the paired target recording.  They do not normalize or boost
+They compare prediction against the paired target recording. They do not normalize or boost
 waveforms at inference time.
 """
 
@@ -19,7 +19,7 @@ import torch
 import torch.nn.functional as F
 
 
-VOCODER_LEVEL_PRESENCE_VERSION = "vocoder-level-presence-v1"
+VOCODER_LEVEL_PRESENCE_VERSION = "vocoder-level-presence-v2"
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,8 @@ class LevelLossResult:
     frame_log_rms_loss: torch.Tensor
     prediction_rms_db: torch.Tensor
     target_rms_db: torch.Tensor
+    rms_error_db: torch.Tensor
+    active_frame_fraction: torch.Tensor
 
 
 @dataclass(frozen=True)
@@ -57,12 +59,25 @@ def target_relative_level_loss(
     frame_length: int = 512,
     frame_hop: int = 256,
     eps: float = 1e-7,
+    global_weight: float = 0.60,
+    active_margin_db: float = 24.0,
+    activity_softness_db: float = 3.0,
 ) -> LevelLossResult:
-    """Match global and short-time amplitude without post-hoc normalization."""
+    """Match global and active-speech short-time amplitude.
+
+    V1 gave every short-time frame equal authority. Long quiet regions could therefore
+    dominate the frame term even when the audible speech itself was becoming too weak.
+    V2 keeps a stronger global-RMS anchor and softly weights the frame objective toward
+    frames that contain meaningful target energy.
+    """
 
     _validate_wave_pair(prediction, target)
     if frame_length < 64 or frame_hop < 1:
         raise ValueError("invalid level-loss framing")
+    if not (0.0 < global_weight < 1.0):
+        raise ValueError("global_weight must be between 0 and 1")
+    if active_margin_db <= 0.0 or activity_softness_db <= 0.0:
+        raise ValueError("activity weighting parameters must be positive")
 
     pred_global = _log_rms(prediction, eps=eps)
     target_global = _log_rms(target, eps=eps)
@@ -79,16 +94,43 @@ def target_relative_level_loss(
 
     pred_frames = framed_log_rms(prediction)
     target_frames = framed_log_rms(target)
-    frame_loss = F.smooth_l1_loss(pred_frames, target_frames)
-    loss = 0.35 * global_loss + 0.65 * frame_loss
 
-    db_scale = 20.0 / torch.log(torch.tensor(10.0, device=prediction.device, dtype=prediction.dtype))
+    log10 = torch.log(
+        torch.tensor(10.0, device=prediction.device, dtype=prediction.dtype)
+    )
+    db_scale = 20.0 / log10
+    pred_global_db = pred_global * db_scale
+    target_global_db = target_global * db_scale
+    target_frame_db = target_frames * db_scale
+
+    # The threshold follows each target example instead of imposing one arbitrary
+    # recording level. The -60 dBFS floor only prevents nearly silent targets from
+    # assigning high weight to numerical noise.
+    threshold_db = torch.maximum(
+        target_global_db.unsqueeze(1) - active_margin_db,
+        torch.full_like(target_frame_db, -60.0),
+    )
+    activity = torch.sigmoid(
+        (target_frame_db - threshold_db) / activity_softness_db
+    )
+    frame_error = F.smooth_l1_loss(
+        pred_frames,
+        target_frames,
+        reduction="none",
+    )
+    frame_loss = (frame_error * activity).sum() / activity.sum().clamp_min(1e-6)
+
+    loss = global_weight * global_loss + (1.0 - global_weight) * frame_loss
+    rms_error_db = (pred_global_db - target_global_db).abs().mean()
+
     return LevelLossResult(
         loss=loss,
         global_log_rms_loss=global_loss,
         frame_log_rms_loss=frame_loss,
-        prediction_rms_db=pred_global.mean() * db_scale,
-        target_rms_db=target_global.mean() * db_scale,
+        prediction_rms_db=pred_global_db.mean(),
+        target_rms_db=target_global_db.mean(),
+        rms_error_db=rms_error_db,
+        active_frame_fraction=activity.mean(),
     )
 
 
@@ -154,20 +196,26 @@ def target_relative_presence_loss(
     )
 
     # Higher bands carry much of the perceptual clarity that collapsed in the rejected v5
-    # oracle outputs.  The comparison remains target-relative; it does not impose a generic EQ.
+    # oracle outputs. The comparison remains target-relative; it does not impose a generic EQ.
     weights = torch.tensor(
         [0.75, 1.0, 1.5, 1.5],
         device=prediction.device,
         dtype=prediction.dtype,
     )
     log_delta = torch.log(pred.clamp_min(eps)) - torch.log(ref.clamp_min(eps))
-    loss = (F.smooth_l1_loss(log_delta, torch.zeros_like(log_delta), reduction="none") * weights).mean()
+    loss = (
+        F.smooth_l1_loss(
+            log_delta,
+            torch.zeros_like(log_delta),
+            reduction="none",
+        )
+        * weights
+    ).mean()
 
     pred_presence = (pred[:, 2] + pred[:, 3]).clamp_min(eps)
     ref_presence = (ref[:, 2] + ref[:, 3]).clamp_min(eps)
     presence_error_db = (
-        10.0
-        * torch.log10(pred_presence / ref_presence)
+        10.0 * torch.log10(pred_presence / ref_presence)
     ).abs().mean()
 
     return PresenceLossResult(
