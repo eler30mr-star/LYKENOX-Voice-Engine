@@ -47,6 +47,10 @@ from .network_v6 import (
     VOCODER_GENERATOR_V6_ARCHITECTURE,
     LykenoxVocoderGeneratorV6,
 )
+from .network_v7 import (
+    VOCODER_GENERATOR_V7_ARCHITECTURE,
+    LykenoxVocoderGeneratorV7,
+)
 
 # The legacy flags on network_v6 describe only whether a waveform is directly bypassed.
 # They were too narrow to justify the former "source-free" claim: V6 injects accumulated
@@ -87,4 +91,6 @@ __all__ = [
     "LykenoxVocoderGeneratorV5",
     "VOCODER_GENERATOR_V6_ARCHITECTURE",
     "LykenoxVocoderGeneratorV6",
+    "VOCODER_GENERATOR_V7_ARCHITECTURE",
+    "LykenoxVocoderGeneratorV7",
 ]
