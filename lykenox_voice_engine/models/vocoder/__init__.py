@@ -48,6 +48,19 @@ from .network_v6 import (
     LykenoxVocoderGeneratorV6,
 )
 
+# The legacy flags on network_v6 describe only whether a waveform is directly bypassed.
+# They were too narrow to justify the former "source-free" claim: V6 injects accumulated
+# F0 phase, a periodic phase aperture, and deterministic unvoiced noise at sample rate.
+# Keep the model/checkpoint class loadable for forensics, but expose the honest semantic
+# and perceptual status on the public model surface.
+LykenoxVocoderGeneratorV6.source_free = False
+LykenoxVocoderGeneratorV6.sample_phase_conditioning = True
+LykenoxVocoderGeneratorV6.deterministic_unvoiced_noise_conditioning = True
+LykenoxVocoderGeneratorV6.local_unit_rms_shape_normalization = True
+LykenoxVocoderGeneratorV6.perceptually_rejected = True
+LykenoxVocoderGeneratorV6.rejection_date = "2026-08-30"
+LykenoxVocoderGeneratorV6.rejection_gate = "full_utterance_oracle_listening"
+
 __all__ = [
     "DISCRIMINATOR_ARCHITECTURE",
     "DiscriminatorOutput",
