@@ -46,18 +46,12 @@ voiced != 0
 
 ## Architecture smoke — PASSED
 
-Local CPU smoke result:
-
 ```text
 status: pass
 architecture: lykenox_stochastic_glottal_filter_v5
 source_family: stochastic_glottal_pulse_noise
 explicit_sinusoidal_carrier: false
 deterministic_harmonics: 0
-persistent_training_started: false
-historical_checkpoints_mutated: false
-exact_length_contract: true
-structural_finite: true
 no_conditioning_only_waveform: true
 zero_excitation_max_abs: 0.0
 no_sinusoidal_carrier: true
@@ -70,7 +64,7 @@ receptive_field_pass: true
 cpu_candidate_pass: true
 ```
 
-Measured cost:
+Measured local CPU cost:
 
 ```text
 parameters: 231360
@@ -82,23 +76,9 @@ benchmark_inference_seconds_median: 0.6981
 benchmark_rtf: 0.6818
 ```
 
-V5 is therefore both structurally viable and faster than real time in the bounded CPU smoke.
+V5 is structurally viable and faster than real time in the bounded CPU smoke.
 
-## Bounded resumable trainer
-
-Implemented:
-
-```text
-lykenox_voice_engine/training/speech_vocoder_v5_artifact.py
-lykenox_voice_engine/training/speech_vocoder_v5_train.py
-lykenox_voice_engine/training/speech_vocoder_v5_resume_smoke.py
-```
-
-Checkpoint kind:
-
-```text
-lykenox_v5_vocoder_training_checkpoint
-```
+## Exact-resume gate — PASSED
 
 Trainer contract:
 
@@ -106,28 +86,56 @@ Trainer contract:
 v5-bounded-resumable-v1
 ```
 
-Persistent artifact directory:
+The exact-resume smoke compared the same four deterministic updates as `4` versus `2 + checkpoint/reload + 2` with adversarial training active. Generator, discriminator, both optimizers, torch RNG, epoch, item offset, global step and run config matched exactly. Source-family identity remained exact, deterministic harmonics remained zero, and the historical v4.2/v4.3/v4.4 checkpoints remained unchanged.
+
+## Persistent training — COMPLETE / NUMERICAL PASS
+
+Artifact directory:
 
 ```text
 models/lykenox_identity/training/vocoder_stochastic_glottal_filter_v5/
 ```
 
-Default persistent schedule:
+Closed result:
 
 ```text
-segment_mel_frames: 48
-train_items: 118
-val_items: 14
-max_epochs: 28
-warmup_epochs: 4
-patience: 6
-generator_lr: 2e-4
-discriminator_lr: 1e-4
-checkpoint_every_updates: 6
-time_budget_seconds: 80
+status: pass
+stop_reason: max_epochs
+persistent_training_complete: true
+architecture: lykenox_stochastic_glottal_filter_v5
+source_family: stochastic_glottal_pulse_noise
+explicit_sinusoidal_carrier: false
+deterministic_harmonics: 0
+trainer_contract_version: v5-bounded-resumable-v1
+epochs_completed: 28
+global_step: 3304
+best_epoch: 27
+training_improved: true
+envelope_improved: true
+historical_checkpoints_mutated: false
 ```
 
-Stable target-referenced checkpoint selection deliberately does **not** reuse the v4.4 harmonic-exposure proxy because that metric improved without perceptual improvement. V5 selection is:
+Initial validation:
+
+```text
+reconstruction: 3.961914
+envelope: 4.125153
+spectral_balance: 2.155811
+local_spectral_contrast: 0.310693
+selection_score: 6.610047
+```
+
+Best validation:
+
+```text
+reconstruction: 1.290753
+envelope: 0.701332
+spectral_balance: 0.070128
+local_spectral_contrast: 0.302039
+selection_score: 1.704257
+```
+
+Checkpoint selection deliberately excludes the v4.4 harmonic-exposure proxy:
 
 ```text
 reconstruction
@@ -136,65 +144,47 @@ reconstruction
 + 0.15 * local_spectral_contrast
 ```
 
-Adversarial and feature-matching losses are training-only after warmup and do not control best-checkpoint selection.
+No further v5 training is authorized by inertia. Numerical improvement does not grant perceptual or product acceptance.
 
-## Exact-resume gate — PASSED
+## Current gate — full-utterance oracle listening acceptance
 
-The bounded exact-resume smoke passed locally. It compared the same four deterministic updates as `4` versus `2 + checkpoint/reload + 2`, with adversarial training active.
-
-Confirmed state:
+Implemented:
 
 ```text
-status: pass
-trainer_contract_version: v5-bounded-resumable-v1
-global_step_exact: true
-epoch_exact: true
-next_item_offset_exact: true
-generator_state_exact: true
-discriminator_state_exact: true
-generator_optimizer_exact: true
-discriminator_optimizer_exact: true
-torch_rng_state_exact: true
-run_config_exact: true
-source_family_exact: true
-no_sinusoidal_carrier_exact: true
-zero_deterministic_harmonics_exact: true
-historical_checkpoints_unchanged: true
-temporary_artifacts_removed: true
-persistent_v5_training_started: false
-next_gate: start_bounded_resumable_v5_persistent_training
+lykenox_voice_engine/training/speech_vocoder_v5_full_utterance_oracle_acceptance.py
 ```
 
-Historical v4.2, v4.3 and v4.4 best checkpoints were present and remained unchanged.
+The audit uses the same three held-out validation utterances and the same teacher-frame oracle conditioning. Listening order:
 
-This closes the resume-contract gate. Persistent v5 training is now authorized.
+```text
+reference -> v4.2 oracle -> v4.4 oracle -> v5 oracle
+```
 
-## Current gate — bounded persistent training
+V4.2 is retained as the stronger historical baseline and v4.4 is retained as the last rejected architecture before the non-sinusoidal break. All candidates receive identical target mel + target F0 + target voicing. No gain normalization, training or checkpoint mutation is allowed.
+
+The audit reports reconstruction, envelope, spectral balance and local spectral contrast. Harmonic-exposure is included only as a diagnostic field because v4.4 demonstrated that it cannot grant perceptual acceptance.
 
 Run:
 
 ```powershell
-.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_v5_train
+.\.venv\Scripts\python.exe -m lykenox_voice_engine.training.speech_vocoder_v5_full_utterance_oracle_acceptance
 ```
 
-If an invocation reports:
+Expected structural state before listening:
 
 ```text
-status: incomplete
-next_gate: rerun_same_command_to_resume
-```
-
-rerun exactly the same command. Do not change hyperparameters and do not delete `last.pt`.
-
-Persistent training is complete only when the final report sets:
-
-```text
+status: needs_listening
+structural_gate_pass: true
 persistent_training_complete: true
+v5_identity_exact: true
+v4_4_identity_exact: true
+v4_2_identity_exact: true
+checkpoints_unchanged: true
+full_utterance_perceptual_acceptance: false
+next_gate: listen_v5_full_utterance_oracle_sets_and_accept_or_revise_vocoder
 ```
 
-The run is considered a numerical training pass only if a valid `best.pt` is selected and both the stable selection score and held-out envelope improve over initialization. A numerical pass does not grant perceptual or product acceptance.
-
-No additional v5 training is authorized by inertia after the persistent run closes. The immediate next gate after completion is full-utterance oracle listening acceptance.
+Perceptual acceptance requires the radio-mistuned / metallic interference to be absent or materially resolved on all three full held-out utterances while preserving useful voice body, intelligibility, consonants/formants and level. Improvement versus rejected v4.4 alone is insufficient: v5 must also be perceptually preferable to v4.2.
 
 ## Remaining order
 
@@ -202,8 +192,8 @@ No additional v5 training is authorized by inertia after the persistent run clos
 v4.4 path attribution                     [CLOSED: periodic path implicated]
   -> v5 non-sinusoidal architecture smoke [PASS]
   -> exact-resume v5 trainer gate          [PASS]
-  -> bounded persistent v5 training        [AUTHORIZED / CURRENT]
-  -> full-utterance oracle listening acceptance
+  -> bounded persistent v5 training        [PASS / CLOSED]
+  -> full-utterance oracle listening       [CURRENT]
   -> predicted-duration calibration
   -> reference-free text-to-waveform perceptual gate
 ```
