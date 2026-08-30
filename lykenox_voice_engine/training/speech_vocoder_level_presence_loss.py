@@ -19,7 +19,7 @@ import torch
 import torch.nn.functional as F
 
 
-VOCODER_LEVEL_PRESENCE_VERSION = "vocoder-level-presence-v2"
+VOCODER_LEVEL_PRESENCE_VERSION = "vocoder-level-presence-v3"
 
 
 @dataclass(frozen=True)
@@ -177,7 +177,16 @@ def target_relative_presence_loss(
     hop_length: int = 256,
     eps: float = 1e-8,
 ) -> PresenceLossResult:
-    """Match target band distribution with extra authority in formant/consonant bands."""
+    """Match target spectral presence and explicitly guard high-band underpresence.
+
+    V2 used a symmetric target-relative log-band loss. Early persistent V6 training showed
+    that the aggregate objective could improve while 3-8 kHz fell well below the paired
+    target, which is exactly the dark/muffled failure mode this loss exists to prevent.
+
+    V3 keeps the symmetric target-relative term, then adds an asymmetric *underpresence-only*
+    clarity guard in 1-3 kHz and 3-8 kHz. It never rewards exceeding the paired target and
+    does not impose an absolute EQ curve; the real target recording remains the authority.
+    """
 
     _validate_wave_pair(prediction, target)
     pred = _band_fractions(
@@ -195,15 +204,16 @@ def target_relative_presence_loss(
         eps=eps,
     )
 
-    # Higher bands carry much of the perceptual clarity that collapsed in the rejected v5
-    # oracle outputs. The comparison remains target-relative; it does not impose a generic EQ.
+    # Broad symmetric matching still keeps the generated spectral distribution tied to
+    # the paired target. Higher bands receive more authority because they carry much of
+    # consonant/formant clarity.
     weights = torch.tensor(
         [0.75, 1.0, 1.5, 1.5],
         device=prediction.device,
         dtype=prediction.dtype,
     )
     log_delta = torch.log(pred.clamp_min(eps)) - torch.log(ref.clamp_min(eps))
-    loss = (
+    symmetric = (
         F.smooth_l1_loss(
             log_delta,
             torch.zeros_like(log_delta),
@@ -211,6 +221,29 @@ def target_relative_presence_loss(
         )
         * weights
     ).mean()
+
+    # Perceptually, falling below the target in the two clarity bands is more dangerous
+    # than temporarily exceeding it: the former removes intelligibility/air, while the
+    # latter remains constrained by the symmetric target-relative term. The guard is
+    # therefore one-sided and has no authority over the two low bands.
+    underpresence = torch.relu(-log_delta)
+    underpresence_error = F.smooth_l1_loss(
+        underpresence,
+        torch.zeros_like(underpresence),
+        reduction="none",
+    )
+    clarity_weights = torch.tensor(
+        [0.0, 0.0, 1.0, 2.0],
+        device=prediction.device,
+        dtype=prediction.dtype,
+    )
+    clarity_guard = (
+        underpresence_error * clarity_weights
+    ).sum(dim=1) / clarity_weights.sum().clamp_min(eps)
+
+    # 0.75 is deliberately bounded: the guard has enough authority to stop high-band
+    # collapse without overwhelming reconstruction, envelope, balance, or level losses.
+    loss = symmetric + 0.75 * clarity_guard.mean()
 
     pred_presence = (pred[:, 2] + pred[:, 3]).clamp_min(eps)
     ref_presence = (ref[:, 2] + ref[:, 3]).clamp_min(eps)
