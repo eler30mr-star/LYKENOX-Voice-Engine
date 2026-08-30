@@ -7,7 +7,9 @@ This gate is intentionally aimed at the two perceptual failures that blocked v5:
 - weak/nasal perceived voice: the short real-data probe must demonstrate trainable target-
   relative level and spectral-presence control in addition to ordinary reconstruction.
 
-No persistent training is started and no historical checkpoint is loaded or mutated.
+Revision 2 also requires structural separation between waveform shape and output level, plus
+a direct decrease in absolute RMS error. No persistent training is started and no historical
+checkpoint is loaded or mutated.
 """
 
 from __future__ import annotations
@@ -40,7 +42,7 @@ from lykenox_voice_engine.training.speech_vocoder_source_balance import (
 )
 
 
-SMOKE_VERSION = "vocoder-v6-direct-waveform-clarity-level-smoke-v1"
+SMOKE_VERSION = "vocoder-v6-direct-waveform-clarity-level-smoke-v2"
 
 
 def _finite_gradients(model: torch.nn.Module) -> bool:
@@ -52,6 +54,11 @@ def _finite_gradients(model: torch.nn.Module) -> bool:
         if not bool(torch.isfinite(parameter.grad).all()):
             return False
     return found
+
+
+def _unit_rms(waveform: torch.Tensor) -> torch.Tensor:
+    rms = torch.sqrt(waveform.square().mean(dim=-1, keepdim=True).clamp_min(1e-8))
+    return waveform / rms
 
 
 def _losses(
@@ -105,9 +112,13 @@ def _losses(
         "spectral_balance": float(balance.detach()),
         "local_spectral_contrast": float(contrast.detach()),
         "level": float(level.loss.detach()),
+        "global_log_rms_loss": float(level.global_log_rms_loss.detach()),
+        "frame_log_rms_loss": float(level.frame_log_rms_loss.detach()),
+        "active_frame_fraction": float(level.active_frame_fraction.detach()),
         "presence": float(presence.loss.detach()),
         "prediction_rms_db": float(level.prediction_rms_db.detach()),
         "target_rms_db": float(level.target_rms_db.detach()),
+        "rms_error_db": float(level.rms_error_db.detach()),
         "presence_1k_8k_error_db": float(presence.presence_1k_8k_error_db.detach()),
         "prediction_band_80_300": float(fractions[0]),
         "prediction_band_300_1000": float(fractions[1]),
@@ -126,15 +137,18 @@ def run_v6_architecture_smoke(
     steps: int = 10,
     segment_mel_frames: int = 40,
     learning_rate: float = 4e-4,
+    level_learning_rate_multiplier: float = 20.0,
     envelope_weight: float = 0.50,
     balance_weight: float = 0.20,
     contrast_weight: float = 0.15,
-    level_weight: float = 0.35,
+    level_weight: float = 0.75,
     presence_weight: float = 0.35,
     seed: int = 6600,
 ) -> dict[str, object]:
     if steps < 6 or steps > 16:
         raise ValueError("steps must be between 6 and 16")
+    if not (1.0 <= level_learning_rate_multiplier <= 32.0):
+        raise ValueError("level_learning_rate_multiplier must be between 1 and 32")
     root = Path(root).resolve()
     torch.set_num_threads(max(1, min(4, torch.get_num_threads())))
     torch.manual_seed(seed)
@@ -182,11 +196,23 @@ def run_v6_architecture_smoke(
             torch.zeros_like(contract_voiced),
         )
 
+        level_bias_before = model.level_logit_bias_parameter.detach().clone()
+        model.level_logit_bias_parameter.add_(0.50)
+        raised_level_wave = model(contract_mel, contract_f0, contract_voiced)
+        model.level_logit_bias_parameter.copy_(level_bias_before)
+
     expected_samples = contract_frames * model.config.hop_length
     exact_length_contract = tuple(contract_wave.shape) == (1, expected_samples)
     structural_finite = all(
         bool(torch.isfinite(value).all())
-        for value in (contract_wave, changed_mel_wave, low_f0_wave, high_f0_wave, unvoiced_wave)
+        for value in (
+            contract_wave,
+            changed_mel_wave,
+            low_f0_wave,
+            high_f0_wave,
+            unvoiced_wave,
+            raised_level_wave,
+        )
     )
     mel_changes_waveform = float((contract_wave - changed_mel_wave).abs().max()) > 1e-8
     f0_changes_waveform = float((low_f0_wave - high_f0_wave).abs().max()) > 1e-8
@@ -200,8 +226,18 @@ def run_v6_architecture_smoke(
             model.voiced_noise_source is False,
             model.raw_source_bypass is False,
             model.conditioning_only_waveform is True,
+            model.waveform_shape_level_decoupled is True,
+            model.level_control_family == "mel_conditioned_frame_rms_envelope",
         )
     )
+
+    contract_rms = torch.sqrt(contract_wave.square().mean().clamp_min(1e-8))
+    raised_level_rms = torch.sqrt(raised_level_wave.square().mean().clamp_min(1e-8))
+    level_control_raises_rms = float(raised_level_rms) > float(contract_rms) * 1.15
+    normalized_shape_delta = float(
+        (_unit_rms(contract_wave) - _unit_rms(raised_level_wave)).abs().mean()
+    )
+    level_control_shape_stable = normalized_shape_delta < 0.05
 
     with torch.no_grad():
         _before_total, before = _losses(
@@ -218,10 +254,38 @@ def run_v6_architecture_smoke(
             presence_weight=presence_weight,
         )
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=1e-5)
+    level_parameters = list(model.level_parameters())
+    level_parameter_ids = {id(parameter) for parameter in level_parameters}
+    shape_parameters = [
+        parameter
+        for parameter in model.parameters()
+        if id(parameter) not in level_parameter_ids
+    ]
+    optimizer = torch.optim.AdamW(
+        [
+            {
+                "params": shape_parameters,
+                "lr": learning_rate,
+                "weight_decay": 1e-5,
+            },
+            {
+                "params": level_parameters,
+                "lr": learning_rate * level_learning_rate_multiplier,
+                "weight_decay": 0.0,
+            },
+        ]
+    )
     gradients_finite = True
     step_times: list[float] = []
     best_seen = dict(before)
+    tracked_keys = (
+        "total",
+        "log_mel_envelope",
+        "level",
+        "rms_error_db",
+        "presence",
+        "presence_1k_8k_error_db",
+    )
     for _ in range(steps):
         started = time.perf_counter()
         optimizer.zero_grad(set_to_none=True)
@@ -244,7 +308,7 @@ def run_v6_architecture_smoke(
         gradients_finite = gradients_finite and bool(torch.isfinite(norm))
         optimizer.step()
         step_times.append(time.perf_counter() - started)
-        for key in ("total", "log_mel_envelope", "level", "presence", "presence_1k_8k_error_db"):
+        for key in tracked_keys:
             best_seen[key] = min(best_seen[key], metrics[key])
 
     with torch.no_grad():
@@ -261,7 +325,7 @@ def run_v6_architecture_smoke(
             level_weight=level_weight,
             presence_weight=presence_weight,
         )
-    for key in ("total", "log_mel_envelope", "level", "presence", "presence_1k_8k_error_db"):
+    for key in tracked_keys:
         best_seen[key] = min(best_seen[key], after[key])
 
     benchmark_frames = 96
@@ -279,14 +343,21 @@ def run_v6_architecture_smoke(
             benchmark_wave = model(benchmark_mel, benchmark_f0, benchmark_voiced)
             inference_times.append(time.perf_counter() - t0)
     inference_seconds = sorted(inference_times)[1]
-    benchmark_audio_seconds = benchmark_frames * model.config.hop_length / model.config.sample_rate
+    benchmark_audio_seconds = (
+        benchmark_frames * model.config.hop_length / model.config.sample_rate
+    )
     benchmark_rtf = inference_seconds / benchmark_audio_seconds
 
     total_decreased = best_seen["total"] < before["total"]
     envelope_decreased = best_seen["log_mel_envelope"] < before["log_mel_envelope"]
     level_decreased = best_seen["level"] < before["level"]
+    level_final_decreased = after["level"] < before["level"]
+    rms_error_decreased = best_seen["rms_error_db"] < before["rms_error_db"]
+    rms_error_final_decreased = after["rms_error_db"] < before["rms_error_db"]
     presence_decreased = best_seen["presence"] < before["presence"]
-    presence_error_decreased = best_seen["presence_1k_8k_error_db"] < before["presence_1k_8k_error_db"]
+    presence_error_decreased = (
+        best_seen["presence_1k_8k_error_db"] < before["presence_1k_8k_error_db"]
+    )
     parameter_budget_pass = parameters <= 500_000
     receptive_field_pass = receptive_field_ms >= 60.0
     cpu_candidate_pass = benchmark_rtf <= 1.5
@@ -303,10 +374,15 @@ def run_v6_architecture_smoke(
             mel_changes_waveform,
             f0_changes_waveform,
             voicing_changes_waveform,
+            level_control_raises_rms,
+            level_control_shape_stable,
             gradients_finite,
             total_decreased,
             envelope_decreased,
             level_decreased,
+            level_final_decreased,
+            rms_error_decreased,
+            rms_error_final_decreased,
             presence_decreased,
             presence_error_decreased,
             parameter_budget_pass,
@@ -330,9 +406,12 @@ def run_v6_architecture_smoke(
         "voiced_noise_source": model.voiced_noise_source,
         "raw_source_bypass": model.raw_source_bypass,
         "conditioning_only_waveform": model.conditioning_only_waveform,
+        "waveform_shape_level_decoupled": model.waveform_shape_level_decoupled,
+        "level_control_family": model.level_control_family,
         "persistent_training_started": False,
         "historical_checkpoints_mutated": False,
         "parameters": parameters,
+        "level_parameters": sum(parameter.numel() for parameter in level_parameters),
         "parameter_budget_pass": parameter_budget_pass,
         "sample_decoder_receptive_field_samples": receptive_field_samples,
         "sample_decoder_receptive_field_ms": round(receptive_field_ms, 3),
@@ -343,21 +422,30 @@ def run_v6_architecture_smoke(
         "mel_changes_waveform": mel_changes_waveform,
         "f0_changes_waveform": f0_changes_waveform,
         "voicing_changes_waveform": voicing_changes_waveform,
+        "level_control_raises_rms": level_control_raises_rms,
+        "level_control_shape_stable": level_control_shape_stable,
+        "level_control_normalized_shape_delta": round(normalized_shape_delta, 6),
         "gradients_finite": gradients_finite,
         "steps": steps,
+        "learning_rate": learning_rate,
+        "level_learning_rate": learning_rate * level_learning_rate_multiplier,
+        "level_learning_rate_multiplier": level_learning_rate_multiplier,
         "skipped_before_selection": len(skipped),
         "probe_before": {key: round(value, 6) for key, value in before.items()},
         "probe_after": {key: round(value, 6) for key, value in after.items()},
         "probe_best_seen": {
             key: round(best_seen[key], 6)
-            for key in ("total", "log_mel_envelope", "level", "presence", "presence_1k_8k_error_db")
+            for key in tracked_keys
         },
         "total_decreased": total_decreased,
         "envelope_decreased": envelope_decreased,
         "level_decreased": level_decreased,
+        "level_final_decreased": level_final_decreased,
+        "rms_error_decreased": rms_error_decreased,
+        "rms_error_final_decreased": rms_error_final_decreased,
         "presence_decreased": presence_decreased,
         "presence_error_decreased": presence_error_decreased,
-        "output_gain": round(float(model.output_gain().detach()), 6),
+        "nominal_output_rms": round(float(model.nominal_output_rms().detach()), 6),
         "mean_seconds_per_step": round(sum(step_times) / len(step_times), 4),
         "max_seconds_per_step": round(max(step_times), 4),
         "benchmark_audio_seconds": round(benchmark_audio_seconds, 4),
@@ -380,7 +468,13 @@ def main() -> None:
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--steps", type=int, default=10)
     args = parser.parse_args()
-    print(json.dumps(run_v6_architecture_smoke(args.root, steps=args.steps), indent=2, ensure_ascii=False))
+    print(
+        json.dumps(
+            run_v6_architecture_smoke(args.root, steps=args.steps),
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
 
 
 if __name__ == "__main__":
