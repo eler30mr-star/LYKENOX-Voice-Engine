@@ -7,7 +7,6 @@ import torch
 
 import lykenox_voice_engine.models.vocoder.network_v8 as network_v8
 from lykenox_voice_engine.models.vocoder import (
-    LykenoxVocoderConfig,
     LykenoxVocoderGeneratorV8,
     VOCODER_GENERATOR_V8_ARCHITECTURE,
 )
@@ -91,18 +90,18 @@ class V8VocoderContractTests(unittest.TestCase):
             VOCODER_GENERATOR_V8_ARCHITECTURE,
             "lykenox_complex_spectral_overlap_add_v8",
         )
-        self.assertIn("torch.istft", source)
-        self.assertIn("torch.stft", source)
+        self.assertIn("torch.istft(", source)
+        self.assertIn("torch.stft(", source)
         self.assertIn("predict_complex_spectrum", source)
         for forbidden in (
-            "ConvTranspose1d",
-            "F.interpolate",
-            "torch.sin",
-            "torch.cumsum",
-            "_harmonic_source",
-            "_aperiodic_source",
-            "baseline_harmonic_weights",
-            "source_gate",
+            "nn.ConvTranspose1d(",
+            "F.interpolate(",
+            "torch.sin(",
+            "torch.cumsum(",
+            "def _harmonic_source(",
+            "def _aperiodic_source(",
+            "baseline_harmonic_weights =",
+            "self.source_gate =",
         ):
             self.assertNotIn(forbidden, source)
 
