@@ -1,8 +1,15 @@
 """Bounded non-persistent architecture smoke for the V8 complex-spectral OLA vocoder.
 
 This is a tiny in-memory overfit on one real aligned mel/waveform crop. It is not
-persistent training and writes no checkpoint. Unlike the historical V7 smoke, frame-grid
-artifact rejection is a hard gate before any resumable trainer may be built.
+persistent training and writes no checkpoint. The v1 smoke is intentionally superseded:
+its absolute frame-grid flag could reject a numerically exact STFT/iSTFT round-trip of a
+naturally periodic voiced crop, and its composite optimization could improve envelope
+terms while the architecture's primary complex-spectrum objective regressed.
+
+The v2 gate fixes both problems: frame-grid rejection is reference-relative, and the
+optimization objective is the direct complex-spectral loss. Envelope and broad-band
+balance remain diagnostics/rejection metrics; they do not override the representation
+that V8 is explicitly designed to learn.
 """
 from __future__ import annotations
 
@@ -20,7 +27,10 @@ from lykenox_voice_engine.models.vocoder import (
 from lykenox_voice_engine.training.speech_pitch import extract_pitch_frames
 from lykenox_voice_engine.training.speech_vocoder_data import collect_vocoder_segments
 from lykenox_voice_engine.training.speech_vocoder_envelope_loss import LogMelEnvelopeLoss
-from lykenox_voice_engine.training.speech_vocoder_grid_artifact import frame_grid_artifact_metrics
+from lykenox_voice_engine.training.speech_vocoder_grid_artifact import (
+    VOCODER_GRID_ARTIFACT_EXCESS_VERSION,
+    frame_grid_artifact_excess_metrics,
+)
 from lykenox_voice_engine.training.speech_vocoder_source_balance import (
     target_relative_spectral_balance_loss,
 )
@@ -30,7 +40,9 @@ from lykenox_voice_engine.training.speech_vocoder_v8_complex_spectral_loss impor
 )
 
 
-SMOKE_VERSION = "vocoder-v8-complex-spectral-ola-smoke-v1"
+PRIOR_SMOKE_VERSION = "vocoder-v8-complex-spectral-ola-smoke-v1"
+SMOKE_VERSION = "vocoder-v8-complex-spectral-ola-smoke-v2"
+PRIOR_SMOKE_INVALIDATED = True
 DEFAULT_STEPS = 12
 DEFAULT_SEGMENT_MEL_FRAMES = 48
 DEFAULT_LEARNING_RATE = 3e-4
@@ -85,16 +97,24 @@ def _forward_loss(
         target,
         sample_rate=model.config.sample_rate,
     )
-    total = complex_loss.total + 0.50 * envelope.total + 0.25 * balance.loss
+
+    # Architecture smoke optimization is representation-first.  The prior v1 composite
+    # objective could reduce envelope/balance enough to hide a regression in the direct
+    # complex coefficients, which is precisely V8's core representation contract.
+    optimization_total = complex_loss.total
+    diagnostic_composite_total = (
+        complex_loss.total + 0.50 * envelope.total + 0.25 * balance.loss
+    )
     metrics = {
-        "total": float(total.detach()),
+        "total": float(optimization_total.detach()),
+        "diagnostic_composite_total": float(diagnostic_composite_total.detach()),
         "complex_relative_l1": float(complex_loss.complex_relative_l1.detach()),
         "log_magnitude_l1": float(complex_loss.log_magnitude_l1.detach()),
         "waveform_l1": float(complex_loss.waveform_l1.detach()),
         "envelope": float(envelope.total.detach()),
         "spectral_balance": float(balance.loss.detach()),
     }
-    return total, waveform, metrics
+    return optimization_total, waveform, metrics
 
 
 def _finite_gradients(model: torch.nn.Module) -> bool:
@@ -188,12 +208,13 @@ def run_v8_architecture_smoke(
     roundtrip_mae = float((roundtrip - target).abs().mean())
     roundtrip_max_abs = float((roundtrip - target).abs().max())
     roundtrip_exact_enough = roundtrip_mae < 1e-5
-    roundtrip_grid = frame_grid_artifact_metrics(
+    roundtrip_grid = frame_grid_artifact_excess_metrics(
         roundtrip,
+        target,
         sample_rate=model.config.sample_rate,
         hop_length=model.config.hop_length,
     )
-    roundtrip_grid_failure = bool(roundtrip_grid.severe_grid_artifact[0])
+    roundtrip_grid_failure = bool(roundtrip_grid.severe_grid_excess[0])
 
     with torch.no_grad():
         _initial_total_tensor, _initial_wave, initial = _forward_loss(
@@ -258,16 +279,18 @@ def run_v8_architecture_smoke(
             target_spectrum,
         )
 
-    final_grid = frame_grid_artifact_metrics(
+    final_grid = frame_grid_artifact_excess_metrics(
         final_wave,
+        target,
         sample_rate=model.config.sample_rate,
         hop_length=model.config.hop_length,
     )
-    final_grid_failure = bool(final_grid.severe_grid_artifact[0])
+    final_grid_failure = bool(final_grid.severe_grid_excess[0])
     total_decreased = final["total"] < initial["total"]
     complex_decreased = final["complex_relative_l1"] < initial["complex_relative_l1"]
     envelope_decreased = final["envelope"] < initial["envelope"]
     log_magnitude_decreased = final["log_magnitude_l1"] < initial["log_magnitude_l1"]
+    waveform_decreased = final["waveform_l1"] < initial["waveform_l1"]
     parameter_budget_pass = parameter_count <= 650_000
 
     after_hashes = {name: _sha256(path) for name, path in protected.items()}
@@ -285,6 +308,7 @@ def run_v8_architecture_smoke(
             complex_decreased,
             envelope_decreased,
             log_magnitude_decreased,
+            waveform_decreased,
             not final_grid_failure,
             parameter_budget_pass,
             checkpoints_unchanged,
@@ -294,8 +318,17 @@ def run_v8_architecture_smoke(
     return {
         "status": "pass" if status_pass else "fail",
         "smoke_version": SMOKE_VERSION,
+        "prior_smoke_version": PRIOR_SMOKE_VERSION,
+        "prior_smoke_invalidated": PRIOR_SMOKE_INVALIDATED,
+        "prior_smoke_invalidated_reason": (
+            "absolute_grid_flag_false_positive_on_near_exact_natural_roundtrip_and_"
+            "composite_objective_allowed_complex_regression"
+        ),
         "architecture": VOCODER_GENERATOR_V8_ARCHITECTURE,
         "complex_loss_version": V8_COMPLEX_SPECTRAL_LOSS_VERSION,
+        "grid_gate_version": VOCODER_GRID_ARTIFACT_EXCESS_VERSION,
+        "grid_gate_mode": "paired_reference_relative_excess",
+        "optimization_objective": "direct_complex_spectral_loss_only",
         "device": "cpu",
         "utterance_id": item.utterance_id,
         "steps": steps,
@@ -310,6 +343,24 @@ def run_v8_architecture_smoke(
         "target_spectrum_shape_exact": target_spectrum_shape_exact,
         "fixed_stft_istft_roundtrip_mae": round(roundtrip_mae, 9),
         "fixed_stft_istft_roundtrip_max_abs": round(roundtrip_max_abs, 9),
+        "reference_grid_hop_autocorrelation": round(
+            float(roundtrip_grid.reference.hop_autocorrelation[0]), 6
+        ),
+        "reference_grid_double_hop_autocorrelation": round(
+            float(roundtrip_grid.reference.double_hop_autocorrelation[0]), 6
+        ),
+        "reference_grid_harmonic_power_fraction": round(
+            float(roundtrip_grid.reference.grid_harmonic_power_fraction[0]), 6
+        ),
+        "fixed_roundtrip_grid_hop_excess": round(
+            float(roundtrip_grid.hop_autocorrelation_excess[0]), 6
+        ),
+        "fixed_roundtrip_grid_double_hop_excess": round(
+            float(roundtrip_grid.double_hop_autocorrelation_excess[0]), 6
+        ),
+        "fixed_roundtrip_grid_harmonic_power_excess": round(
+            float(roundtrip_grid.grid_harmonic_power_fraction_excess[0]), 6
+        ),
         "fixed_roundtrip_grid_failure": roundtrip_grid_failure,
         "gradients_finite": gradients_finite,
         "initial": {key: round(value, 6) for key, value in initial.items()},
@@ -317,13 +368,25 @@ def run_v8_architecture_smoke(
         "total_decreased": total_decreased,
         "complex_decreased": complex_decreased,
         "log_magnitude_decreased": log_magnitude_decreased,
+        "waveform_decreased": waveform_decreased,
         "envelope_decreased": envelope_decreased,
-        "final_grid_hop_autocorrelation": round(float(final_grid.hop_autocorrelation[0]), 6),
+        "final_grid_hop_autocorrelation": round(
+            float(final_grid.candidate.hop_autocorrelation[0]), 6
+        ),
         "final_grid_double_hop_autocorrelation": round(
-            float(final_grid.double_hop_autocorrelation[0]), 6
+            float(final_grid.candidate.double_hop_autocorrelation[0]), 6
         ),
         "final_grid_harmonic_power_fraction": round(
-            float(final_grid.grid_harmonic_power_fraction[0]), 6
+            float(final_grid.candidate.grid_harmonic_power_fraction[0]), 6
+        ),
+        "final_grid_hop_excess": round(
+            float(final_grid.hop_autocorrelation_excess[0]), 6
+        ),
+        "final_grid_double_hop_excess": round(
+            float(final_grid.double_hop_autocorrelation_excess[0]), 6
+        ),
+        "final_grid_harmonic_power_excess": round(
+            float(final_grid.grid_harmonic_power_fraction_excess[0]), 6
         ),
         "final_grid_failure": final_grid_failure,
         "source_free": model.source_free,
