@@ -1,8 +1,9 @@
-"""Checkpoint contract for isolated zero-init acoustic mel postnet training.
+"""Checkpoint contract for the rejected acoustic mel postnet experiment.
 
-Only the residual postnet is persisted as trainable state. The accepted acoustic-v2 base
-is referenced by SHA-256 and reloaded immutably on every run, so duration/F0/voicing and
-all base acoustic tensors cannot drift inside this experiment.
+The one-epoch residual postnet is retained for forensic reproducibility, but its full-
+utterance A/B was perceptually rejected because it was effectively tied with, and slightly
+below, the accepted v4.2 baseline. New persistent runs through the default output path are
+therefore blocked. Historical checkpoints remain loadable for audits and comparisons.
 """
 from __future__ import annotations
 
@@ -25,6 +26,8 @@ from lykenox_voice_engine.training.speech_acoustic_prosody_artifact import (
 MEL_POSTNET_CHECKPOINT_VERSION = 1
 MEL_POSTNET_CHECKPOINT_KIND = "lykenox_acoustic_mel_postnet_first_epoch_checkpoint"
 MEL_POSTNET_HIDDEN_CHANNELS = 128
+MEL_POSTNET_PERCEPTUALLY_REJECTED = True
+MEL_POSTNET_PERSISTENT_TRAINING_ENABLED = False
 
 
 def file_sha256(path: Path) -> str:
@@ -46,13 +49,22 @@ def base_checkpoint_path(root: Path) -> Path:
     )
 
 
-def postnet_output_dir(root: Path) -> Path:
+def rejected_postnet_output_dir(root: Path) -> Path:
+    """Return the historical artifact path without authorizing new training."""
     return (
         Path(root).resolve()
         / "models"
         / "lykenox_identity"
         / "training"
         / "acoustic_mel_postnet_v1"
+    )
+
+
+def postnet_output_dir(root: Path) -> Path:
+    del root
+    raise RuntimeError(
+        "acoustic_mel_postnet_v1 was perceptually rejected: persistent postnet training "
+        "is disabled; keep existing checkpoints for forensic A/B only"
     )
 
 
