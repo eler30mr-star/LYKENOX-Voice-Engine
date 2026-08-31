@@ -1,183 +1,198 @@
-# LYKENOX Identity and Distribution Policy
+# Política de Identidad Propia y Distribución de LYKENOX
 
-**Policy ID:** LYX-POL-001  
-**Version:** 1.0  
-**Status:** Mandatory  
-**Effective date:** 2026-08-31  
-**Applies to:** LYKENOX Voice Engine and all model, training, inference, evaluation, packaging, and distribution work
+**ID de política:** LYX-POL-001  
+**Versión:** 1.0  
+**Estado:** OBLIGATORIA  
+**Fecha de vigencia:** 31 de agosto de 2026  
+**Ámbito:** LYKENOX Voice Engine y todo trabajo de modelo, entrenamiento, inferencia, evaluación, empaquetado y distribución
 
-## 1. Objective
+## 1. Objetivo
 
-LYKENOX Voice Engine is an identity-owned voice system intended for independent distribution. Its voice identity, model behavior, trained parameters, and production inference path must remain LYKENOX-owned and reproducible from LYKENOX-authorized data and code.
+LYKENOX Voice Engine es un sistema de voz de identidad propia destinado a distribución independiente. Su identidad vocal, comportamiento del modelo, parámetros entrenados y ruta de inferencia de producción deben permanecer bajo control de LYKENOX y ser reproducibles a partir de datos, código, configuración y artefactos autorizados por el proyecto.
 
-The project must not solve quality, speed, or engineering problems by inserting third-party trained intelligence into the product. Distribution independence and identity ownership take priority over convenience, benchmark results, or development speed.
+El proyecto no resolverá problemas de calidad, velocidad o ingeniería insertando inteligencia entrenada por terceros dentro del producto. La independencia de distribución y la propiedad de identidad prevalecen sobre la conveniencia, los resultados de benchmark o la rapidez de desarrollo.
 
-## 2. Core policy
+## 2. Política central
 
-The production voice stack shall use **LYKENOX-owned model implementations and LYKENOX-owned trained weights only**.
+La pila de voz de producción utilizará exclusivamente **implementaciones de modelo mantenidas por LYKENOX y pesos de producción entrenados por LYKENOX**.
 
-No third-party pretrained model, checkpoint, voice asset, inference service, or trained neural component may be introduced into the LYKENOX voice identity path, whether permanently, temporarily, as a fallback, as a benchmark substitute, or as a diagnostic shortcut.
+Ningún modelo preentrenado, checkpoint, activo de voz, servicio de inferencia o componente neuronal entrenado por terceros podrá introducirse en la ruta de identidad de voz de LYKENOX, ya sea de forma permanente, temporal, como fallback, como sustituto de benchmark o como atajo de diagnóstico.
 
-## 3. Scope
+**Regla de bloqueo:** si una solución necesita pesos, identidad o inferencia entrenada fuera de LYKENOX, esa solución no es válida para este proyecto.
 
-This policy applies to every component that can influence the generated voice or its identity, including:
+## 3. Alcance
 
-- text-to-acoustic models;
-- acoustic models;
-- duration and alignment models;
-- pitch/F0 and voicing predictors;
-- speaker or identity encoders;
-- vocoders and waveform renderers;
-- denoisers, enhancers, source-filter modules, postnets, and neural post-processing;
-- model checkpoints and initialization weights;
-- training datasets, validation datasets, voice recordings, synthetic voice data, and derived learned assets;
-- runtime inference services and remote model APIs;
-- exported, packaged, or distributed model artifacts.
+Esta política se aplica a todo componente que pueda influir en la voz generada o en su identidad, incluyendo:
 
-## 4. Definitions
+- modelos texto-a-acústica y modelos acústicos;
+- modelos de duración, alineamiento, F0/pitch y voicing;
+- encoders de speaker o identidad;
+- vocoders, renderers de waveform y módulos source-filter;
+- postnets, denoisers, enhancers, codecs neuronales y postprocesamiento aprendido;
+- checkpoints, pesos de inicialización, adapters y artefactos aprendidos;
+- datasets de entrenamiento y validación, grabaciones de voz y datos sintéticos;
+- servicios de inferencia, endpoints remotos y APIs externas de generación de voz;
+- artefactos exportados, empaquetados o distribuidos.
 
-### 4.1 LYKENOX-owned component
+## 4. Definiciones
 
-A component whose implementation is maintained by the LYKENOX project, whose production weights are trained by the LYKENOX training pipeline, and whose required training data and artifact provenance are authorized for LYKENOX distribution.
+### 4.1 Componente propiedad de LYKENOX
 
-### 4.2 Third-party trained component
+Componente cuya implementación se mantiene dentro del proyecto, cuyos pesos de producción son generados por el pipeline de entrenamiento de LYKENOX y cuya procedencia de datos y artefactos está autorizada para la distribución prevista.
 
-Any model, checkpoint, embedding, voice asset, learned frontend, learned decoder, learned feature extractor, or inference service produced outside the authorized LYKENOX training pipeline.
+### 4.2 Componente entrenado de tercero
 
-### 4.3 Generic infrastructure dependency
+Cualquier modelo, checkpoint, embedding, activo de voz, frontend aprendido, decoder aprendido, extractor de características aprendido o servicio de inferencia producido fuera del pipeline autorizado de LYKENOX.
 
-A non-identity software dependency used for computation, audio I/O, tensor operations, packaging, testing, build, or operating-system support. Examples may include numerical frameworks and audio libraries. Such dependencies are not considered part of the LYKENOX voice identity only when they contain no pretrained voice/model asset and satisfy the distribution rules in this policy.
+### 4.3 Dependencia genérica de infraestructura
 
-## 5. Non-negotiable rules
+Dependencia de software no identitaria utilizada para cómputo, I/O de audio, operaciones tensoriales, empaquetado, pruebas, build o soporte del sistema operativo. Solo se considera infraestructura si no contiene pesos o identidad de voz preentrenados y cumple las reglas de distribución y licencia de esta política.
 
-### Rule 1 - No third-party pretrained weights
+## 5. Reglas no negociables
 
-LYKENOX shall not load, import, download, bundle, fine-tune, distill from, initialize from, or depend on pretrained model weights produced by a third party.
+### Regla 1 - Prohibidos los pesos preentrenados de terceros
 
-This includes checkpoints obtained from model hubs, public repositories, vendors, SaaS providers, research releases, other TTS engines, or other voice products.
+LYKENOX no cargará, importará, descargará, empaquetará, ajustará, destilará, inicializará desde ni dependerá de pesos preentrenados producidos por terceros.
 
-### Rule 2 - No third-party neural voice components
+La prohibición incluye checkpoints de model hubs, repositorios públicos, vendors, SaaS, releases de investigación, otros motores TTS y otros productos de voz.
 
-The production path shall not contain a third-party pretrained vocoder, TTS model, acoustic model, speaker encoder, aligner, pitch model, enhancer, denoiser, codec model, or other learned component that contributes to generated speech.
+### Regla 2 - Prohibidos los componentes neuronales de voz de terceros
 
-### Rule 3 - No external inference dependency
+La ruta de producción no contendrá vocoders, TTS, acoustic models, speaker encoders, aligners, pitch models, enhancers, denoisers, codec models u otros componentes aprendidos de terceros que contribuyan a generar el habla.
 
-Production inference shall not require a remote API, hosted model, vendor endpoint, cloud TTS service, or external inference service to produce the LYKENOX voice.
+### Regla 3 - Sin dependencia externa de inferencia
 
-The distributed engine must remain capable of producing its voice from its own packaged LYKENOX artifacts and declared generic runtime dependencies.
+La inferencia de producción no requerirá API remota, modelo hospedado, endpoint de vendor, cloud TTS ni servicio externo para producir la voz LYKENOX.
 
-### Rule 4 - LYKENOX weights must be trained by LYKENOX
+El motor distribuido deberá poder generar su voz con sus propios artefactos LYKENOX y las dependencias genéricas declaradas.
 
-Every distributed learned parameter file must have provenance showing that it was produced by an authorized LYKENOX training run.
+### Regla 4 - Los pesos LYKENOX deben ser entrenados por LYKENOX
 
-Production weights must not be derived from third-party pretrained weights through fine-tuning, transfer learning, distillation, adapter training, LoRA, merging, conversion, or any equivalent mechanism.
+Todo archivo de parámetros aprendido que se distribuya deberá tener procedencia demostrable de una ejecución autorizada de entrenamiento LYKENOX.
 
-### Rule 5 - Voice identity data must be owned or explicitly authorized
+No se permiten derivados de pesos de terceros mediante fine-tuning, transfer learning, distillation, adapters, LoRA, merging, conversión o mecanismos equivalentes.
 
-Training and validation data that define the LYKENOX voice identity must be owned by or explicitly authorized for the project and for its intended distribution.
+### Regla 5 - Los datos de identidad deben ser propios o expresamente autorizados
 
-No third-party voice recordings, cloned voices, scraped voice datasets, synthetic voices generated by external TTS systems, or unverified licensed voice assets may be mixed into the identity dataset.
+Los datos que definan la identidad de voz deben ser propiedad del proyecto o estar expresamente autorizados para su uso y distribución.
 
-### Rule 6 - No temporary exception for probes
+No se mezclarán grabaciones de terceros, voces clonadas, datasets scrapeados, voces sintéticas de TTS externos ni activos de licencia no verificada.
 
-A prohibited third-party trained component may not be introduced merely because it is labeled a probe, benchmark, smoke test, diagnostic, fallback, comparison baseline, or temporary experiment.
+### Regla 6 - No existe excepción temporal para probes
 
-Engineering diagnostics must be built from LYKENOX-owned artifacts or from non-learned generic analysis tools.
+Un componente entrenado prohibido no puede introducirse por ser llamado probe, benchmark, smoke test, diagnóstico, fallback, baseline comparativo o experimento temporal.
 
-### Rule 7 - Research may inform design; implementation remains owned
+Los diagnósticos deberán construirse con artefactos propios o con herramientas genéricas no aprendidas.
 
-Public papers, mathematical methods, standards, and general architectural ideas may be studied as engineering references.
+### Regla 7 - La investigación puede informar; la implementación sigue siendo propia
 
-However, a production neural component must be implemented and maintained within LYKENOX, and its production weights must be trained by LYKENOX. Research reference does not authorize importing a third-party checkpoint or making a third-party trained model part of the product.
+Papers públicos, métodos matemáticos, estándares e ideas arquitectónicas generales pueden estudiarse como referencia.
 
-### Rule 8 - No quality masking by post-processing
+La implementación de producción debe mantenerse dentro de LYKENOX y los pesos de producción deben entrenarse en LYKENOX. Estudiar una referencia no autoriza importar checkpoints ni insertar modelos entrenados externos.
 
-Post-hoc gain normalization, EQ, denoising, enhancement, or similar processing shall not be used to conceal a failed voice model during acceptance testing.
+### Regla 8 - Prohibido maquillar fallos de calidad
 
-Any production post-processing must have an explicit product requirement, must not disguise model defects, and must comply with the same ownership and distribution policy.
+No se usará normalización de ganancia, EQ, denoise, enhancement u otro postprocesamiento post-hoc para ocultar un modelo fallido durante aceptación.
 
-### Rule 9 - Predicted duration is an independent contract
+Cualquier postprocesamiento de producto deberá tener requisito explícito y cumplir la misma política de propiedad y distribución.
 
-Predicted duration shall not be silently modified to make a model appear better during evaluation. Duration changes require their own explicit engineering decision and acceptance gate.
+### Regla 9 - La duración predicha es un contrato independiente
 
-### Rule 10 - Audible full-utterance quality is authoritative
+La duración predicha no se modificará silenciosamente para hacer que un modelo parezca mejor. Cualquier cambio de duración requiere una decisión y gate independientes.
 
-Metrics may reject a candidate but cannot by themselves accept voice quality. Final voice-quality acceptance requires listening to full held-out utterances generated through the intended product path.
+### Regla 10 - La calidad audible de utterances completas es la autoridad final
 
-Short crops, trainability smokes, reconstruction metrics, or isolated numerical improvements shall not be presented as product-quality progress.
+Las métricas pueden rechazar un candidato, pero no pueden aceptar por sí solas la calidad de voz.
 
-## 6. Allowed generic infrastructure
+La aceptación requiere escuchar utterances completas held-out generadas por la ruta prevista de producto. Crops cortos, smokes de trainability y mejoras numéricas aisladas no constituyen progreso de producto.
 
-Third-party generic software infrastructure may be used only when all of the following are true:
+## 6. Infraestructura genérica permitida
 
-1. it does not provide pretrained voice identity, model weights, embeddings, or learned speech behavior;
-2. it is used as a general-purpose runtime, numerical, audio, build, test, packaging, or operating-system dependency;
-3. its license permits the intended LYKENOX distribution model;
-4. the dependency and license are documented for release review;
-5. removal or replacement of the dependency does not require replacing the LYKENOX-owned trained identity with an external model.
+Se permite software genérico de terceros únicamente cuando se cumplen simultáneamente estas condiciones:
 
-Examples of potentially acceptable infrastructure categories include tensor frameworks, FFT implementations, audio file readers/writers, testing frameworks, and packaging tools. Acceptance is based on function and licensing, not brand name.
+1. No aporta identidad de voz preentrenada, pesos de modelo, embeddings ni comportamiento de habla aprendido.
+2. Cumple una función general de runtime, cómputo numérico, audio, build, testing, empaquetado o sistema operativo.
+3. Su licencia permite el modelo de distribución previsto para LYKENOX.
+4. La dependencia y su licencia quedan documentadas para revisión de release.
+5. Su uso no obliga a reemplazar la identidad entrenada propia por un modelo externo.
 
-## 7. Distribution requirements
+Ejemplos de categorías potencialmente válidas: frameworks tensoriales, FFT, lectores/escritores de archivos de audio, frameworks de testing y herramientas de empaquetado. La aceptación depende de su función y licencia, no de la marca.
 
-Before a LYKENOX release containing voice models can be approved, the release process must verify:
+## 7. Requisitos de distribución
 
-- every distributed checkpoint has LYKENOX provenance;
-- no model asset is downloaded at first run from a third-party model host;
-- no production code path references external model IDs or pretrained checkpoint URLs;
-- no remote inference service is required to generate speech;
-- the training-data provenance for identity-defining data is documented;
-- generic software dependencies have a distribution-compatible license review;
-- model and checkpoint hashes are recorded;
-- the release can be reproduced from the approved LYKENOX source, data, configuration, and training artifacts;
-- audible acceptance has been completed on full held-out utterances.
+Antes de aprobar una release que contenga modelos de voz, deberá verificarse:
 
-## 8. Engineering gates and enforcement
+- todo checkpoint distribuido posee procedencia LYKENOX;
+- ningún modelo se descarga en el primer arranque desde un host de modelos de terceros;
+- la ruta de producción no contiene IDs de modelos externos ni URLs de checkpoints preentrenados;
+- la generación de voz no requiere servicios remotos de inferencia;
+- la procedencia de los datos que definen identidad está documentada;
+- las dependencias genéricas cuentan con revisión de licencia compatible con distribución;
+- los hashes de modelos y checkpoints están registrados;
+- la release puede reproducirse desde fuente, datos, configuración y artefactos LYKENOX aprobados;
+- la aceptación auditiva se ha completado sobre utterances completas held-out.
 
-The repository shall maintain automated checks that enforce this policy where practical. At minimum, engineering gates should reject or flag:
+## 8. Gates y enforcement de ingeniería
 
-- use of external pretrained model identifiers in the production voice path;
-- `from_pretrained`-style model loading for production voice components;
-- checkpoint downloads from external model hosts;
-- new runtime calls to remote speech-generation services;
-- attempts to reactivate perceptually or architecturally rejected model families without an explicit policy-compliant engineering decision;
-- persistent training before the required architecture, data, resume, and acceptance gates are satisfied.
+El repositorio mantendrá controles automatizados siempre que sea práctico. Como mínimo, los gates deberán rechazar o marcar:
 
-Policy checks are rejection controls. Passing a policy check does not mean a model is perceptually acceptable.
+- IDs de modelos preentrenados externos dentro de la ruta de voz de producción;
+- cargas tipo `from_pretrained` para componentes de voz de producción;
+- descargas de checkpoints desde model hubs o proveedores externos;
+- llamadas nuevas a servicios remotos de generación de habla;
+- reactivación de familias perceptual o arquitectónicamente rechazadas sin decisión explícita y compatible con la política;
+- entrenamiento persistente antes de superar gates de arquitectura, datos, exact-resume y aceptación.
 
-## 9. Architecture and training change control
+Los checks de política son controles de rechazo. Superarlos no significa que un modelo tenga calidad perceptual aceptable.
 
-A new model architecture shall not be authorized merely because the previous candidate failed. Before opening a new architecture line, the team must first determine whether the failure belongs to data, conditioning, alignment, objective design, training procedure, renderer geometry, or architecture.
+## 9. Control de cambios de arquitectura y entrenamiento
 
-Persistent training requires an explicit gate. Rejected candidates remain available only for forensic reproducibility and must not silently become initialization sources for a new production model.
+No se autorizará una arquitectura nueva únicamente porque falló el candidato anterior. Antes de abrir una nueva línea deberá determinarse si el fallo pertenece a datos, conditioning, alignment, objetivo, procedimiento de entrenamiento, geometría del renderer o arquitectura.
 
-## 10. Exceptions
+El entrenamiento persistente requiere gate explícito. Los candidatos rechazados permanecen solo para reproducibilidad forense y no pueden convertirse silenciosamente en fuentes de inicialización de un modelo nuevo.
 
-There is **no exception** to the prohibition on third-party trained voice/model components in the LYKENOX production identity path.
+## 10. Excepciones
 
-Any proposed exception involving generic infrastructure must be documented, must not contain trained voice intelligence, and must pass distribution/license review before adoption.
+**No existe excepción a la prohibición de componentes entrenados de terceros dentro de la identidad de voz de producción LYKENOX.**
 
-Convenience, development speed, benchmark quality, or lack of an immediate LYKENOX solution are not valid reasons to bypass this policy.
+Cualquier excepción propuesta para infraestructura genérica debe documentarse, no debe contener inteligencia de voz entrenada y debe superar revisión de licencia y distribución antes de adoptarse.
 
-## 11. Priority rule
+La conveniencia, la velocidad de desarrollo, un benchmark favorable o la falta de una solución LYKENOX inmediata no justifican el incumplimiento.
 
-When engineering goals conflict, the order of authority is:
+## 11. Regla de prioridad
 
-1. ownership and distribution independence;
-2. correctness and reproducibility;
-3. audible voice quality on full held-out utterances;
-4. training efficiency and implementation convenience.
+Cuando existan objetivos de ingeniería en conflicto, se aplica el siguiente orden de autoridad:
 
-A technically impressive result that violates ownership or distribution independence is not an acceptable LYKENOX result.
+1. Propiedad de identidad e independencia de distribución.
+2. Corrección y reproducibilidad.
+3. Calidad audible sobre utterances completas held-out.
+4. Eficiencia de entrenamiento y conveniencia de implementación.
 
-## 12. Policy change authority
+Un resultado técnicamente impresionante que viole la propiedad o la independencia de distribución no es un resultado aceptable para LYKENOX.
 
-This policy is mandatory until explicitly changed through a deliberate, versioned project decision.
+## 12. Autoridad de cambio de política
 
-No experiment, engineer, automated agent, benchmark, or temporary development task may weaken or bypass it implicitly.
+Esta política es obligatoria hasta que sea modificada mediante una decisión deliberada, explícita y versionada del proyecto.
 
-Any future amendment must identify the exact rule being changed, the distribution impact, the ownership impact, and the reason for the change.
+Ningún experimento, ingeniero, agente automatizado, benchmark o tarea temporal puede debilitarla o saltarla implícitamente.
+
+Toda modificación futura deberá identificar la regla exacta que cambia, su impacto de distribución, su impacto de propiedad y la razón de la modificación.
+
+## 13. Criterio de cumplimiento y aprobación
+
+Para considerar una versión del motor conforme a esta política deben existir evidencias trazables de propiedad de los pesos, procedencia de datos, ausencia de modelos externos en la ruta de producción y aceptación auditiva de utterances completas.
+
+| Control | Requisito | Resultado requerido |
+|---|---|---|
+| Pesos | Procedencia LYKENOX demostrable | PASS |
+| Modelos externos | Ninguno en producción o diagnóstico aprendido | 0 |
+| Servicios remotos | No requeridos para generar voz | 0 |
+| Datos de identidad | Propios o expresamente autorizados | PASS |
+| Licencias de infraestructura | Compatibles con distribución | PASS |
+| Duración | Sin modificación silenciosa | PASS |
+| Postprocesado | No usado para ocultar fallos | PASS |
+| Calidad | Utterances completas held-out aceptadas auditivamente | PASS |
 
 ---
 
-**Policy statement:** LYKENOX is a proprietary identity voice project for independent distribution. Its voice identity and learned production stack shall remain LYKENOX-owned, LYKENOX-trained, auditable, and distributable without third-party trained model dependencies.
+**Declaración final de política:** LYKENOX es un proyecto de voz de identidad propia para distribución independiente. Su identidad vocal y su stack aprendido de producción permanecerán bajo propiedad y entrenamiento de LYKENOX, auditables y distribuibles sin dependencias de modelos entrenados de terceros.
