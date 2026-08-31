@@ -1,10 +1,10 @@
 """Read-only source/filter attribution for the colored v4.2 oracle renderer.
 
 The accepted v4.2 checkpoint is driven by target mel, target F0 and target voicing on the
-same three held-out utterances used by the direct reference-waveform forensics.  Internal
+same three held-out utterances used by the direct reference-waveform forensics. Internal
 source components are ablated without mutating model weights so the remaining waveform
 error can be attributed to explicit harmonic excitation, deterministic aperiodic excitation,
-or the mel-envelope/filter path.  This audit does not train or normalize audio.
+or the mel-envelope/filter path. This audit does not train or normalize audio.
 """
 from __future__ import annotations
 
@@ -261,15 +261,17 @@ def run_v4_2_source_filter_attribution(root: Path) -> dict[str, object]:
                     hop_length=config.hop_length,
                 )
                 grid = frame_grid_artifact_metrics(
-                    wave.unsqueeze(0),
+                    wave,
                     sample_rate=config.sample_rate,
                     hop_length=config.hop_length,
                 )
                 delta = _pair_delta(ref_metrics, metrics, ref_env, env, env_band)
                 delta["presence_1k_8k_error_db"] = abs(float(presence.presence_1k_8k_error_db))
-                delta["frame_grid_harmonic_power_fraction"] = float(grid.harmonic_power_fraction)
-                delta["frame_grid_hop_autocorrelation"] = float(grid.hop_autocorrelation)
-                delta["frame_grid_failure"] = float(bool(grid.severe_grid_artifact))
+                delta["frame_grid_harmonic_power_fraction"] = float(
+                    grid.grid_harmonic_power_fraction[0]
+                )
+                delta["frame_grid_hop_autocorrelation"] = float(grid.hop_autocorrelation[0])
+                delta["frame_grid_failure"] = float(bool(grid.severe_grid_artifact[0]))
                 variant_deltas[variant].append(delta)
                 wav_path = output_dir / f"{prefix}_{variant}.wav"
                 sf.write(str(wav_path), wave.numpy(), config.sample_rate, subtype="PCM_16")
