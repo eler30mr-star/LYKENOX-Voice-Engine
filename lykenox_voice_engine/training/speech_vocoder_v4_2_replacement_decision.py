@@ -1,11 +1,12 @@
-"""Frozen engineering decision after direct v4.2 oracle/source-filter forensics."""
+"""Frozen engineering decision after direct v4.2/V8/V9 vocoder forensics."""
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v2"
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v3"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
 PREDICTED_DURATION_MODIFICATION_AUTHORIZED = False
 POSTHOC_GAIN_EQ_DENOISE_AUTHORIZED = False
+SCRATCH_VOCODER_ITERATION_AUTHORIZED = False
 
 FORENSIC_BASELINE = {
     "spectral_centroid_relative_pct": -16.468669,
@@ -28,5 +29,13 @@ V8_VERDICT = (
     "architecturally rejected and persistent training is forbidden."
 )
 
-NEXT_ARCHITECTURE = "lykenox_phase_increment_spectral_ola_v9"
-NEXT_GATE = "run_v9_phase_increment_architecture_smoke_before_any_persistent_training"
+V9_VERDICT = (
+    "V9 removed V8 frame-grid excess and its differential spectral factorization was "
+    "numerically sound, but the bounded oracle output was not usable speech. The bounded "
+    "smoke itself was only a short trainability probe and must not be used to justify more "
+    "scratch-vocoder iterations. V9 is perceptually rejected and persistent training is "
+    "forbidden."
+)
+
+NEXT_ARCHITECTURE = "pretrained_vocoder_baseline"
+NEXT_GATE = "run_full_utterance_pretrained_vocos_copy_synthesis_before_any_more_vocoder_training"
