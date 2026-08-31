@@ -1,10 +1,8 @@
-"""Read-only full-utterance A/B gate for the one-epoch mel residual postnet.
+"""Read-only full-utterance A/B gate for the rejected one-epoch mel residual postnet.
 
-The accepted acoustic-v2 base and vocoder-v4.2 remain immutable. Three fixed held-out
-utterances are rendered on teacher durations. Each utterance contains two controlled
-base/postnet pairs: target prosody isolates the postnet's mel effect, while identical
-predicted prosody tests the real acoustic-to-vocoder interaction. No gain, EQ, denoising,
-training, duration modification, or second postnet epoch is authorized here.
+The accepted acoustic-v2 base and vocoder-v4.2 remain immutable. Historical postnet
+checkpoints stay loadable for forensic comparison even though new persistent postnet
+training is disabled after perceptual rejection.
 """
 from __future__ import annotations
 
@@ -28,7 +26,7 @@ from lykenox_voice_engine.training.speech_acoustic_mel_postnet_artifact import (
     base_checkpoint_path,
     file_sha256,
     load_mel_postnet_checkpoint,
-    postnet_output_dir,
+    rejected_postnet_output_dir,
 )
 from lykenox_voice_engine.training.speech_acoustic_mel_postnet_train import (
     HARD_EPOCH_LIMIT,
@@ -81,10 +79,11 @@ def _atomic_json(path: Path, payload: dict[str, object]) -> None:
 
 def _protected_paths(root: Path) -> dict[str, Path]:
     training = root / "models" / "lykenox_identity" / "training"
+    postnet_dir = rejected_postnet_output_dir(root)
     return {
         "acoustic_v2_best": training / "acoustic_frame_context_v2" / "best.pt",
-        "postnet_best": training / "acoustic_mel_postnet_v1" / "best.pt",
-        "postnet_last": training / "acoustic_mel_postnet_v1" / "last.pt",
+        "postnet_best": postnet_dir / "best.pt",
+        "postnet_last": postnet_dir / "last.pt",
         "v4_2_best": training / "vocoder_source_filter_v4_2" / "best.pt",
         "rejected_mel_best": training / "acoustic_mel_fidelity_v1" / "best.pt",
         "rejected_mel_last": training / "acoustic_mel_fidelity_v1" / "last.pt",
@@ -349,11 +348,11 @@ def run_mel_postnet_full_utterance_ab(root: Path) -> dict[str, object]:
             "postnet_mel_predicted_prosody"
         ),
         "acceptance_rule": (
-            "Postnet is acceptable only if full held-out speech is audibly more intelligible "
-            "or clearer than base without new metallic, nasal, noisy, grid-like, or harsh artifacts. "
-            "Metrics may reject but cannot accept. Ambiguous listening does not authorize epoch 2."
+            "Postnet was perceptually rejected because full held-out speech was effectively "
+            "tied with and slightly below the accepted v4.2 baseline. Historical metrics remain "
+            "forensic only and cannot authorize further postnet training."
         ),
-        "next_gate": "listen_postnet_vs_base_full_utterances_before_any_epoch2",
+        "next_gate": "postnet_perceptually_rejected_no_epoch2",
     }
     _atomic_json(report_path, report)
     return {**report, "report_path": str(report_path)}
