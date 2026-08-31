@@ -4,14 +4,26 @@ V8 learned hop-locked repetition while predicting absolute complex STFT frames. 
 supervises magnitude and inter-frame phase advance. This smoke first proves that the V9
 factorization itself reconstructs a real waveform, then performs a tiny in-memory overfit
 and rejects any learned frame-grid excess relative to the paired reference.
+
+The historical v1 gate is superseded. It required raw sample-domain waveform L1 to decrease
+while assigning that term only 0.05 weight inside the optimization objective. That was an
+internally inconsistent gate: the optimizer could rationally improve the spectral
+representation and envelope while slightly worsening a phase-sensitive sample L1, then be
+rejected for the term it was barely asked to optimize. V2 uses representation +
+multi-resolution spectral reconstruction + envelope + target-relative presence as the
+optimization/rejection surface. Raw waveform L1 remains diagnostic, never an acceptance
+metric. If the structural smoke passes, it writes reference/final WAVs for an auditory gate
+before any persistent checkpoint may be built.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 
+import soundfile as sf
 import torch
 
 from lykenox_voice_engine.models.vocoder import (
@@ -25,13 +37,25 @@ from lykenox_voice_engine.training.speech_vocoder_grid_artifact import (
     VOCODER_GRID_ARTIFACT_EXCESS_VERSION,
     frame_grid_artifact_excess_metrics,
 )
+from lykenox_voice_engine.training.speech_vocoder_level_presence_loss import (
+    VOCODER_LEVEL_PRESENCE_VERSION,
+    target_relative_presence_loss,
+)
+from lykenox_voice_engine.training.speech_vocoder_losses import (
+    VOCODER_LOSS_RECIPE_VERSION,
+    multi_resolution_reconstruction_loss,
+)
 from lykenox_voice_engine.training.speech_vocoder_v9_phase_increment_loss import (
+    PRIOR_V9_PHASE_INCREMENT_LOSS_INVALIDATED,
+    PRIOR_V9_PHASE_INCREMENT_LOSS_VERSION,
     V9_PHASE_INCREMENT_LOSS_VERSION,
     v9_phase_increment_loss,
 )
 
 
-SMOKE_VERSION = "vocoder-v9-phase-increment-ola-smoke-v1"
+PRIOR_SMOKE_VERSION = "vocoder-v9-phase-increment-ola-smoke-v1"
+SMOKE_VERSION = "vocoder-v9-phase-increment-ola-smoke-v2"
+PRIOR_SMOKE_INVALIDATED = True
 DEFAULT_STEPS = 16
 DEFAULT_SEGMENT_MEL_FRAMES = 48
 DEFAULT_LEARNING_RATE = 3e-4
@@ -45,6 +69,13 @@ def _sha256(path: Path) -> str | None:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _atomic_json(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    os.replace(temporary, path)
 
 
 def _protected(root: Path) -> dict[str, Path]:
@@ -90,15 +121,34 @@ def _forward_loss(
         waveform,
         target,
     )
+    reconstruction = multi_resolution_reconstruction_loss(waveform, target)
     envelope = envelope_loss(waveform, target)
+    presence = target_relative_presence_loss(
+        waveform,
+        target,
+        sample_rate=model.config.sample_rate,
+        hop_length=model.config.hop_length,
+    )
+    optimization_total = (
+        representation.total
+        + 0.50 * reconstruction.total
+        + 0.25 * envelope.total
+        + 0.25 * presence.loss
+    )
     metrics = {
-        "total": float(representation.total.detach()),
+        "total": float(optimization_total.detach()),
+        "representation_total": float(representation.total.detach()),
         "log_magnitude_l1": float(representation.log_magnitude_l1.detach()),
         "phase_increment_circular": float(representation.phase_increment_circular.detach()),
         "waveform_l1": float(representation.waveform_l1.detach()),
+        "reconstruction": float(reconstruction.total.detach()),
+        "reconstruction_spectral_convergence": float(reconstruction.spectral_convergence.detach()),
+        "reconstruction_log_magnitude": float(reconstruction.log_magnitude.detach()),
         "envelope": float(envelope.total.detach()),
+        "presence": float(presence.loss.detach()),
+        "presence_1k_8k_error_db": float(presence.presence_1k_8k_error_db.detach()),
     }
-    return representation.total, waveform, metrics
+    return optimization_total, waveform, metrics
 
 
 def run_v9_architecture_smoke(
@@ -164,7 +214,6 @@ def run_v9_architecture_smoke(
         torch.isfinite(contract_magnitude).all()
     ) and bool(torch.isfinite(torch.view_as_real(contract_residual)).all())
 
-    # Validate the differential spectral representation independently from learning.
     with torch.no_grad():
         target_spectrum = model.target_complex_spectrum(target)
         target_magnitude, target_residual_phase = model.factorize_target_spectrum(target_spectrum)
@@ -190,7 +239,7 @@ def run_v9_architecture_smoke(
     factorization_grid_failure = bool(factorization_grid.severe_grid_excess[0])
 
     with torch.no_grad():
-        _initial_total, _initial_wave, initial = _forward_loss(
+        _initial_total, initial_wave, initial = _forward_loss(
             model,
             envelope_loss,
             mel,
@@ -264,11 +313,17 @@ def run_v9_architecture_smoke(
     )
     final_grid_failure = bool(final_grid.severe_grid_excess[0])
     total_decreased = final["total"] < initial["total"]
+    representation_decreased = final["representation_total"] < initial["representation_total"]
     magnitude_decreased = final["log_magnitude_l1"] < initial["log_magnitude_l1"]
     phase_increment_decreased = (
         final["phase_increment_circular"] < initial["phase_increment_circular"]
     )
-    waveform_decreased = final["waveform_l1"] < initial["waveform_l1"]
+    reconstruction_decreased = final["reconstruction"] < initial["reconstruction"]
+    envelope_decreased = final["envelope"] < initial["envelope"]
+    presence_decreased = final["presence"] < initial["presence"]
+    presence_error_decreased = (
+        final["presence_1k_8k_error_db"] < initial["presence_1k_8k_error_db"]
+    )
     parameter_budget_pass = parameter_count <= 650_000
 
     after_hashes = {name: _sha256(path) for name, path in protected.items()}
@@ -282,24 +337,58 @@ def run_v9_architecture_smoke(
             not factorization_grid_failure,
             gradients_finite,
             total_decreased,
+            representation_decreased,
             magnitude_decreased,
             phase_increment_decreased,
-            waveform_decreased,
+            reconstruction_decreased,
+            envelope_decreased,
+            presence_decreased,
+            presence_error_decreased,
             not final_grid_failure,
             parameter_budget_pass,
             checkpoints_unchanged,
         )
     )
 
-    return {
-        "status": "pass" if status_pass else "fail",
+    output_dir = (
+        root
+        / "models"
+        / "lykenox_identity"
+        / "evaluation"
+        / "vocoder_v9_bounded_oracle_smoke_v2"
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    reference_path = output_dir / "reference.wav"
+    initial_path = output_dir / "initial_v9.wav"
+    final_path = output_dir / "final_v9.wav"
+    sf.write(reference_path, target[0].detach().cpu().numpy(), model.config.sample_rate, subtype="FLOAT")
+    sf.write(initial_path, initial_wave[0].detach().cpu().numpy(), model.config.sample_rate, subtype="FLOAT")
+    sf.write(final_path, final_wave[0].detach().cpu().numpy(), model.config.sample_rate, subtype="FLOAT")
+
+    report: dict[str, object] = {
+        "status": "needs_listening" if status_pass else "fail",
+        "structural_smoke_pass": status_pass,
         "smoke_version": SMOKE_VERSION,
-        "architecture": VOCODER_GENERATOR_V9_ARCHITECTURE,
+        "prior_smoke_version": PRIOR_SMOKE_VERSION,
+        "prior_smoke_invalidated": PRIOR_SMOKE_INVALIDATED,
+        "prior_smoke_invalidated_reason": (
+            "raw_waveform_l1_was_a_hard_gate_despite_only_0_05_objective_weight"
+        ),
         "loss_version": V9_PHASE_INCREMENT_LOSS_VERSION,
+        "prior_loss_version": PRIOR_V9_PHASE_INCREMENT_LOSS_VERSION,
+        "prior_loss_invalidated": PRIOR_V9_PHASE_INCREMENT_LOSS_INVALIDATED,
+        "phase_loss_semantics": "inter_frame_increments_only_frame_zero_anchor_excluded",
+        "architecture": VOCODER_GENERATOR_V9_ARCHITECTURE,
+        "reconstruction_loss_version": VOCODER_LOSS_RECIPE_VERSION,
+        "presence_loss_version": VOCODER_LEVEL_PRESENCE_VERSION,
         "grid_gate_version": VOCODER_GRID_ARTIFACT_EXCESS_VERSION,
         "grid_gate_mode": "paired_reference_relative_excess",
-        "phase_representation": model.phase_representation,
-        "absolute_frame_phase_prediction": model.absolute_frame_phase_prediction,
+        "optimization_objective": (
+            "v9_representation_plus_0.50_mrstft_plus_0.25_envelope_plus_0.25_presence"
+        ),
+        "raw_waveform_l1_is_hard_gate": False,
+        "metrics_can_accept_voice_quality": False,
+        "audible_acceptance_required_before_persistence": True,
         "device": "cpu",
         "utterance_id": item.utterance_id,
         "steps": steps,
@@ -317,9 +406,15 @@ def run_v9_architecture_smoke(
         "initial": {key: round(value, 6) for key, value in initial.items()},
         "final": {key: round(value, 6) for key, value in final.items()},
         "total_decreased": total_decreased,
+        "representation_decreased": representation_decreased,
         "magnitude_decreased": magnitude_decreased,
         "phase_increment_decreased": phase_increment_decreased,
-        "waveform_decreased": waveform_decreased,
+        "reconstruction_decreased": reconstruction_decreased,
+        "envelope_decreased": envelope_decreased,
+        "presence_decreased": presence_decreased,
+        "presence_error_decreased": presence_error_decreased,
+        "waveform_l1_diagnostic_initial": round(initial["waveform_l1"], 6),
+        "waveform_l1_diagnostic_final": round(final["waveform_l1"], 6),
         "final_grid_hop_excess": round(float(final_grid.hop_autocorrelation_excess[0]), 6),
         "final_grid_double_hop_excess": round(
             float(final_grid.double_hop_autocorrelation_excess[0]), 6
@@ -328,24 +423,26 @@ def run_v9_architecture_smoke(
             float(final_grid.grid_harmonic_power_fraction_excess[0]), 6
         ),
         "final_grid_failure": final_grid_failure,
-        "source_free": model.source_free,
-        "explicit_sample_rate_source": model.explicit_sample_rate_source,
-        "learned_sample_rate_upsampling": model.learned_sample_rate_upsampling,
+        "reference_wav": str(reference_path),
+        "initial_wav": str(initial_path),
+        "final_wav": str(final_path),
+        "audio_was_gain_normalized": False,
+        "audio_was_eq_processed": False,
+        "audio_was_denoised": False,
         "protected_checkpoints_unchanged": checkpoints_unchanged,
         "persistent_training_started": False,
         "persistent_training_authorized": False,
-        "metrics_can_accept_voice_quality": False,
-        "audible_full_utterance_acceptance_required": True,
         "predicted_duration_modified": False,
-        "posthoc_gain_normalization_used": False,
-        "posthoc_eq_used": False,
-        "posthoc_denoising_used": False,
         "next_gate": (
-            "build_exact_resume_v9_first_epoch_candidate"
+            "listen_v9_bounded_oracle_reference_vs_final_before_persistence"
             if status_pass
             else "reject_or_revise_v9_before_persistent_training"
         ),
     }
+    report_path = output_dir / "smoke_report.json"
+    report["report_path"] = str(report_path)
+    _atomic_json(report_path, report)
+    return report
 
 
 def main() -> None:
