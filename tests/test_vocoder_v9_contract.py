@@ -15,6 +15,8 @@ from lykenox_voice_engine.training.speech_vocoder_v4_2_replacement_decision impo
     NEXT_ARCHITECTURE,
 )
 from lykenox_voice_engine.training.speech_vocoder_v9_phase_increment_loss import (
+    PRIOR_V9_PHASE_INCREMENT_LOSS_INVALIDATED,
+    PRIOR_V9_PHASE_INCREMENT_LOSS_VERSION,
     V9_PHASE_INCREMENT_LOSS_VERSION,
     v9_phase_increment_loss,
 )
@@ -115,12 +117,34 @@ class V9VocoderContractTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, source)
 
-    def test_phase_increment_loss_is_phase_sensitive_and_differentiable(self) -> None:
+    def test_phase_increment_loss_v2_excludes_absolute_anchor(self) -> None:
         self.assertEqual(
             V9_PHASE_INCREMENT_LOSS_VERSION,
+            "vocoder-v9-phase-increment-loss-v2",
+        )
+        self.assertEqual(
+            PRIOR_V9_PHASE_INCREMENT_LOSS_VERSION,
             "vocoder-v9-phase-increment-loss-v1",
         )
+        self.assertTrue(PRIOR_V9_PHASE_INCREMENT_LOSS_INVALIDATED)
         torch.manual_seed(94)
+        magnitude = torch.rand(1, 9, 4) + 0.1
+        target_phase = torch.polar(torch.ones(1, 9, 4), torch.randn(1, 9, 4))
+        predicted_phase = target_phase.clone()
+        predicted_phase[..., 0] = -predicted_phase[..., 0]
+        target_wave = torch.randn(1, 256)
+        result = v9_phase_increment_loss(
+            magnitude,
+            magnitude,
+            predicted_phase,
+            target_phase,
+            target_wave,
+            target_wave,
+        )
+        self.assertLess(float(result.phase_increment_circular.detach()), 1e-7)
+
+    def test_phase_increment_loss_is_increment_sensitive_and_differentiable(self) -> None:
+        torch.manual_seed(95)
         magnitude = torch.rand(1, 9, 4) + 0.1
         predicted_magnitude = magnitude.clone().requires_grad_(True)
         target_phase = torch.polar(torch.ones(1, 9, 4), torch.randn(1, 9, 4))
@@ -141,13 +165,26 @@ class V9VocoderContractTests(unittest.TestCase):
         self.assertIsNotNone(predicted_magnitude.grad)
         self.assertIsNotNone(phase_angle.grad)
 
-    def test_smoke_is_bounded_reference_relative_and_nonpersistent(self) -> None:
+    def test_smoke_v2_is_reconstruction_aligned_and_audible_before_persistence(self) -> None:
         source = inspect.getsource(v9_smoke.run_v9_architecture_smoke)
         module_source = inspect.getsource(v9_smoke)
-        self.assertEqual(v9_smoke.SMOKE_VERSION, "vocoder-v9-phase-increment-ola-smoke-v1")
-        self.assertIn("factorized_spectrum_mae", source)
-        self.assertIn("factorized_waveform_mae", source)
+        forward_source = inspect.getsource(v9_smoke._forward_loss)
+        self.assertEqual(v9_smoke.PRIOR_SMOKE_VERSION, "vocoder-v9-phase-increment-ola-smoke-v1")
+        self.assertEqual(v9_smoke.SMOKE_VERSION, "vocoder-v9-phase-increment-ola-smoke-v2")
+        self.assertTrue(v9_smoke.PRIOR_SMOKE_INVALIDATED)
+        self.assertIn("multi_resolution_reconstruction_loss", module_source)
+        self.assertIn("target_relative_presence_loss", module_source)
+        self.assertIn("representation.total", forward_source)
+        self.assertIn("0.50 * reconstruction.total", forward_source)
+        self.assertIn("0.25 * envelope.total", forward_source)
+        self.assertIn("0.25 * presence.loss", forward_source)
+        self.assertIn("raw_waveform_l1_is_hard_gate", source)
+        self.assertIn("needs_listening", source)
+        self.assertIn("reference.wav", source)
+        self.assertIn("final_v9.wav", source)
         self.assertIn("phase_increment_decreased", source)
+        self.assertIn("reconstruction_decreased", source)
+        self.assertIn("presence_error_decreased", source)
         self.assertIn("frame_grid_artifact_excess_metrics", module_source)
         self.assertIn('"persistent_training_started": False', source)
         self.assertIn('"persistent_training_authorized": False', source)
