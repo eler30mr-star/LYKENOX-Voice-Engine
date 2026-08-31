@@ -7,7 +7,9 @@ import torch
 import torch.nn.functional as F
 
 
-V9_PHASE_INCREMENT_LOSS_VERSION = "vocoder-v9-phase-increment-loss-v1"
+V9_PHASE_INCREMENT_LOSS_VERSION = "vocoder-v9-phase-increment-loss-v2"
+PRIOR_V9_PHASE_INCREMENT_LOSS_VERSION = "vocoder-v9-phase-increment-loss-v1"
+PRIOR_V9_PHASE_INCREMENT_LOSS_INVALIDATED = True
 
 
 @dataclass(frozen=True)
@@ -29,11 +31,17 @@ def v9_phase_increment_loss(
     phase_weight: float = 0.75,
     waveform_weight: float = 0.05,
 ) -> V9PhaseIncrementLoss:
-    """Supervise magnitude and inter-frame phase advance directly.
+    """Supervise magnitude and *inter-frame* phase advance.
 
-    Phase is compared on the unit circle and weighted by target spectral magnitude so
-    near-silent bins do not dominate with arbitrary phase. The waveform term is light;
-    V9's primary contract is its differential spectral representation.
+    Frame zero is an absolute phase anchor, not an increment.  The historical v1 loss
+    incorrectly included that anchor in ``phase_increment_circular`` even though absolute
+    STFT phase is not determined by mel/F0/voicing.  V2 therefore evaluates only frames
+    1..T for the phase-increment term.  Phase increments are compared on the unit circle
+    and weighted by target spectral magnitude so near-silent bins do not dominate.
+
+    ``waveform_l1`` remains a light diagnostic pressure.  It is intentionally not a
+    stand-alone architecture acceptance criterion because tiny phase shifts can increase
+    sample-domain L1 while spectral envelope and inter-frame phase structure improve.
     """
     if predicted_magnitude.shape != target_magnitude.shape:
         raise ValueError("predicted and target magnitude shapes must match")
@@ -43,6 +51,8 @@ def v9_phase_increment_loss(
         raise ValueError("phase residuals must be complex unit factors")
     if predicted_waveform.shape != target_waveform.shape:
         raise ValueError("predicted and target waveforms must match")
+    if predicted_residual_phase.shape[-1] < 2:
+        raise ValueError("phase-increment supervision requires at least two STFT frames")
     if phase_weight < 0.0 or waveform_weight < 0.0:
         raise ValueError("loss weights must be non-negative")
 
@@ -53,10 +63,12 @@ def v9_phase_increment_loss(
         torch.log1p(target_magnitude),
     )
 
+    predicted_increment = predicted_residual_phase[..., 1:]
+    target_increment = target_residual_phase[..., 1:]
     agreement = (
-        predicted_residual_phase * target_residual_phase.conj()
+        predicted_increment * target_increment.conj()
     ).real.clamp(-1.0, 1.0)
-    weights = torch.log1p(target_magnitude).clamp_min(0.0)
+    weights = torch.log1p(target_magnitude[..., 1:]).clamp_min(0.0)
     weights = weights / weights.mean().clamp_min(1e-4)
     phase_increment_circular = (
         (1.0 - agreement) * weights
