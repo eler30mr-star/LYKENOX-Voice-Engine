@@ -1,8 +1,10 @@
 """Checkpoint contract for isolated acoustic mel-decoder fidelity refinement.
 
-The experiment is initialized from the accepted acoustic frame-context-v2 ``best.pt`` and
-may change only ``mel_decoder.*`` tensors.  Every other model tensor is required to remain
-bit-exact with that immutable base checkpoint on save and load.
+The one-epoch ``mel_decoder``-only candidate is retained for forensic reproducibility but
+has been perceptually rejected: it did not produce a useful audible improvement over the
+accepted acoustic-v2 baseline. New persistent runs through its default output path are
+therefore blocked. Temporary explicit output directories remain available to historical
+exact-resume tests.
 """
 from __future__ import annotations
 
@@ -22,6 +24,8 @@ from lykenox_voice_engine.training.speech_acoustic_prosody_artifact import (
 
 ISOLATED_MEL_ARTIFACT_VERSION = "acoustic-mel-fidelity-isolated-artifact-v1"
 TRAINABLE_PREFIX = "mel_decoder."
+ISOLATED_MEL_PERCEPTUALLY_REJECTED = True
+ISOLATED_MEL_PERSISTENT_TRAINING_ENABLED = False
 
 
 def file_sha256(path: Path) -> str:
@@ -43,13 +47,22 @@ def base_checkpoint_path(root: Path) -> Path:
     )
 
 
-def isolated_output_dir(root: Path) -> Path:
+def rejected_isolated_output_dir(root: Path) -> Path:
+    """Return the historical artifact location without authorizing new training."""
     return (
         Path(root).resolve()
         / "models"
         / "lykenox_identity"
         / "training"
         / "acoustic_mel_fidelity_v1"
+    )
+
+
+def isolated_output_dir(root: Path) -> Path:
+    del root
+    raise RuntimeError(
+        "acoustic_mel_fidelity_v1 was perceptually rejected: persistent mel_decoder-only "
+        "training is disabled; keep existing checkpoints for forensic A/B only"
     )
 
 
