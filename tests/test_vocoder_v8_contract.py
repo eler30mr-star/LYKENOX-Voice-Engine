@@ -11,6 +11,10 @@ from lykenox_voice_engine.models.vocoder import (
     VOCODER_GENERATOR_V8_ARCHITECTURE,
 )
 from lykenox_voice_engine.training import speech_vocoder_v8_architecture_smoke as v8_smoke
+from lykenox_voice_engine.training.speech_vocoder_grid_artifact import (
+    VOCODER_GRID_ARTIFACT_EXCESS_VERSION,
+    frame_grid_artifact_excess_metrics,
+)
 from lykenox_voice_engine.training.speech_vocoder_v4_2_replacement_decision import (
     ACOUSTIC_TRAINING_AUTHORIZED,
     NEXT_ARCHITECTURE,
@@ -131,12 +135,51 @@ class V8VocoderContractTests(unittest.TestCase):
         self.assertIsNotNone(predicted_real.grad)
         self.assertIsNotNone(predicted_imag.grad)
 
-    def test_smoke_has_v7_missing_grid_gate_and_no_persistence(self) -> None:
+    def test_reference_relative_grid_gate_does_not_reject_identical_periodic_audio(self) -> None:
+        self.assertEqual(
+            VOCODER_GRID_ARTIFACT_EXCESS_VERSION,
+            "vocoder-frame-grid-artifact-excess-v1",
+        )
+        torch.manual_seed(85)
+        frame = torch.randn(256)
+        reference = frame.repeat(8).unsqueeze(0)
+        result = frame_grid_artifact_excess_metrics(
+            reference.clone(),
+            reference,
+            sample_rate=24000,
+            hop_length=256,
+        )
+        self.assertTrue(bool(result.reference.severe_grid_artifact[0]))
+        self.assertFalse(bool(result.severe_grid_excess[0]))
+        self.assertLess(abs(float(result.hop_autocorrelation_excess[0])), 1e-7)
+        self.assertLess(abs(float(result.double_hop_autocorrelation_excess[0])), 1e-7)
+        self.assertLess(abs(float(result.grid_harmonic_power_fraction_excess[0])), 1e-7)
+
+    def test_reference_relative_grid_gate_rejects_added_hop_locking(self) -> None:
+        torch.manual_seed(86)
+        reference = torch.randn(1, 2048)
+        candidate = reference[:, :256].repeat(1, 8)
+        result = frame_grid_artifact_excess_metrics(
+            candidate,
+            reference,
+            sample_rate=24000,
+            hop_length=256,
+        )
+        self.assertTrue(bool(result.severe_grid_excess[0]))
+        self.assertGreater(float(result.hop_autocorrelation_excess[0]), 0.25)
+
+    def test_smoke_supersedes_v1_with_complex_first_relative_grid_gate(self) -> None:
         source = inspect.getsource(v8_smoke.run_v8_architecture_smoke)
         module_source = inspect.getsource(v8_smoke)
-        self.assertIn("frame_grid_artifact_metrics", module_source)
+        forward_source = inspect.getsource(v8_smoke._forward_loss)
+        self.assertEqual(v8_smoke.PRIOR_SMOKE_VERSION, "vocoder-v8-complex-spectral-ola-smoke-v1")
+        self.assertEqual(v8_smoke.SMOKE_VERSION, "vocoder-v8-complex-spectral-ola-smoke-v2")
+        self.assertTrue(v8_smoke.PRIOR_SMOKE_INVALIDATED)
+        self.assertIn("frame_grid_artifact_excess_metrics", module_source)
+        self.assertIn("paired_reference_relative_excess", source)
         self.assertIn("fixed_stft_istft_roundtrip_mae", source)
         self.assertIn("final_grid_failure", source)
+        self.assertIn("optimization_total = complex_loss.total", forward_source)
         self.assertIn('"persistent_training_started": False', source)
         self.assertIn('"persistent_training_authorized": False', source)
         self.assertIn('"metrics_can_accept_voice_quality": False', source)
