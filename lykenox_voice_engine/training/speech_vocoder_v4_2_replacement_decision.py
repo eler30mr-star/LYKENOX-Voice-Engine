@@ -1,12 +1,24 @@
-"""Frozen engineering decision after direct v4.2/V8/V9 vocoder forensics."""
+"""Frozen engineering decision after direct v4.2/V8/V9 vocoder forensics.
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v3"
+LYKENOX is an identity-voice product intended for distribution. The vocoder architecture,
+training state, and distributable model weights must remain LYKENOX-owned. Third-party
+pretrained vocoder checkpoints are not an authorized product dependency, fallback, probe,
+or replacement path.
+"""
+
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v4"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
 PREDICTED_DURATION_MODIFICATION_AUTHORIZED = False
 POSTHOC_GAIN_EQ_DENOISE_AUTHORIZED = False
 SCRATCH_VOCODER_ITERATION_AUTHORIZED = False
+
+VOCODER_OWNERSHIP_CONTRACT = "lykenox_owned_architecture_and_weights_only"
+THIRD_PARTY_PRETRAINED_VOCODER_AUTHORIZED = False
+THIRD_PARTY_VOCODER_CHECKPOINT_AUTHORIZED = False
+DISTRIBUTION_REQUIRES_LYKENOX_OWNED_WEIGHTS = True
+NEW_VOCODER_ARCHITECTURE_AUTHORIZED = False
 
 FORENSIC_BASELINE = {
     "spectral_centroid_relative_pct": -16.468669,
@@ -31,11 +43,9 @@ V8_VERDICT = (
 
 V9_VERDICT = (
     "V9 removed V8 frame-grid excess and its differential spectral factorization was "
-    "numerically sound, but the bounded oracle output was not usable speech. The bounded "
-    "smoke itself was only a short trainability probe and must not be used to justify more "
-    "scratch-vocoder iterations. V9 is perceptually rejected and persistent training is "
-    "forbidden."
+    "numerically sound, but the bounded oracle output was not usable speech. V9 is "
+    "perceptually rejected and persistent training is forbidden."
 )
 
-NEXT_ARCHITECTURE = "pretrained_vocoder_baseline"
-NEXT_GATE = "run_full_utterance_pretrained_vocos_copy_synthesis_before_any_more_vocoder_training"
+NEXT_ARCHITECTURE = "undecided_after_owned_pipeline_forensics"
+NEXT_GATE = "audit_owned_vocoder_data_conditioning_and_training_contract_before_new_architecture"
