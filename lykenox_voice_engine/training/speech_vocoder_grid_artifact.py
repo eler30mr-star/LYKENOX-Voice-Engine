@@ -14,6 +14,7 @@ import torch
 
 
 VOCODER_GRID_ARTIFACT_VERSION = "vocoder-frame-grid-artifact-v1"
+VOCODER_GRID_ARTIFACT_EXCESS_VERSION = "vocoder-frame-grid-artifact-excess-v1"
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,26 @@ class FrameGridArtifactResult:
     double_hop_autocorrelation: torch.Tensor
     grid_harmonic_power_fraction: torch.Tensor
     severe_grid_artifact: torch.Tensor
+
+
+@dataclass(frozen=True)
+class FrameGridArtifactExcessResult:
+    """Candidate grid-locking in excess of the paired natural reference.
+
+    Absolute hop-period autocorrelation is not sufficient to identify a decoder artifact:
+    a short naturally voiced crop can itself be highly periodic at a lag close to the mel
+    hop.  The excess gate therefore asks whether the candidate *adds* frame-grid locking
+    relative to the paired real waveform.  This keeps the historical absolute detector
+    available for V7 forensics while preventing an almost-exact analysis/synthesis
+    round-trip from being falsely blamed for periodicity already present in the target.
+    """
+
+    reference: FrameGridArtifactResult
+    candidate: FrameGridArtifactResult
+    hop_autocorrelation_excess: torch.Tensor
+    double_hop_autocorrelation_excess: torch.Tensor
+    grid_harmonic_power_fraction_excess: torch.Tensor
+    severe_grid_excess: torch.Tensor
 
 
 def _as_batch(waveform: torch.Tensor) -> torch.Tensor:
@@ -59,10 +80,11 @@ def frame_grid_artifact_metrics(
 ) -> FrameGridArtifactResult:
     """Measure repetition at the mel hop and energy locked to the frame-rate comb.
 
-    ``severe_grid_artifact`` is true when either hop-period repetition is almost exact or
-    the frame-rate harmonic comb owns an implausibly large fraction of 20--4000 Hz power.
-    The thresholds are deliberately conservative: V7 measured about 0.99 at the 256-sample
-    hop, while natural/reference speech in the same audit was far lower.
+    ``severe_grid_artifact`` is an absolute forensic flag.  It remains useful for the V7
+    failure where full held-out references had far lower hop-period correlation and comb
+    power, but it must not by itself be interpreted as a decoder-caused artifact on short
+    voiced crops.  New architecture gates should use ``frame_grid_artifact_excess_metrics``
+    against the paired natural reference.
     """
 
     if sample_rate < 1 or hop_length < 2:
@@ -119,4 +141,66 @@ def frame_grid_artifact_metrics(
         double_hop_autocorrelation=double_hop_corr,
         grid_harmonic_power_fraction=comb_fraction,
         severe_grid_artifact=severe,
+    )
+
+
+def frame_grid_artifact_excess_metrics(
+    candidate: torch.Tensor,
+    reference: torch.Tensor,
+    *,
+    sample_rate: int,
+    hop_length: int,
+    max_harmonics: int = 8,
+    autocorrelation_excess_threshold: float = 0.25,
+    harmonic_power_excess_threshold: float = 0.20,
+) -> FrameGridArtifactExcessResult:
+    """Reject only frame-grid locking introduced beyond the paired natural waveform.
+
+    Thresholds are intentionally much smaller than the historical V7/reference separation:
+    V7 full utterances showed roughly +0.5 or more hop-correlation excess and +0.7 or more
+    frame-comb power-fraction excess.  Identical or numerically equivalent waveforms have
+    approximately zero excess even when both are naturally periodic.
+    """
+
+    candidate_batch = _as_batch(candidate)
+    reference_batch = _as_batch(reference)
+    if candidate_batch.shape != reference_batch.shape:
+        raise ValueError("candidate and reference must share waveform shape")
+    if not 0.0 < autocorrelation_excess_threshold < 1.0:
+        raise ValueError("autocorrelation_excess_threshold must be between zero and one")
+    if not 0.0 < harmonic_power_excess_threshold < 1.0:
+        raise ValueError("harmonic_power_excess_threshold must be between zero and one")
+
+    candidate_metrics = frame_grid_artifact_metrics(
+        candidate_batch,
+        sample_rate=sample_rate,
+        hop_length=hop_length,
+        max_harmonics=max_harmonics,
+    )
+    reference_metrics = frame_grid_artifact_metrics(
+        reference_batch,
+        sample_rate=sample_rate,
+        hop_length=hop_length,
+        max_harmonics=max_harmonics,
+    )
+    hop_excess = candidate_metrics.hop_autocorrelation.abs() - reference_metrics.hop_autocorrelation.abs()
+    double_hop_excess = (
+        candidate_metrics.double_hop_autocorrelation.abs()
+        - reference_metrics.double_hop_autocorrelation.abs()
+    )
+    comb_excess = (
+        candidate_metrics.grid_harmonic_power_fraction
+        - reference_metrics.grid_harmonic_power_fraction
+    )
+    severe_excess = (
+        torch.maximum(hop_excess, double_hop_excess)
+        >= autocorrelation_excess_threshold
+    ) | (comb_excess >= harmonic_power_excess_threshold)
+    return FrameGridArtifactExcessResult(
+        reference=reference_metrics,
+        candidate=candidate_metrics,
+        hop_autocorrelation_excess=hop_excess,
+        double_hop_autocorrelation_excess=double_hop_excess,
+        grid_harmonic_power_fraction_excess=comb_excess,
+        severe_grid_excess=severe_excess,
     )
