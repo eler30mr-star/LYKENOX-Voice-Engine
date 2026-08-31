@@ -1,6 +1,6 @@
 """Frozen engineering decision after direct v4.2 oracle/source-filter forensics."""
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v1"
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v2"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
@@ -21,5 +21,12 @@ ABLATION_VERDICT = (
     "spectrally colored with all paths active."
 )
 
-NEXT_ARCHITECTURE = "lykenox_complex_spectral_overlap_add_v8"
-NEXT_GATE = "run_v8_complex_spectral_ola_architecture_smoke_before_any_persistent_training"
+V8_VERDICT = (
+    "V8 fixed STFT/iSTFT analysis-synthesis is numerically sound, but predicting absolute "
+    "complex STFT coefficients learned severe hop-locked repetition relative to the paired "
+    "reference (+0.341784 hop and +0.671333 double-hop autocorrelation excess). V8 is "
+    "architecturally rejected and persistent training is forbidden."
+)
+
+NEXT_ARCHITECTURE = "lykenox_phase_increment_spectral_ola_v9"
+NEXT_GATE = "run_v9_phase_increment_architecture_smoke_before_any_persistent_training"
