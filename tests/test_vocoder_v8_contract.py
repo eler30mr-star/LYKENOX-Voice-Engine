@@ -7,7 +7,6 @@ import torch
 from lykenox_voice_engine.models.vocoder import (
     LykenoxVocoderGeneratorV8,
     VOCODER_GENERATOR_V8_ARCHITECTURE,
-    VOCODER_GENERATOR_V9_ARCHITECTURE,
 )
 from lykenox_voice_engine.training.speech_vocoder_grid_artifact import (
     VOCODER_GRID_ARTIFACT_EXCESS_VERSION,
@@ -15,6 +14,7 @@ from lykenox_voice_engine.training.speech_vocoder_grid_artifact import (
 )
 from lykenox_voice_engine.training.speech_vocoder_v4_2_replacement_decision import (
     ACOUSTIC_TRAINING_AUTHORIZED,
+    NEW_VOCODER_ARCHITECTURE_AUTHORIZED,
     NEXT_ARCHITECTURE,
     V4_2_FURTHER_TRAINING_AUTHORIZED,
     V4_2_ROLE,
@@ -66,11 +66,12 @@ class V8VocoderContractTests(unittest.TestCase):
             require_v8_training_enabled()
         self.assertIn("hop-locked", V8_VERDICT)
 
-    def test_replacement_decision_advances_to_v9_without_reopening_acoustic(self) -> None:
+    def test_replacement_decision_keeps_v8_forensic_and_selects_no_new_architecture(self) -> None:
         self.assertEqual(V4_2_ROLE, "intelligible_colored_baseline_only")
         self.assertFalse(V4_2_FURTHER_TRAINING_AUTHORIZED)
         self.assertFalse(ACOUSTIC_TRAINING_AUTHORIZED)
-        self.assertEqual(NEXT_ARCHITECTURE, VOCODER_GENERATOR_V9_ARCHITECTURE)
+        self.assertFalse(NEW_VOCODER_ARCHITECTURE_AUTHORIZED)
+        self.assertEqual(NEXT_ARCHITECTURE, "undecided_after_owned_pipeline_forensics")
 
 
 if __name__ == "__main__":
