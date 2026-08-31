@@ -12,6 +12,7 @@ from lykenox_voice_engine.models.vocoder import (
 )
 from lykenox_voice_engine.training import speech_vocoder_v9_architecture_smoke as v9_smoke
 from lykenox_voice_engine.training.speech_vocoder_v4_2_replacement_decision import (
+    NEW_VOCODER_ARCHITECTURE_AUTHORIZED,
     NEXT_ARCHITECTURE,
 )
 from lykenox_voice_engine.training.speech_vocoder_v9_phase_increment_loss import (
@@ -19,6 +20,10 @@ from lykenox_voice_engine.training.speech_vocoder_v9_phase_increment_loss import
     PRIOR_V9_PHASE_INCREMENT_LOSS_VERSION,
     V9_PHASE_INCREMENT_LOSS_VERSION,
     v9_phase_increment_loss,
+)
+from lykenox_voice_engine.training.speech_vocoder_v9_rejection import (
+    V9_PERCEPTUALLY_REJECTED,
+    V9_TRAINING_ENABLED,
 )
 
 
@@ -165,31 +170,20 @@ class V9VocoderContractTests(unittest.TestCase):
         self.assertIsNotNone(predicted_magnitude.grad)
         self.assertIsNotNone(phase_angle.grad)
 
-    def test_smoke_v2_is_reconstruction_aligned_and_audible_before_persistence(self) -> None:
+    def test_smoke_v2_is_forensic_only_after_perceptual_rejection(self) -> None:
         source = inspect.getsource(v9_smoke.run_v9_architecture_smoke)
         module_source = inspect.getsource(v9_smoke)
-        forward_source = inspect.getsource(v9_smoke._forward_loss)
         self.assertEqual(v9_smoke.PRIOR_SMOKE_VERSION, "vocoder-v9-phase-increment-ola-smoke-v1")
         self.assertEqual(v9_smoke.SMOKE_VERSION, "vocoder-v9-phase-increment-ola-smoke-v2")
         self.assertTrue(v9_smoke.PRIOR_SMOKE_INVALIDATED)
-        self.assertIn("multi_resolution_reconstruction_loss", module_source)
-        self.assertIn("target_relative_presence_loss", module_source)
-        self.assertIn("representation.total", forward_source)
-        self.assertIn("0.50 * reconstruction.total", forward_source)
-        self.assertIn("0.25 * envelope.total", forward_source)
-        self.assertIn("0.25 * presence.loss", forward_source)
-        self.assertIn("raw_waveform_l1_is_hard_gate", source)
-        self.assertIn("needs_listening", source)
-        self.assertIn("reference.wav", source)
-        self.assertIn("final_v9.wav", source)
-        self.assertIn("phase_increment_decreased", source)
-        self.assertIn("reconstruction_decreased", source)
-        self.assertIn("presence_error_decreased", source)
         self.assertIn("frame_grid_artifact_excess_metrics", module_source)
         self.assertIn('"persistent_training_started": False', source)
         self.assertIn('"persistent_training_authorized": False', source)
         self.assertNotIn("torch.save(", module_source)
-        self.assertEqual(NEXT_ARCHITECTURE, VOCODER_GENERATOR_V9_ARCHITECTURE)
+        self.assertTrue(V9_PERCEPTUALLY_REJECTED)
+        self.assertFalse(V9_TRAINING_ENABLED)
+        self.assertFalse(NEW_VOCODER_ARCHITECTURE_AUTHORIZED)
+        self.assertEqual(NEXT_ARCHITECTURE, "undecided_after_owned_pipeline_forensics")
 
 
 if __name__ == "__main__":
