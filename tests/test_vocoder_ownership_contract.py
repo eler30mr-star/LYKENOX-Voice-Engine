@@ -24,8 +24,12 @@ class VocoderOwnershipContractTests(unittest.TestCase):
             "undecided_after_owned_pipeline_forensics",
         )
         self.assertEqual(
+            decision.OWNED_VOCODER_DATA_CONTRACT,
+            "vocoder-segment-v2-full-utterance-mel-pitch-conditioning",
+        )
+        self.assertEqual(
             decision.NEXT_GATE,
-            "audit_owned_vocoder_data_conditioning_and_training_contract_before_new_architecture",
+            "run_owned_vocoder_conditioning_pipeline_forensics_before_loss_or_architecture_work",
         )
 
     def test_decision_contains_no_external_pretrained_replacement_route(self) -> None:
