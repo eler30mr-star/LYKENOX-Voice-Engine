@@ -64,12 +64,12 @@ class AcousticMelPostnetFullUtteranceABContractTests(unittest.TestCase):
         self.assertIn("predicted_prosody_exact", source)
         self.assertIn("prepare_speech_vocoder_conditioning", source)
 
-    def test_acceptance_is_perceptual_not_metric_only(self) -> None:
+    def test_postnet_is_perceptually_rejected_and_epoch_two_stays_closed(self) -> None:
         source = inspect.getsource(run_mel_postnet_full_utterance_ab)
-        self.assertIn("Metrics may reject but cannot accept", source)
-        self.assertIn("Ambiguous listening does not authorize epoch 2", source)
+        self.assertIn("perceptually rejected", source)
+        self.assertIn("slightly below the accepted v4.2 baseline", source)
         self.assertIn(
-            '"next_gate": "listen_postnet_vs_base_full_utterances_before_any_epoch2"',
+            '"next_gate": "postnet_perceptually_rejected_no_epoch2"',
             source,
         )
 
