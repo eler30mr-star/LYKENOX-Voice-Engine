@@ -172,7 +172,9 @@ def run_v8_architecture_smoke(
     )
 
     # Prove the fixed analysis/synthesis geometry itself can reconstruct a real waveform.
-    with torch.inference_mode():
+    # no_grad is intentional rather than inference_mode because target_spectrum is reused
+    # as a constant target inside subsequent differentiable loss computations.
+    with torch.no_grad():
         target_spectrum = model.target_complex_spectrum(target)
         roundtrip = model.synthesize_complex_spectrum(
             target_spectrum,
