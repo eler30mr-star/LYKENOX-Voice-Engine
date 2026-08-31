@@ -6,7 +6,7 @@ pretrained vocoder checkpoints are not an authorized product dependency, fallbac
 or replacement path.
 """
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v4"
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v5"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
@@ -19,6 +19,9 @@ THIRD_PARTY_PRETRAINED_VOCODER_AUTHORIZED = False
 THIRD_PARTY_VOCODER_CHECKPOINT_AUTHORIZED = False
 DISTRIBUTION_REQUIRES_LYKENOX_OWNED_WEIGHTS = True
 NEW_VOCODER_ARCHITECTURE_AUTHORIZED = False
+OWNED_VOCODER_DATA_CONTRACT = (
+    "vocoder-segment-v2-full-utterance-mel-pitch-conditioning"
+)
 
 FORENSIC_BASELINE = {
     "spectral_centroid_relative_pct": -16.468669,
@@ -47,5 +50,15 @@ V9_VERDICT = (
     "perceptually rejected and persistent training is forbidden."
 )
 
+CONDITIONING_FORENSIC_FINDING = (
+    "Historical vocoder segment training re-extracted F0/voicing from each waveform crop, "
+    "while the acoustic model is supervised from the versioned full-utterance pitch cache. "
+    "Crop-local extraction changes reflected boundary context and the RMS-relative voicing "
+    "threshold. New vocoder work must slice mel/F0/voicing from the same full-utterance "
+    "frame origin before any architecture is selected."
+)
+
 NEXT_ARCHITECTURE = "undecided_after_owned_pipeline_forensics"
-NEXT_GATE = "audit_owned_vocoder_data_conditioning_and_training_contract_before_new_architecture"
+NEXT_GATE = (
+    "run_owned_vocoder_conditioning_pipeline_forensics_before_loss_or_architecture_work"
+)
