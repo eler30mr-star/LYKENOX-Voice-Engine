@@ -40,7 +40,7 @@ STATIC_RENDERER_SAFETY_EVIDENCE = {
 }
 FRAME_RATE_PREDICTOR_ARCHITECTURE = "lykenox_owned_frame_rate_cepstral_predictor_v1"
 FRAME_RATE_PREDICTOR_STRUCTURAL_SMOKE_VERSION = (
-    "owned-frame-rate-cepstral-predictor-structural-smoke-v1"
+    "owned-frame-rate-cepstral-predictor-smoke-v1"
 )
 FRAME_RATE_PREDICTOR_STRUCTURAL_SMOKE_STATUS = "pass"
 FRAME_RATE_PREDICTOR_STRUCTURAL_SMOKE_TEST_COUNT = 36
