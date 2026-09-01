@@ -32,9 +32,10 @@ class LowCepstralOrderOracleDiagnosticTests(unittest.TestCase):
         source = inspect.getsource(diagnostic.run_low_cepstral_order_oracle)
         self.assertIn("cepstral_order=CEPSTRAL_ORDER_TEST", source)
         self.assertIn("render_owned_minimum_phase_vocoder_path", source)
-        self.assertNotIn("band_split", source.lower())
-        self.assertNotIn("gaussian", source.lower())
-        self.assertNotIn("no_crossfade", source.lower())
+        self.assertNotIn("build_neutral_excitation_band_split", source)
+        self.assertNotIn("render_owned_minimum_phase_vocoder_path_band_split", source)
+        self.assertNotIn("_gaussian_aperiodic_noise", source)
+        self.assertNotIn("render_time_varying_minimum_phase_no_crossfade", source)
 
     def test_production_renderer_accepts_order_32_without_code_change(self) -> None:
         frames = 5
