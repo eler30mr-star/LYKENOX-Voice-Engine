@@ -27,10 +27,15 @@ class VocoderOwnershipContractTests(unittest.TestCase):
             decision.OWNED_VOCODER_DATA_CONTRACT,
             "vocoder-segment-v2-full-utterance-mel-pitch-conditioning",
         )
+        self.assertEqual(
+            decision.OWNED_VOCODER_LOSS_CONTRACT,
+            "owned-vocoder-loss-v2-valid-context-conditioning-aligned",
+        )
         self.assertEqual(decision.CONDITIONING_FORENSICS_STATUS, "pass")
+        self.assertEqual(decision.LOSS_EDGE_FORENSICS_STATUS, "pass")
         self.assertEqual(
             decision.NEXT_GATE,
-            "audit_owned_vocoder_loss_edge_and_objective_semantics",
+            "run_owned_vocoder_loss_v2_target_consistency_audit_before_architecture_selection",
         )
 
     def test_decision_records_boundary_dominant_conditioning_mismatch(self) -> None:
@@ -47,6 +52,25 @@ class VocoderOwnershipContractTests(unittest.TestCase):
             metrics["mean_interior_f0_mae_cents_on_common_voiced"],
             0.0,
         )
+
+    def test_decision_records_artificial_loss_edge_bug_and_64_frame_contract(self) -> None:
+        metrics = decision.LOSS_EDGE_FORENSIC_METRICS
+        self.assertEqual(metrics["mel_crop_local_frame_count"], 65)
+        self.assertEqual(metrics["mel_conditioning_frame_count"], 64)
+        self.assertTrue(metrics["mel_extra_terminal_frame_without_conditioning"])
+        self.assertGreater(
+            metrics["mean_mel_artificial_log_l1"],
+            metrics["mean_mel_interior_log_l1"],
+        )
+        for prefix in ("stft_256_64", "stft_512_128", "stft_1024_256"):
+            self.assertGreater(
+                metrics[f"{prefix}_mean_artificial_log_magnitude_l1"],
+                metrics[f"{prefix}_mean_interior_log_magnitude_l1"],
+            )
+            self.assertEqual(
+                metrics[f"{prefix}_mean_interior_log_magnitude_l1"],
+                0.0,
+            )
 
     def test_decision_contains_no_external_pretrained_replacement_route(self) -> None:
         source = inspect.getsource(decision).lower()
