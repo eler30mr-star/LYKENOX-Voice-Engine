@@ -6,7 +6,7 @@ pretrained vocoder checkpoints are not an authorized product dependency, fallbac
 or replacement path.
 """
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v12"
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v13"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
@@ -19,12 +19,18 @@ THIRD_PARTY_PRETRAINED_VOCODER_AUTHORIZED = False
 THIRD_PARTY_VOCODER_CHECKPOINT_AUTHORIZED = False
 DISTRIBUTION_REQUIRES_LYKENOX_OWNED_WEIGHTS = True
 
-# Data/loss/architecture/renderer gates are frozen. Only predictor instantiation is open.
+# Data/loss/architecture/renderer/predictor structural gates are frozen. Only the explicit
+# two-update real-data optimizer smoke is open; trainer and persistent training remain blocked.
 LOSS_WEIGHT_CONTRACT_AUTHORIZED = True
 LOSS_V2_WEIGHT_CONTRACT_FROZEN = True
 MODEL_INSTANTIATION_AUTHORIZED = True
 FRAME_RATE_CEPSTRAL_PREDICTOR_IMPLEMENTATION_AUTHORIZED = True
+BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED = True
+BOUNDED_OPTIMIZER_SMOKE_MAX_UPDATES = 2
+BOUNDED_OPTIMIZER_SMOKE_SEGMENT_FRAMES = 32
+BOUNDED_OPTIMIZER_SMOKE_MAX_ITEMS = 1
 OPTIMIZER_CREATION_AUTHORIZED = False
+TRAINER_IMPLEMENTATION_AUTHORIZED = False
 PERSISTENT_TRAINING_AUTHORIZED = False
 NEW_VOCODER_ARCHITECTURE_AUTHORIZED = False
 NEW_VOCODER_CHECKPOINT_AUTHORIZED = False
@@ -42,6 +48,7 @@ OWNED_VOCODER_PRESENCE_CONTRACT = (
 OWNED_VOCODER_LOSS_WEIGHT_CONTRACT = "owned-vocoder-loss-v2-weight-contract-v1"
 OWNED_VOCODER_ARCHITECTURE_CONTRACT = "owned-vocoder-architecture-contract-v1"
 OWNED_STATIC_RENDERER = "owned-minimum-phase-time-varying-renderer-v1"
+OWNED_FRAME_RATE_PREDICTOR = "lykenox_owned_frame_rate_cepstral_predictor_v1"
 HISTORICAL_PRESENCE_EDGE_SEMANTICS_REJECTED = True
 
 FORENSIC_BASELINE = {
@@ -314,10 +321,35 @@ STATIC_RENDERER_SAFETY_FINDING = (
     "the excitation without a source bypass, output length is exactly frames*256, same-seed "
     "excitation is deterministic, and paired voiced/unvoiced grid-excess metrics remain far "
     "below the severe-grid thresholds. This authorizes frame-rate predictor instantiation "
-    "only; it does not authorize an optimizer, training, or a checkpoint."
+    "only; it does not authorize persistent training or a checkpoint."
+)
+
+FRAME_RATE_PREDICTOR_STRUCTURAL_STATUS = "pass"
+FRAME_RATE_PREDICTOR_STRUCTURAL_SMOKE_VERSION = "owned-frame-rate-cepstral-predictor-smoke-v1"
+FRAME_RATE_PREDICTOR_STRUCTURAL_TEST_COUNT = 36
+FRAME_RATE_PREDICTOR_STRUCTURAL_METRICS = {
+    "predictor_output_shape": (2, 48, 64),
+    "maximum_abs_initial_cepstrum": 0.0,
+    "renderer_identity_max_abs_error": 0.0,
+    "expected_waveform_samples": 12288,
+    "actual_waveform_samples": 12288,
+    "hop_autocorrelation_excess": 0.0,
+    "double_hop_autocorrelation_excess": 0.0,
+    "grid_harmonic_power_fraction_excess": 0.0,
+    "parameter_count": 236736,
+    "connected_nonzero_gradient_tensor_count": 30,
+    "trainable_parameter_tensor_count": 30,
+}
+FRAME_RATE_PREDICTOR_STRUCTURAL_FINDING = (
+    "The owned frame-rate cepstral predictor passed its pre-optimizer structural smoke. "
+    "Its zero-initialized output is exactly neutral, the fixed renderer remains exact "
+    "identity with exact frames*256 length, no frame-grid excess is introduced at neutral "
+    "initialization, and all 30 trainable parameter tensors receive finite non-zero gradient "
+    "in the deterministic connectivity probe. This opens only the explicit two-update "
+    "real-data optimizer smoke; persistent training remains forbidden."
 )
 
 NEXT_ARCHITECTURE = "owned_minimum_phase_time_varying_filter_over_neutral_excitation"
 NEXT_GATE = (
-    "prove_owned_frame_rate_cepstral_predictor_shapes_neutral_init_gradients_and_grid_safety_before_optimizer"
+    "prove_owned_predictor_real_data_bounded_optimizer_descent_without_grid_or_checkpoint_regression"
 )
