@@ -6,7 +6,7 @@ pretrained vocoder checkpoints are not an authorized product dependency, fallbac
 or replacement path.
 """
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v11"
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v12"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
@@ -19,13 +19,15 @@ THIRD_PARTY_PRETRAINED_VOCODER_AUTHORIZED = False
 THIRD_PARTY_VOCODER_CHECKPOINT_AUTHORIZED = False
 DISTRIBUTION_REQUIRES_LYKENOX_OWNED_WEIGHTS = True
 
-# Loss/data contracts are now frozen. Architecture/model/training work remains gated.
+# Data/loss/architecture/renderer gates are frozen. Only predictor instantiation is open.
 LOSS_WEIGHT_CONTRACT_AUTHORIZED = True
 LOSS_V2_WEIGHT_CONTRACT_FROZEN = True
-MODEL_INSTANTIATION_AUTHORIZED = False
+MODEL_INSTANTIATION_AUTHORIZED = True
+FRAME_RATE_CEPSTRAL_PREDICTOR_IMPLEMENTATION_AUTHORIZED = True
 OPTIMIZER_CREATION_AUTHORIZED = False
 PERSISTENT_TRAINING_AUTHORIZED = False
 NEW_VOCODER_ARCHITECTURE_AUTHORIZED = False
+NEW_VOCODER_CHECKPOINT_AUTHORIZED = False
 VOCODER_ARCHITECTURE_SELECTION_AUTHORIZED = True
 
 OWNED_VOCODER_DATA_CONTRACT = (
@@ -38,6 +40,8 @@ OWNED_VOCODER_PRESENCE_CONTRACT = (
     "owned-vocoder-presence-v2-valid-context-target-relative"
 )
 OWNED_VOCODER_LOSS_WEIGHT_CONTRACT = "owned-vocoder-loss-v2-weight-contract-v1"
+OWNED_VOCODER_ARCHITECTURE_CONTRACT = "owned-vocoder-architecture-contract-v1"
+OWNED_STATIC_RENDERER = "owned-minimum-phase-time-varying-renderer-v1"
 HISTORICAL_PRESENCE_EDGE_SEMANTICS_REJECTED = True
 
 FORENSIC_BASELINE = {
@@ -141,7 +145,7 @@ LOSS_V2_TARGET_CONSISTENCY_FINDING = (
     "the target waveform against its owned cached conditioning mel is numerically zero "
     "(~1e-8) on the 61 valid conditioning frames. The 65th crop-local mel frame is excluded "
     "because no conditioning slot exists for it. This validates objective semantics only; "
-    "it does not authorize a new architecture or persistent training."
+    "it does not authorize persistent training."
 )
 
 LOSS_V2_GRADIENT_BALANCE_STATUS = "pass"
@@ -282,5 +286,38 @@ LOSS_V2_WEIGHT_CONTRACT_FINDING = (
     "reweighting requires a new explicit contract version and audit."
 )
 
-NEXT_ARCHITECTURE = "undecided_owned_architecture_after_loss_v2_weight_contract"
-NEXT_GATE = "define_owned_vocoder_architecture_contract_before_model_instantiation"
+ARCHITECTURE_CONTRACT_STATUS = "pass"
+ARCHITECTURE_CONTRACT_VALIDATION_TEST_COUNT = 21
+STATIC_RENDERER_SAFETY_STATUS = "pass"
+STATIC_RENDERER_SAFETY_AUDIT_VERSION = "owned-minimum-phase-renderer-safety-audit-v1"
+STATIC_RENDERER_SAFETY_TEST_COUNT = 24
+STATIC_RENDERER_SAFETY_METRICS = {
+    "maximum_log_magnitude_factorization_error": 1.0685896612017132e-15,
+    "maximum_reference_oracle_roundtrip_error": 6.938893903907228e-18,
+    "flat_envelope_max_abs_identity_error": 0.0,
+    "attenuating_filter_measured_rms_ratio": 0.002478752176666358,
+    "attenuating_filter_max_abs_expected_error": 8.673617379884035e-19,
+    "unvoiced_hop_autocorrelation_excess": -0.001309794233417115,
+    "unvoiced_double_hop_autocorrelation_excess": -0.0013493497067419598,
+    "unvoiced_grid_harmonic_power_fraction_excess": 0.00012359877649464196,
+    "voiced_hop_autocorrelation_excess": 9.394839821898096e-05,
+    "voiced_double_hop_autocorrelation_excess": 0.0005020093189166902,
+    "voiced_grid_harmonic_power_fraction_excess": 0.00040792484893605215,
+    "same_seed_max_abs_error": 0.0,
+    "source_bypass_absent": True,
+    "exact_output_length": True,
+}
+STATIC_RENDERER_SAFETY_FINDING = (
+    "The owned fixed minimum-phase renderer passed its structural safety gate before any "
+    "neural model existed. Cepstral factorization and the reference-envelope roundtrip are "
+    "numerically exact, a flat envelope is exact identity, an attenuating filter suppresses "
+    "the excitation without a source bypass, output length is exactly frames*256, same-seed "
+    "excitation is deterministic, and paired voiced/unvoiced grid-excess metrics remain far "
+    "below the severe-grid thresholds. This authorizes frame-rate predictor instantiation "
+    "only; it does not authorize an optimizer, training, or a checkpoint."
+)
+
+NEXT_ARCHITECTURE = "owned_minimum_phase_time_varying_filter_over_neutral_excitation"
+NEXT_GATE = (
+    "prove_owned_frame_rate_cepstral_predictor_shapes_neutral_init_gradients_and_grid_safety_before_optimizer"
+)
