@@ -19,6 +19,7 @@ class VocoderOwnershipContractTests(unittest.TestCase):
     def test_no_new_architecture_before_owned_pipeline_forensics(self) -> None:
         self.assertFalse(decision.NEW_VOCODER_ARCHITECTURE_AUTHORIZED)
         self.assertFalse(decision.SCRATCH_VOCODER_ITERATION_AUTHORIZED)
+        self.assertFalse(decision.LOSS_WEIGHT_CONTRACT_AUTHORIZED)
         self.assertEqual(
             decision.NEXT_ARCHITECTURE,
             "undecided_after_owned_pipeline_forensics",
@@ -33,9 +34,10 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         )
         self.assertEqual(decision.CONDITIONING_FORENSICS_STATUS, "pass")
         self.assertEqual(decision.LOSS_EDGE_FORENSICS_STATUS, "pass")
+        self.assertEqual(decision.LOSS_V2_TARGET_CONSISTENCY_STATUS, "pass")
         self.assertEqual(
             decision.NEXT_GATE,
-            "run_owned_vocoder_loss_v2_target_consistency_audit_before_architecture_selection",
+            "audit_owned_vocoder_loss_v2_gradient_balance_before_architecture_selection",
         )
 
     def test_decision_records_boundary_dominant_conditioning_mismatch(self) -> None:
@@ -71,6 +73,19 @@ class VocoderOwnershipContractTests(unittest.TestCase):
                 metrics[f"{prefix}_mean_interior_log_magnitude_l1"],
                 0.0,
             )
+
+    def test_decision_records_loss_v2_target_consistency_without_authorizing_weights(self) -> None:
+        metrics = decision.LOSS_V2_TARGET_CONSISTENCY_METRICS
+        self.assertTrue(metrics["exact_conditioning_frame_contract"])
+        self.assertTrue(metrics["target_reconstruction_exact_on_valid_context"])
+        self.assertTrue(metrics["conditioning_envelope_exact_on_valid_context"])
+        self.assertEqual(metrics["conditioning_frames"], 64)
+        self.assertEqual(metrics["analysis_frames"], 65)
+        self.assertEqual(metrics["valid_conditioning_frames"], 61)
+        self.assertEqual(metrics["reconstruction_valid_frame_counts"], (253, 125, 61))
+        self.assertEqual(metrics["reconstruction_analysis_frame_counts"], (257, 129, 65))
+        self.assertLess(metrics["mean_conditioning_aligned_envelope_total"], 1e-6)
+        self.assertFalse(decision.LOSS_WEIGHT_CONTRACT_AUTHORIZED)
 
     def test_decision_contains_no_external_pretrained_replacement_route(self) -> None:
         source = inspect.getsource(decision).lower()
