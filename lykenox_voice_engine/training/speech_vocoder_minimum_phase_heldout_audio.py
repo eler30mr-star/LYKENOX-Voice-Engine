@@ -1,8 +1,8 @@
-"""Render complete validation utterances from the owned minimum-phase checkpoint.
+"""Render complete validation utterances from the owned minimum-phase best checkpoint.
 
-This is the audible acceptance surface.  It writes prediction/reference FLOAT WAV pairs with
+This is the audible acceptance surface. It writes prediction/reference FLOAT WAV pairs with
 no gain normalization, EQ, denoising, duration modification or other post-hoc enhancement.
-Metrics are reported only as rejection diagnostics; they cannot declare voice quality good.
+Metrics are rejection diagnostics only and cannot declare voice quality good.
 """
 
 from __future__ import annotations
@@ -22,6 +22,10 @@ from lykenox_voice_engine.training.speech_vocoder_minimum_phase_full_utterance_d
     FULL_UTTERANCE_DATA_VERSION,
     collect_owned_vocoder_utterances,
 )
+from lykenox_voice_engine.training.speech_vocoder_minimum_phase_noise import (
+    NOISE_SEED_VERSION,
+    stable_owned_noise_seed,
+)
 from lykenox_voice_engine.training.speech_vocoder_minimum_phase_objective import (
     ACTIVE_LOSS_WEIGHT_CONTRACT_VERSION,
     ACTIVE_MINIMUM_PHASE_OBJECTIVE_VERSION,
@@ -36,7 +40,7 @@ from lykenox_voice_engine.training.speech_vocoder_minimum_phase_renderer import 
 )
 
 
-HELDOUT_AUDIO_VERSION = "owned-minimum-phase-heldout-audio-v1"
+HELDOUT_AUDIO_VERSION = "owned-minimum-phase-heldout-audio-v2-per-utterance-noise"
 POSTHOC_GAIN_NORMALIZATION_USED = False
 POSTHOC_EQ_USED = False
 POSTHOC_DENOISING_USED = False
@@ -60,20 +64,6 @@ def _write_float_wav(path: Path, waveform: torch.Tensor) -> None:
     sf.write(str(path), values, SAMPLE_RATE, subtype="FLOAT")
 
 
-def _default_checkpoint(root: Path) -> tuple[Path, str]:
-    training_dir = root / "models" / "lykenox_identity" / "training" / "vocoder_minimum_phase_v1"
-    best = training_dir / "best.pt"
-    last = training_dir / "last.pt"
-    if best.exists():
-        return best, "best_validation"
-    if last.exists():
-        return last, "last_fallback_no_best"
-    raise FileNotFoundError(
-        "minimum-phase checkpoint does not exist; expected best.pt or last.pt in "
-        f"{training_dir}"
-    )
-
-
 def render_heldout_audio(
     root: Path,
     *,
@@ -88,17 +78,19 @@ def render_heldout_audio(
     if max_items < 1:
         raise ValueError("max_items must be positive")
     root = Path(root).resolve()
-    if checkpoint is None:
-        checkpoint, checkpoint_selection = _default_checkpoint(root)
-    else:
-        checkpoint = Path(checkpoint).resolve()
-        checkpoint_selection = "explicit"
+    checkpoint = (
+        Path(checkpoint).resolve()
+        if checkpoint is not None
+        else root / "models" / "lykenox_identity" / "training" / "vocoder_minimum_phase_v2" / "best.pt"
+    )
     if not checkpoint.exists():
-        raise FileNotFoundError(f"minimum-phase checkpoint does not exist: {checkpoint}")
+        raise FileNotFoundError(f"minimum-phase best checkpoint does not exist: {checkpoint}")
+    if checkpoint.name != "best.pt":
+        raise ValueError("held-out listening requires the validation-selected best.pt checkpoint")
     output_dir = (
         Path(output_dir).resolve()
         if output_dir is not None
-        else root / "models" / "lykenox_identity" / "evaluation" / "vocoder_minimum_phase_v1_heldout"
+        else root / "models" / "lykenox_identity" / "evaluation" / "vocoder_minimum_phase_v2_heldout"
     )
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -110,18 +102,24 @@ def render_heldout_audio(
     items: list[dict[str, object]] = []
     with torch.no_grad():
         for utterance in utterances:
-            mel = utterance.mel.unsqueeze(0)
-            f0_hz = utterance.f0_hz.unsqueeze(0)
-            voiced = utterance.voiced.unsqueeze(0)
-            periodicity = utterance.periodicity.unsqueeze(0)
-            target = utterance.waveform.unsqueeze(0)
+            mel = utterance.mel.unsqueeze(0).cpu()
+            f0_hz = utterance.f0_hz.unsqueeze(0).cpu()
+            voiced = utterance.voiced.unsqueeze(0).cpu()
+            periodicity = utterance.periodicity.unsqueeze(0).cpu()
+            target = utterance.waveform.unsqueeze(0).cpu()
             cepstrum = model(mel, f0_hz, voiced, periodicity)
+            item_noise_seed = stable_owned_noise_seed(
+                noise_seed,
+                split=utterance.split,
+                utterance_id=utterance.utterance_id,
+                start_frame=0,
+            )
             prediction, _ = render_owned_minimum_phase_vocoder_path(
                 cepstrum,
                 f0_hz,
                 voiced,
                 periodicity,
-                noise_seed=noise_seed,
+                noise_seed=item_noise_seed,
             )
             expected_samples = utterance.mel_frames * HOP_LENGTH
             if prediction.shape[-1] != expected_samples or target.shape[-1] != expected_samples:
@@ -139,6 +137,7 @@ def render_heldout_audio(
                     "mel_frames": utterance.mel_frames,
                     "samples": expected_samples,
                     "seconds": expected_samples / float(SAMPLE_RATE),
+                    "noise_seed": item_noise_seed,
                     "prediction": str(prediction_path),
                     "reference": str(reference_path),
                     "diagnostic_loss": {
@@ -155,9 +154,12 @@ def render_heldout_audio(
         "renderer_version": RENDERER_VERSION,
         "objective_version": ACTIVE_MINIMUM_PHASE_OBJECTIVE_VERSION,
         "loss_weight_contract_version": ACTIVE_LOSS_WEIGHT_CONTRACT_VERSION,
+        "noise_seed_version": NOISE_SEED_VERSION,
+        "base_noise_seed": int(noise_seed),
         "active_weights": active_weights(),
+        "device": "cpu",
         "checkpoint": str(checkpoint),
-        "checkpoint_selection": checkpoint_selection,
+        "checkpoint_selection": "best_validation",
         "checkpoint_global_step": int(payload["progress"]["global_step"]),
         "split": split,
         "item_count": len(items),
