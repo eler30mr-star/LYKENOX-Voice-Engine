@@ -1,16 +1,15 @@
-"""Owned LYKENOX vocoder architecture contract after predictor structural proof.
+"""Owned LYKENOX vocoder architecture contract after bounded optimizer proof.
 
-The owned architecture family, fixed minimum-phase renderer, and frame-rate cepstral
-predictor have passed their structural gates.  This contract now authorizes exactly one
-additional capability: an ephemeral, tightly bounded optimizer smoke over owned V2 data.
-It still does not authorize a trainer, persistent training, checkpoint creation, or
-product-quality acceptance.
+The owned architecture family, fixed minimum-phase renderer, frame-rate cepstral predictor,
+and the exactly-two-update real-data optimizer smoke have passed their gates.  The optimizer
+smoke is now closed/consumed.  Before any longer trainability experiment may exist, the next
+and only authorized gate is a read-only audit of frozen Loss V2 authority after the renderer
+and predictor Jacobians.
 
-The selected family keeps pitch timing information while excluding the historical shortcuts
-that allowed a carrier, learned upsampler, or frame-phase representation to dominate the
-waveform. Voice identity must be carried by a learned time-varying spectral envelope/filter
-trained only from LYKENOX-owned data. Excitation remains fixed, spectrally neutral, and has
-no direct output bypass.
+This contract still does not authorize a general optimizer, trainer, persistent training,
+checkpoint creation, or product-quality acceptance.  Voice identity remains constrained to
+the learned frame-rate spectral envelope/filter; excitation is fixed, neutral, and has no
+direct output bypass.
 """
 
 from __future__ import annotations
@@ -19,6 +18,7 @@ from __future__ import annotations
 OWNED_VOCODER_ARCHITECTURE_CONTRACT_VERSION = "owned-vocoder-architecture-contract-v1"
 ARCHITECTURE_CONTRACT_VALIDATION_STATUS = "pass"
 ARCHITECTURE_CONTRACT_VALIDATION_TEST_COUNT = 21
+
 STATIC_RENDERER_VERSION = "owned-minimum-phase-time-varying-renderer-v1"
 STATIC_RENDERER_SAFETY_AUDIT_REQUIRED = True
 STATIC_RENDERER_SAFETY_AUDIT_VERSION = "owned-minimum-phase-renderer-safety-audit-v1"
@@ -38,6 +38,7 @@ STATIC_RENDERER_SAFETY_EVIDENCE = {
     "voiced_grid_harmonic_power_fraction_excess": 0.00040792484893605215,
     "same_seed_max_abs_error": 0.0,
 }
+
 FRAME_RATE_PREDICTOR_ARCHITECTURE = "lykenox_owned_frame_rate_cepstral_predictor_v1"
 FRAME_RATE_PREDICTOR_STRUCTURAL_SMOKE_VERSION = (
     "owned-frame-rate-cepstral-predictor-smoke-v1"
@@ -57,6 +58,41 @@ FRAME_RATE_PREDICTOR_STRUCTURAL_EVIDENCE = {
     "connected_nonzero_gradient_tensor_count": 30,
     "trainable_parameter_tensor_count": 30,
 }
+
+BOUNDED_OPTIMIZER_SMOKE_VERSION = "owned-minimum-phase-bounded-optimizer-smoke-v1"
+BOUNDED_OPTIMIZER_SMOKE_STATUS = "pass"
+BOUNDED_OPTIMIZER_SMOKE_TEST_COUNT = 33
+BOUNDED_OPTIMIZER_SMOKE_CONSUMED = True
+BOUNDED_OPTIMIZER_SMOKE_EVIDENCE = {
+    "segment_mel_frames": 32,
+    "max_items": 1,
+    "max_updates": 2,
+    "learning_rate": 0.0002,
+    "max_gradient_norm": 1.0,
+    "initial_total": 195.1538543701,
+    "final_total": 194.9214477539,
+    "relative_total_change": -0.0011908892,
+    "initial_reconstruction": 19.2587738037,
+    "final_reconstruction": 19.2581729889,
+    "initial_envelope": 4.7642612457,
+    "final_envelope": 4.7644839287,
+    "initial_presence": 3.1395702362,
+    "final_presence": 3.1374154091,
+    "initial_spectral_balance": 1.6438173056,
+    "final_spectral_balance": 1.640686512,
+    "update_1_raw_gradient_norm": 580.735168457,
+    "update_2_raw_gradient_norm": 580.9564819336,
+    "parameter_delta_norm": 0.0004,
+    "parameter_delta_max_abs": 0.0000964731,
+    "final_hop_autocorrelation_excess": -0.00002784491516649723,
+    "final_double_hop_autocorrelation_excess": 0.00002341344952583313,
+    "final_grid_harmonic_power_fraction_excess": 0.000048296526074409485,
+    "checkpoints_unchanged": True,
+}
+BOUNDED_OPTIMIZER_TOTAL_DESCENT_CONFIRMED = True
+BOUNDED_OPTIMIZER_CLIP_REGIME_REVIEW_REQUIRED = True
+BOUNDED_OPTIMIZER_ENVELOPE_LOCAL_INCREASE_OBSERVED = True
+
 SELECTED_ARCHITECTURE_FAMILY = (
     "owned_minimum_phase_time_varying_filter_over_neutral_excitation"
 )
@@ -103,7 +139,7 @@ POSTHOC_EQ_AUTHORIZED = False
 POSTHOC_DENOISING_AUTHORIZED = False
 THIRD_PARTY_MODEL_OR_CHECKPOINT_AUTHORIZED = False
 
-# Renderer invariants remain mandatory for every model/optimizer smoke.
+# Renderer invariants remain mandatory for every later gate.
 EXACT_OUTPUT_LENGTH_REQUIRED = True
 OUTPUT_LENGTH_RULE = "waveform_samples=conditioning_frames*256"
 FIXED_FRAME_TO_SAMPLE_INTERPOLATION_REQUIRED = True
@@ -120,19 +156,21 @@ REFERENCE_ENVELOPE_ORACLE_PRODUCT_PATH_AUTHORIZED = False
 METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 FULL_HELD_OUT_AUDIO_REQUIRED_FOR_PRODUCT_ACCEPTANCE = True
 
-# Scoped authorization: exactly one bounded smoke may create an ephemeral optimizer.
+# The two-update smoke has been consumed. Only the read-only parameter/Jacobian audit opens.
 STATIC_RENDERER_IMPLEMENTATION_AUTHORIZED = True
 FRAME_RATE_CEPSTRAL_PREDICTOR_IMPLEMENTATION_AUTHORIZED = True
 MODEL_INSTANTIATION_AUTHORIZED = True
-BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED = True
+BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED = False
 BOUNDED_OPTIMIZER_SMOKE_MAX_UPDATES = 2
 BOUNDED_OPTIMIZER_SMOKE_SEGMENT_FRAMES = 32
 BOUNDED_OPTIMIZER_SMOKE_MAX_ITEMS = 1
-OPTIMIZER_CREATION_AUTHORIZED = False  # general/trainer optimizer creation remains blocked
+PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED = True
+EXTENDED_TRAINABILITY_SMOKE_AUTHORIZED = False
+OPTIMIZER_CREATION_AUTHORIZED = False
 TRAINER_IMPLEMENTATION_AUTHORIZED = False
 PERSISTENT_TRAINING_AUTHORIZED = False
 NEW_VOCODER_CHECKPOINT_AUTHORIZED = False
 
 NEXT_GATE = (
-    "prove_owned_predictor_real_data_bounded_optimizer_descent_without_grid_or_checkpoint_regression"
+    "audit_owned_predictor_parameter_space_loss_v2_authority_before_extended_trainability"
 )
