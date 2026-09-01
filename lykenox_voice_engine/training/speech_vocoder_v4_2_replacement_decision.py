@@ -6,7 +6,7 @@ pretrained vocoder checkpoints are not an authorized product dependency, fallbac
 or replacement path.
 """
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v9"
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v10"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
@@ -164,5 +164,56 @@ LOSS_V2_GRADIENT_BALANCE_FINDING = (
     "gradient calibration before any loss weights or architecture can be authorized."
 )
 
+LOSS_V2_FOUR_OBJECTIVE_CALIBRATION_STATUS = "pass"
+LOSS_V2_FOUR_OBJECTIVE_CALIBRATION_METRICS = {
+    "mean_reconstruction_gradient_norm": 11.3107378483,
+    "mean_envelope_gradient_norm": 3.5935441388,
+    "mean_presence_gradient_norm": 0.5849306592,
+    "mean_spectral_balance_gradient_norm": 0.1855753782,
+    "derived_reconstruction_weight": 1.0,
+    "derived_envelope_weight": 3.1475160486,
+    "derived_presence_weight": 19.3368866395,
+    "derived_spectral_balance_weight": 60.9495610684,
+    "mean_reconstruction_share": 0.266542,
+    "mean_envelope_share": 0.26621,
+    "mean_presence_share": 0.231574,
+    "mean_spectral_balance_share": 0.235674,
+    "minimum_reconstruction_share": 0.16015,
+    "minimum_envelope_share": 0.119819,
+    "minimum_presence_share": 0.102618,
+    "minimum_spectral_balance_share": 0.12295,
+    "maximum_reconstruction_share": 0.526076,
+    "maximum_envelope_share": 0.378526,
+    "maximum_presence_share": 0.429119,
+    "maximum_spectral_balance_share": 0.36469,
+    "minimum_reconstruction_combined_alignment": 0.34519,
+    "minimum_envelope_combined_alignment": 0.318401,
+    "minimum_presence_combined_alignment": 0.357462,
+    "minimum_spectral_balance_combined_alignment": 0.351216,
+    "minimum_reconstruction_descent_dot": 58.8145828247,
+    "minimum_envelope_descent_dot": 12.9584732056,
+    "minimum_presence_descent_dot": 0.9880405664,
+    "minimum_spectral_balance_descent_dot": 0.3690142632,
+    "maximum_derived_weighted_gradient_norm_share": 0.526076,
+}
+LOSS_V2_FOUR_OBJECTIVE_CALIBRATION_FINDING = (
+    "The valid-context four-objective calibration passed and removed the historical "
+    "reconstruction monopoly. Mean weighted gradient authority is distributed across "
+    "reconstruction/envelope/presence/spectral balance at roughly 23-27%, every objective "
+    "retains at least about 10% authority on the measured probes, every minimum combined "
+    "alignment is positive (>0.31), and every minimum first-order descent dot is positive. "
+    "The large numerical spectral-balance coefficient (~60.95) reflects its much smaller "
+    "raw waveform-gradient scale; coefficient magnitude alone is therefore not evidence of "
+    "excess authority. The exact vector is not frozen yet: it must survive a bounded "
+    "relative-weight sensitivity audit so the contract is not a knife-edge calibration."
+)
+LOSS_V2_WEIGHT_CONTRACT_CANDIDATE = {
+    "reconstruction": 1.0,
+    "envelope": 3.1475,
+    "presence": 19.3369,
+    "spectral_balance": 60.9496,
+}
+LOSS_V2_WEIGHT_CONTRACT_SENSITIVITY_REQUIRED = True
+
 NEXT_ARCHITECTURE = "undecided_after_owned_pipeline_forensics"
-NEXT_GATE = "audit_owned_vocoder_four_objective_gradient_calibration_before_weight_contract"
+NEXT_GATE = "audit_owned_vocoder_loss_v2_weight_contract_sensitivity_before_freezing_weights"
