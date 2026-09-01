@@ -1,8 +1,8 @@
-"""Render complete validation utterances from the owned minimum-phase best checkpoint.
+"""Render complete held-out utterances from the validation-selected directional checkpoint.
 
-This is the audible acceptance surface. It writes prediction/reference FLOAT WAV pairs with
-no gain normalization, EQ, denoising, duration modification or other post-hoc enhancement.
-Metrics are rejection diagnostics only and cannot declare voice quality good.
+The checkpoint supplies the exact fixed loss weights used during training.  Output is written
+as FLOAT WAV without gain normalization, EQ, denoising, duration modification or any other
+post-hoc enhancement.  Metrics remain rejection diagnostics only.
 """
 
 from __future__ import annotations
@@ -15,8 +15,11 @@ from pathlib import Path
 import soundfile as sf
 import torch
 
-from lykenox_voice_engine.training.speech_vocoder_minimum_phase_artifact import (
-    load_minimum_phase_checkpoint,
+from lykenox_voice_engine.training.speech_vocoder_minimum_phase_artifact_v2 import (
+    load_minimum_phase_checkpoint_v2,
+)
+from lykenox_voice_engine.training.speech_vocoder_minimum_phase_directional_weight_calibration import (
+    fixed_weights_from_mapping,
 )
 from lykenox_voice_engine.training.speech_vocoder_minimum_phase_full_utterance_data import (
     FULL_UTTERANCE_DATA_VERSION,
@@ -26,11 +29,9 @@ from lykenox_voice_engine.training.speech_vocoder_minimum_phase_noise import (
     NOISE_SEED_VERSION,
     stable_owned_noise_seed,
 )
-from lykenox_voice_engine.training.speech_vocoder_minimum_phase_objective import (
-    ACTIVE_LOSS_WEIGHT_CONTRACT_VERSION,
+from lykenox_voice_engine.training.speech_vocoder_minimum_phase_objective_v3 import (
     ACTIVE_MINIMUM_PHASE_OBJECTIVE_VERSION,
-    OwnedMinimumPhaseObjectiveV2,
-    active_weights,
+    OwnedMinimumPhaseObjectiveV3,
 )
 from lykenox_voice_engine.training.speech_vocoder_minimum_phase_renderer import (
     HOP_LENGTH,
@@ -40,7 +41,7 @@ from lykenox_voice_engine.training.speech_vocoder_minimum_phase_renderer import 
 )
 
 
-HELDOUT_AUDIO_VERSION = "owned-minimum-phase-heldout-audio-v2-per-utterance-noise"
+HELDOUT_AUDIO_VERSION = "owned-minimum-phase-heldout-audio-v3-directional-fixed"
 POSTHOC_GAIN_NORMALIZATION_USED = False
 POSTHOC_EQ_USED = False
 POSTHOC_DENOISING_USED = False
@@ -56,7 +57,9 @@ def _atomic_json(path: Path, payload: dict[str, object]) -> None:
 
 
 def _safe_name(value: str) -> str:
-    return "".join(character if character.isalnum() or character in "-_" else "_" for character in value)
+    return "".join(
+        character if character.isalnum() or character in "-_" else "_" for character in value
+    )
 
 
 def _write_float_wav(path: Path, waveform: torch.Tensor) -> None:
@@ -81,22 +84,26 @@ def render_heldout_audio(
     checkpoint = (
         Path(checkpoint).resolve()
         if checkpoint is not None
-        else root / "models" / "lykenox_identity" / "training" / "vocoder_minimum_phase_v2" / "best.pt"
+        else root / "models" / "lykenox_identity" / "training" / "vocoder_minimum_phase_v3" / "best.pt"
     )
     if not checkpoint.exists():
         raise FileNotFoundError(f"minimum-phase best checkpoint does not exist: {checkpoint}")
     if checkpoint.name != "best.pt":
-        raise ValueError("held-out listening requires the validation-selected best.pt checkpoint")
+        raise ValueError("held-out listening requires validation-selected best.pt")
     output_dir = (
         Path(output_dir).resolve()
         if output_dir is not None
-        else root / "models" / "lykenox_identity" / "evaluation" / "vocoder_minimum_phase_v2_heldout"
+        else root / "models" / "lykenox_identity" / "evaluation" / "vocoder_minimum_phase_v3_heldout"
     )
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    model, payload = load_minimum_phase_checkpoint(checkpoint)
+    model, payload = load_minimum_phase_checkpoint_v2(checkpoint)
+    run_config = payload.get("run_config")
+    if not isinstance(run_config, dict):
+        raise RuntimeError("directional checkpoint is missing run config")
+    weights = fixed_weights_from_mapping(run_config["calibrated_weights"])
     model.eval()
-    objective = OwnedMinimumPhaseObjectiveV2().cpu()
+    objective = OwnedMinimumPhaseObjectiveV3(weights).cpu()
     utterances = collect_owned_vocoder_utterances(root, split, max_items=max_items)
 
     items: list[dict[str, object]] = []
@@ -125,7 +132,6 @@ def render_heldout_audio(
             if prediction.shape[-1] != expected_samples or target.shape[-1] != expected_samples:
                 raise RuntimeError("held-out audio violated exact full-utterance length contract")
             losses = objective(prediction, target, mel)
-
             stem = _safe_name(utterance.utterance_id)
             prediction_path = output_dir / f"{stem}__prediction.wav"
             reference_path = output_dir / f"{stem}__reference.wav"
@@ -153,10 +159,9 @@ def render_heldout_audio(
         "full_utterance_data_version": FULL_UTTERANCE_DATA_VERSION,
         "renderer_version": RENDERER_VERSION,
         "objective_version": ACTIVE_MINIMUM_PHASE_OBJECTIVE_VERSION,
-        "loss_weight_contract_version": ACTIVE_LOSS_WEIGHT_CONTRACT_VERSION,
         "noise_seed_version": NOISE_SEED_VERSION,
         "base_noise_seed": int(noise_seed),
-        "active_weights": active_weights(),
+        "calibrated_weights": weights.as_dict(),
         "device": "cpu",
         "checkpoint": str(checkpoint),
         "checkpoint_selection": "best_validation",
