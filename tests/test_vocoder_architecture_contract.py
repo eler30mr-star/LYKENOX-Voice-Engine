@@ -26,6 +26,10 @@ class VocoderArchitectureContractTests(unittest.TestCase):
             contract.FRAME_RATE_PREDICTOR_ARCHITECTURE,
             "lykenox_owned_frame_rate_cepstral_predictor_v1",
         )
+        self.assertEqual(
+            contract.FRAME_RATE_PREDICTOR_STRUCTURAL_SMOKE_VERSION,
+            "owned-frame-rate-cepstral-predictor-smoke-v1",
+        )
         self.assertEqual(contract.FRAME_RATE_PREDICTOR_STRUCTURAL_SMOKE_STATUS, "pass")
         self.assertEqual(contract.FRAME_RATE_PREDICTOR_STRUCTURAL_SMOKE_TEST_COUNT, 36)
         self.assertEqual(
