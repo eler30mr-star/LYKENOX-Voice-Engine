@@ -44,7 +44,52 @@ class VocoderArchitectureContractTests(unittest.TestCase):
         self.assertEqual(contract.IDENTITY_CARRIER, "learned_spectral_envelope_filter_only")
         self.assertFalse(contract.EXCITATION_DIRECT_OUTPUT_BYPASS)
 
-    def test_contract_uses_exact_owned_pipeline_and_frozen_weights(self) -> None:
+    def test_parameter_authority_audit_rejects_v1_for_this_architecture(self) -> None:
+        self.assertEqual(
+            contract.PARAMETER_SPACE_GRADIENT_AUDIT_VERSION,
+            "owned-minimum-phase-parameter-gradient-authority-audit-v1",
+        )
+        self.assertEqual(contract.PARAMETER_SPACE_GRADIENT_AUDIT_STATUS, "pass")
+        self.assertEqual(contract.PARAMETER_SPACE_GRADIENT_AUDIT_TEST_COUNT, 41)
+        self.assertEqual(contract.PARAMETER_SPACE_GRADIENT_AUDIT_PROBE_COUNT, 8)
+        self.assertTrue(contract.WAVEFORM_SPACE_WEIGHT_CONTRACT_FROZEN)
+        self.assertTrue(contract.WAVEFORM_SPACE_WEIGHT_CONTRACT_VALID_IN_ORIGINAL_CALIBRATION_SPACE)
+        self.assertFalse(contract.WAVEFORM_SPACE_WEIGHT_CONTRACT_ARCHITECTURE_COMPATIBLE)
+        self.assertTrue(contract.ARCHITECTURE_WEIGHT_RECALIBRATION_REQUIRED)
+
+        parameter = contract.PARAMETER_SPACE_GRADIENT_AUDIT_EVIDENCE
+        self.assertGreater(
+            parameter["neutral_mean_weighted_gradient_norm_shares"]["spectral_balance"],
+            0.70,
+        )
+        self.assertLess(
+            parameter["neutral_mean_weighted_gradient_norm_shares"]["envelope"],
+            0.01,
+        )
+        self.assertLess(
+            parameter["neutral_minimum_combined_gradient_alignment_cosines"]["envelope"],
+            0.0,
+        )
+        self.assertLess(
+            parameter["neutral_minimum_first_order_descent_dots"]["envelope"],
+            0.0,
+        )
+        self.assertGreater(parameter["neutral_mean_combined_gradient_norm"], 500.0)
+        self.assertLess(parameter["neutral_mean_clip_scale_if_max_norm_1"], 0.01)
+
+        cepstrum = contract.CEPSTRUM_SPACE_GRADIENT_AUDIT_EVIDENCE
+        self.assertGreater(
+            cepstrum["neutral_mean_weighted_gradient_norm_shares"]["spectral_balance"],
+            0.75,
+        )
+        self.assertLess(
+            cepstrum["neutral_mean_weighted_gradient_norm_shares"]["envelope"],
+            0.01,
+        )
+        self.assertLess(cepstrum["neutral_minimum_envelope_combined_alignment"], 0.0)
+        self.assertLess(cepstrum["connected_minimum_envelope_combined_alignment"], 0.0)
+
+    def test_contract_uses_exact_owned_pipeline_and_preserves_v1_history(self) -> None:
         self.assertEqual(contract.SAMPLE_RATE, 24000)
         self.assertEqual(contract.HOP_LENGTH, 256)
         self.assertEqual(contract.N_FFT, 1024)
@@ -53,9 +98,16 @@ class VocoderArchitectureContractTests(unittest.TestCase):
         self.assertEqual(contract.LOSS_CONTRACT_VERSION, weights.LOSS_CONTRACT_VERSION)
         self.assertEqual(contract.PRESENCE_CONTRACT_VERSION, weights.PRESENCE_CONTRACT_VERSION)
         self.assertEqual(
-            contract.LOSS_WEIGHT_CONTRACT_VERSION,
+            contract.WAVEFORM_SPACE_WEIGHT_CONTRACT_VERSION,
             weights.OWNED_VOCODER_LOSS_V2_WEIGHT_CONTRACT_VERSION,
         )
+        self.assertEqual(
+            contract.LOSS_WEIGHT_CONTRACT_VERSION,
+            contract.WAVEFORM_SPACE_WEIGHT_CONTRACT_VERSION,
+        )
+        self.assertEqual(contract.ARCHITECTURE_WEIGHT_RECALIBRATION_DERIVATION_SPACE, "cepstrum_space")
+        self.assertEqual(contract.ARCHITECTURE_WEIGHT_RECALIBRATION_CROSS_CHECK_SPACE, "parameter_space")
+        self.assertFalse(contract.ARCHITECTURE_WEIGHT_CONTRACT_V2_AUTHORIZED)
         self.assertIn("f0_hz_from_full_utterance_pitch_cache", contract.CONDITIONING_INPUTS)
         self.assertIn("voiced_from_full_utterance_pitch_cache", contract.CONDITIONING_INPUTS)
 
@@ -92,7 +144,7 @@ class VocoderArchitectureContractTests(unittest.TestCase):
         self.assertTrue(contract.REFERENCE_ENVELOPE_ORACLE_DIAGNOSTIC_REQUIRED)
         self.assertFalse(contract.REFERENCE_ENVELOPE_ORACLE_PRODUCT_PATH_AUTHORIZED)
 
-    def test_bounded_optimizer_smoke_is_recorded_pass_and_consumed(self) -> None:
+    def test_bounded_optimizer_smoke_remains_recorded_pass_and_consumed(self) -> None:
         self.assertEqual(
             contract.BOUNDED_OPTIMIZER_SMOKE_VERSION,
             "owned-minimum-phase-bounded-optimizer-smoke-v1",
@@ -103,20 +155,15 @@ class VocoderArchitectureContractTests(unittest.TestCase):
         self.assertTrue(contract.BOUNDED_OPTIMIZER_TOTAL_DESCENT_CONFIRMED)
         self.assertTrue(contract.BOUNDED_OPTIMIZER_CLIP_REGIME_REVIEW_REQUIRED)
         self.assertTrue(contract.BOUNDED_OPTIMIZER_ENVELOPE_LOCAL_INCREASE_OBSERVED)
-        evidence = contract.BOUNDED_OPTIMIZER_SMOKE_EVIDENCE
-        self.assertEqual(evidence["max_updates"], 2)
-        self.assertLess(evidence["final_total"], evidence["initial_total"])
-        self.assertGreater(evidence["final_envelope"], evidence["initial_envelope"])
-        self.assertGreater(evidence["update_1_raw_gradient_norm"], 500.0)
-        self.assertGreater(evidence["update_2_raw_gradient_norm"], 500.0)
-        self.assertTrue(evidence["checkpoints_unchanged"])
 
-    def test_only_parameter_space_gradient_audit_is_open_now(self) -> None:
+    def test_only_read_only_architecture_weight_recalibration_is_open(self) -> None:
         self.assertTrue(contract.STATIC_RENDERER_IMPLEMENTATION_AUTHORIZED)
         self.assertTrue(contract.FRAME_RATE_CEPSTRAL_PREDICTOR_IMPLEMENTATION_AUTHORIZED)
         self.assertTrue(contract.MODEL_INSTANTIATION_AUTHORIZED)
         self.assertFalse(contract.BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED)
-        self.assertTrue(contract.PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED)
+        self.assertFalse(contract.PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED)
+        self.assertTrue(contract.ARCHITECTURE_WEIGHT_RECALIBRATION_AUDIT_AUTHORIZED)
+        self.assertFalse(contract.ARCHITECTURE_WEIGHT_CONTRACT_V2_AUTHORIZED)
         self.assertFalse(contract.EXTENDED_TRAINABILITY_SMOKE_AUTHORIZED)
         self.assertFalse(contract.OPTIMIZER_CREATION_AUTHORIZED)
         self.assertFalse(contract.TRAINER_IMPLEMENTATION_AUTHORIZED)
@@ -126,7 +173,7 @@ class VocoderArchitectureContractTests(unittest.TestCase):
         self.assertTrue(contract.FULL_HELD_OUT_AUDIO_REQUIRED_FOR_PRODUCT_ACCEPTANCE)
         self.assertEqual(
             contract.NEXT_GATE,
-            "audit_owned_predictor_parameter_space_loss_v2_authority_before_extended_trainability",
+            "audit_owned_minimum_phase_architecture_coupled_loss_v2_weight_recalibration",
         )
 
     def test_contract_has_no_model_or_training_implementation(self) -> None:
