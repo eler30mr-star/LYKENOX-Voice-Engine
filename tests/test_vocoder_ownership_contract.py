@@ -27,9 +27,25 @@ class VocoderOwnershipContractTests(unittest.TestCase):
             decision.OWNED_VOCODER_DATA_CONTRACT,
             "vocoder-segment-v2-full-utterance-mel-pitch-conditioning",
         )
+        self.assertEqual(decision.CONDITIONING_FORENSICS_STATUS, "pass")
         self.assertEqual(
             decision.NEXT_GATE,
-            "run_owned_vocoder_conditioning_pipeline_forensics_before_loss_or_architecture_work",
+            "audit_owned_vocoder_loss_edge_and_objective_semantics",
+        )
+
+    def test_decision_records_boundary_dominant_conditioning_mismatch(self) -> None:
+        metrics = decision.CONDITIONING_FORENSIC_METRICS
+        self.assertGreater(
+            metrics["mean_boundary_f0_mae_cents_on_common_voiced"],
+            metrics["mean_interior_f0_mae_cents_on_common_voiced"],
+        )
+        self.assertGreater(
+            metrics["mean_boundary_periodicity_l1"],
+            metrics["mean_interior_periodicity_l1"],
+        )
+        self.assertEqual(
+            metrics["mean_interior_f0_mae_cents_on_common_voiced"],
+            0.0,
         )
 
     def test_decision_contains_no_external_pretrained_replacement_route(self) -> None:
