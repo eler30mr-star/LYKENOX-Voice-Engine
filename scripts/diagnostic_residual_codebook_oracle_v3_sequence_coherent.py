@@ -103,8 +103,8 @@ def _top_positive_candidates(
     dots = torch.mv(candidates, target)
     cosine = dots / torch.sqrt(candidate_energy * target_energy)
 
-    # V2 used abs(cosine) and could invert individual windows by 180 degrees.  V3 forbids
-    # per-window polarity inversion.  If every compatible candidate is negative, fall back to the
+    # V2 used abs(cosine) and could invert individual windows by 180 degrees. V3 forbids
+    # per-window polarity inversion. If every compatible candidate is negative, fall back to the
     # least-negative candidates with zero-clamped cosine ranking rather than introducing a sign flip.
     positive_score = cosine.clamp_min(0.0)
     count = min(int(top_k), int(candidates.shape[0]))
@@ -125,29 +125,50 @@ def _top_positive_candidates(
     )
 
 
-def _overlap_unwindowed(vectors: torch.Tensor, *, right: bool) -> torch.Tensor:
-    """Approximate the underlying residual samples in the 256-sample neighboring overlap."""
+def _paired_overlap_unwindowed(
+    previous: torch.Tensor,
+    current: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Recover aligned underlying samples from the shared 256-sample overlap.
 
-    if vectors.ndim != 2 or int(vectors.shape[1]) != CODEVECTOR_SAMPLES:
-        raise ValueError("vectors must have shape [K, codevector_samples]")
-    window = _sqrt_hann(dtype=vectors.dtype)
-    if right:
-        values = vectors[:, HOP_LENGTH:]
-        weights = window[HOP_LENGTH:]
-    else:
-        values = vectors[:, :HOP_LENGTH]
-        weights = window[:HOP_LENGTH]
-    mask = weights >= OVERLAP_WINDOW_FLOOR
-    if int(mask.sum()) < HOP_LENGTH // 2:
-        raise RuntimeError("overlap comparison mask is unexpectedly small")
-    return (values[:, mask] / weights[mask].unsqueeze(0)).contiguous()
+    The periodic sqrt-Hann has a one-sample asymmetry at the two half-window boundaries. Applying
+    the floor mask independently therefore produced 224 right-side samples versus 223 left-side
+    samples on Windows. Use one joint mask over identical physical overlap positions and divide each
+    side by its own Hann weight. This preserves alignment rather than truncating either side.
+    """
+
+    if previous.ndim != 2 or current.ndim != 2:
+        raise ValueError("overlap candidates must be rank-2")
+    if int(previous.shape[1]) != CODEVECTOR_SAMPLES or int(current.shape[1]) != CODEVECTOR_SAMPLES:
+        raise ValueError("overlap candidates must use codevector geometry")
+
+    window = _sqrt_hann(dtype=previous.dtype)
+    previous_weights = window[HOP_LENGTH:]
+    current_weights = window[:HOP_LENGTH]
+    if int(previous_weights.numel()) != HOP_LENGTH or int(current_weights.numel()) != HOP_LENGTH:
+        raise RuntimeError("overlap window geometry changed")
+
+    joint_mask = (
+        (previous_weights >= OVERLAP_WINDOW_FLOOR)
+        & (current_weights >= OVERLAP_WINDOW_FLOOR)
+    )
+    joint_count = int(joint_mask.sum())
+    if joint_count < HOP_LENGTH // 2:
+        raise RuntimeError("joint overlap comparison mask is unexpectedly small")
+
+    previous_values = previous[:, HOP_LENGTH:][:, joint_mask]
+    current_values = current[:, :HOP_LENGTH][:, joint_mask]
+    previous_overlap = previous_values / previous_weights[joint_mask].unsqueeze(0)
+    current_overlap = current_values / current_weights[joint_mask].unsqueeze(0)
+    if int(previous_overlap.shape[-1]) != int(current_overlap.shape[-1]):
+        raise RuntimeError("joint overlap alignment failed")
+    return previous_overlap.contiguous(), current_overlap.contiguous()
 
 
 def _transition_cost(previous: torch.Tensor, current: torch.Tensor) -> torch.Tensor:
     """Pairwise normalized overlap mismatch for all previous/current candidate combinations."""
 
-    previous_overlap = _overlap_unwindowed(previous, right=True)
-    current_overlap = _overlap_unwindowed(current, right=False)
+    previous_overlap, current_overlap = _paired_overlap_unwindowed(previous, current)
     difference = previous_overlap[:, None, :] - current_overlap[None, :, :]
     mse = difference.square().mean(dim=-1)
     previous_power = previous_overlap.square().mean(dim=-1)[:, None]
@@ -372,6 +393,7 @@ def run_sequence_coherent_oracle(
         "codebook_tensor_sha256": metadata.get("tensor_sha256"),
         "heldout_split": split,
         "selection_rule": "viterbi_topk_positive_cosine_plus_gain_scaled_overlap_continuity",
+        "overlap_alignment_rule": "joint_mask_same_physical_overlap_positions",
         "per_window_polarity_inversion_allowed": False,
         "gain_rule": "positive_target_energy_over_codeword_energy",
         "gain_applied_at_excitation_before_filter": True,
