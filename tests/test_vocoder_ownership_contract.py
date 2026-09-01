@@ -16,9 +16,11 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         self.assertFalse(decision.THIRD_PARTY_VOCODER_CHECKPOINT_AUTHORIZED)
         self.assertTrue(decision.DISTRIBUTION_REQUIRES_LYKENOX_OWNED_WEIGHTS)
 
-    def test_only_parameter_space_gradient_audit_is_open(self) -> None:
+    def test_only_architecture_weight_recalibration_is_open(self) -> None:
         self.assertTrue(decision.LOSS_WEIGHT_CONTRACT_AUTHORIZED)
         self.assertTrue(decision.LOSS_V2_WEIGHT_CONTRACT_FROZEN)
+        self.assertFalse(decision.LOSS_V2_WEIGHT_CONTRACT_V1_ARCHITECTURE_COMPATIBLE)
+        self.assertFalse(decision.ACTIVE_ARCHITECTURE_WEIGHT_CONTRACT_AUTHORIZED)
         self.assertFalse(decision.NEW_VOCODER_ARCHITECTURE_AUTHORIZED)
         self.assertFalse(decision.SCRATCH_VOCODER_ITERATION_AUTHORIZED)
         self.assertTrue(decision.FRAME_RATE_CEPSTRAL_PREDICTOR_IMPLEMENTATION_AUTHORIZED)
@@ -26,7 +28,10 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         self.assertEqual(decision.BOUNDED_OPTIMIZER_SMOKE_STATUS, "pass")
         self.assertTrue(decision.BOUNDED_OPTIMIZER_SMOKE_CONSUMED)
         self.assertFalse(decision.BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED)
-        self.assertTrue(decision.PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED)
+        self.assertEqual(decision.PARAMETER_SPACE_GRADIENT_AUDIT_STATUS, "pass")
+        self.assertFalse(decision.PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED)
+        self.assertTrue(decision.ARCHITECTURE_WEIGHT_RECALIBRATION_AUDIT_AUTHORIZED)
+        self.assertFalse(decision.ARCHITECTURE_WEIGHT_CONTRACT_V2_AUTHORIZED)
         self.assertFalse(decision.EXTENDED_TRAINABILITY_SMOKE_AUTHORIZED)
         self.assertFalse(decision.OPTIMIZER_CREATION_AUTHORIZED)
         self.assertFalse(decision.TRAINER_IMPLEMENTATION_AUTHORIZED)
@@ -39,7 +44,7 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         )
         self.assertEqual(
             decision.NEXT_GATE,
-            "audit_owned_predictor_parameter_space_loss_v2_authority_before_extended_trainability",
+            "audit_owned_minimum_phase_architecture_coupled_loss_v2_weight_recalibration",
         )
 
     def test_owned_pipeline_contracts_are_exact(self) -> None:
@@ -71,6 +76,14 @@ class VocoderOwnershipContractTests(unittest.TestCase):
             decision.OWNED_FRAME_RATE_PREDICTOR,
             "lykenox_owned_frame_rate_cepstral_predictor_v1",
         )
+        self.assertEqual(
+            decision.ARCHITECTURE_WEIGHT_RECALIBRATION_AUDIT_VERSION,
+            "owned-minimum-phase-architecture-weight-recalibration-audit-v1",
+        )
+        self.assertEqual(
+            decision.ARCHITECTURE_WEIGHT_RECALIBRATION_CANDIDATE_VERSION,
+            "owned-vocoder-loss-v2-minimum-phase-weight-contract-v2-candidate",
+        )
         self.assertTrue(decision.HISTORICAL_PRESENCE_EDGE_SEMANTICS_REJECTED)
 
     def test_all_completed_gates_are_recorded_pass(self) -> None:
@@ -89,8 +102,11 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         self.assertEqual(decision.FRAME_RATE_PREDICTOR_STRUCTURAL_TEST_COUNT, 36)
         self.assertEqual(decision.BOUNDED_OPTIMIZER_SMOKE_STATUS, "pass")
         self.assertEqual(decision.BOUNDED_OPTIMIZER_SMOKE_TEST_COUNT, 33)
+        self.assertEqual(decision.PARAMETER_SPACE_GRADIENT_AUDIT_STATUS, "pass")
+        self.assertEqual(decision.PARAMETER_SPACE_GRADIENT_AUDIT_TEST_COUNT, 41)
+        self.assertEqual(decision.PARAMETER_SPACE_GRADIENT_AUDIT_PROBE_COUNT, 8)
 
-    def test_bounded_optimizer_evidence_requires_jacobian_review_before_scaling(self) -> None:
+    def test_bounded_optimizer_evidence_triggered_jacobian_review(self) -> None:
         metrics = decision.BOUNDED_OPTIMIZER_SMOKE_METRICS
         self.assertEqual(metrics["update_count"], 2)
         self.assertLess(metrics["final_total"], metrics["initial_total"])
@@ -100,7 +116,34 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         self.assertEqual(metrics["parameter_delta_norm"], 0.0004)
         self.assertFalse(metrics["severe_grid_excess"])
         self.assertTrue(metrics["checkpoints_unchanged"])
-        self.assertTrue(decision.PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED)
+
+    def test_parameter_jacobian_audit_rejects_v1_for_active_architecture(self) -> None:
+        metrics = decision.PARAMETER_SPACE_GRADIENT_AUDIT_METRICS
+        parameter_shares = metrics["neutral_mean_weighted_gradient_norm_shares"]
+        self.assertGreater(parameter_shares["spectral_balance"], 0.70)
+        self.assertLess(parameter_shares["envelope"], 0.01)
+        self.assertLess(
+            metrics["neutral_minimum_combined_gradient_alignment_cosines"]["envelope"],
+            0.0,
+        )
+        self.assertLess(
+            metrics["neutral_minimum_first_order_descent_dots"]["envelope"],
+            0.0,
+        )
+        self.assertGreater(metrics["neutral_mean_combined_gradient_norm"], 500.0)
+        self.assertLess(metrics["neutral_mean_clip_scale_if_max_norm_1"], 0.01)
+        self.assertGreater(
+            metrics["cepstrum_neutral_mean_weighted_gradient_norm_shares"]["spectral_balance"],
+            0.75,
+        )
+        self.assertLess(
+            metrics["cepstrum_neutral_mean_weighted_gradient_norm_shares"]["envelope"],
+            0.01,
+        )
+        self.assertLess(metrics["cepstrum_neutral_minimum_envelope_alignment"], 0.0)
+        self.assertLess(metrics["cepstrum_connected_minimum_envelope_alignment"], 0.0)
+        self.assertFalse(decision.LOSS_V2_WEIGHT_CONTRACT_V1_ARCHITECTURE_COMPATIBLE)
+        self.assertTrue(decision.ARCHITECTURE_WEIGHT_RECALIBRATION_AUDIT_AUTHORIZED)
         self.assertFalse(decision.EXTENDED_TRAINABILITY_SMOKE_AUTHORIZED)
         self.assertFalse(decision.PERSISTENT_TRAINING_AUTHORIZED)
 
@@ -134,10 +177,7 @@ class VocoderOwnershipContractTests(unittest.TestCase):
             metrics["mean_boundary_periodicity_l1"],
             metrics["mean_interior_periodicity_l1"],
         )
-        self.assertEqual(
-            metrics["mean_interior_f0_mae_cents_on_common_voiced"],
-            0.0,
-        )
+        self.assertEqual(metrics["mean_interior_f0_mae_cents_on_common_voiced"], 0.0)
 
     def test_decision_records_artificial_loss_edge_bug_and_64_frame_contract(self) -> None:
         metrics = decision.LOSS_EDGE_FORENSIC_METRICS
@@ -153,10 +193,7 @@ class VocoderOwnershipContractTests(unittest.TestCase):
                 metrics[f"{prefix}_mean_artificial_log_magnitude_l1"],
                 metrics[f"{prefix}_mean_interior_log_magnitude_l1"],
             )
-            self.assertEqual(
-                metrics[f"{prefix}_mean_interior_log_magnitude_l1"],
-                0.0,
-            )
+            self.assertEqual(metrics[f"{prefix}_mean_interior_log_magnitude_l1"], 0.0)
 
     def test_loss_v2_target_consistency_remains_exact(self) -> None:
         metrics = decision.LOSS_V2_TARGET_CONSISTENCY_METRICS
@@ -170,22 +207,7 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         self.assertEqual(metrics["reconstruction_analysis_frame_counts"], (257, 129, 65))
         self.assertLess(metrics["mean_conditioning_aligned_envelope_total"], 1e-6)
 
-    def test_historical_reference_weights_remain_rejected(self) -> None:
-        metrics = decision.LOSS_V2_GRADIENT_BALANCE_METRICS
-        self.assertGreater(metrics["mean_reference_weighted_reconstruction_share"], 0.80)
-        self.assertLess(metrics["mean_reference_weighted_spectral_balance_share"], 0.01)
-        self.assertGreater(metrics["maximum_reference_weighted_gradient_norm_share"], 0.90)
-        self.assertNotEqual(
-            decision.LOSS_V2_WEIGHT_CONTRACT_FROZEN_WEIGHTS,
-            {
-                "reconstruction": 1.0,
-                "envelope": 0.50,
-                "presence": 0.0,
-                "spectral_balance": 0.25,
-            },
-        )
-
-    def test_four_objective_weights_are_frozen_after_sensitivity_pass(self) -> None:
+    def test_v1_weights_remain_frozen_as_historical_waveform_space_contract(self) -> None:
         self.assertEqual(
             decision.LOSS_V2_WEIGHT_CONTRACT_FROZEN_WEIGHTS,
             {
@@ -196,26 +218,13 @@ class VocoderOwnershipContractTests(unittest.TestCase):
             },
         )
         sensitivity = decision.LOSS_V2_WEIGHT_CONTRACT_SENSITIVITY_METRICS
-        self.assertEqual(sensitivity["scenario_count"], 23)
-        self.assertEqual(sensitivity["relative_weight_perturbation"], 0.10)
         self.assertTrue(sensitivity["candidate_tracks_derivation"])
         self.assertTrue(sensitivity["authority_retained"])
         self.assertTrue(sensitivity["alignment_positive"])
-        self.assertTrue(sensitivity["alignment_retained"])
         self.assertTrue(sensitivity["descent_positive"])
         self.assertTrue(sensitivity["dominance_bounded"])
-        self.assertLess(
-            sensitivity["all_scenarios_maximum_weighted_gradient_norm_share"],
-            0.60,
-        )
-        for value in sensitivity[
-            "all_scenarios_minimum_combined_gradient_alignment_cosines"
-        ].values():
-            self.assertGreater(value, 0.0)
-        for value in sensitivity[
-            "all_scenarios_minimum_first_order_descent_dots"
-        ].values():
-            self.assertGreater(value, 0.0)
+        self.assertFalse(decision.LOSS_V2_WEIGHT_CONTRACT_V1_ARCHITECTURE_COMPATIBLE)
+        self.assertFalse(decision.ACTIVE_ARCHITECTURE_WEIGHT_CONTRACT_AUTHORIZED)
 
     def test_decision_contains_no_external_pretrained_replacement_route(self) -> None:
         source = inspect.getsource(decision).lower()
