@@ -1,4 +1,4 @@
-"""Render complete validation utterances from the owned minimum-phase best checkpoint.
+"""Render complete validation utterances from the owned minimum-phase checkpoint.
 
 This is the audible acceptance surface.  It writes prediction/reference FLOAT WAV pairs with
 no gain normalization, EQ, denoising, duration modification or other post-hoc enhancement.
@@ -60,6 +60,20 @@ def _write_float_wav(path: Path, waveform: torch.Tensor) -> None:
     sf.write(str(path), values, SAMPLE_RATE, subtype="FLOAT")
 
 
+def _default_checkpoint(root: Path) -> tuple[Path, str]:
+    training_dir = root / "models" / "lykenox_identity" / "training" / "vocoder_minimum_phase_v1"
+    best = training_dir / "best.pt"
+    last = training_dir / "last.pt"
+    if best.exists():
+        return best, "best_validation"
+    if last.exists():
+        return last, "last_fallback_no_best"
+    raise FileNotFoundError(
+        "minimum-phase checkpoint does not exist; expected best.pt or last.pt in "
+        f"{training_dir}"
+    )
+
+
 def render_heldout_audio(
     root: Path,
     *,
@@ -74,13 +88,13 @@ def render_heldout_audio(
     if max_items < 1:
         raise ValueError("max_items must be positive")
     root = Path(root).resolve()
-    checkpoint = (
-        Path(checkpoint).resolve()
-        if checkpoint is not None
-        else root / "models" / "lykenox_identity" / "training" / "vocoder_minimum_phase_v1" / "best.pt"
-    )
+    if checkpoint is None:
+        checkpoint, checkpoint_selection = _default_checkpoint(root)
+    else:
+        checkpoint = Path(checkpoint).resolve()
+        checkpoint_selection = "explicit"
     if not checkpoint.exists():
-        raise FileNotFoundError(f"minimum-phase best checkpoint does not exist: {checkpoint}")
+        raise FileNotFoundError(f"minimum-phase checkpoint does not exist: {checkpoint}")
     output_dir = (
         Path(output_dir).resolve()
         if output_dir is not None
@@ -143,6 +157,7 @@ def render_heldout_audio(
         "loss_weight_contract_version": ACTIVE_LOSS_WEIGHT_CONTRACT_VERSION,
         "active_weights": active_weights(),
         "checkpoint": str(checkpoint),
+        "checkpoint_selection": checkpoint_selection,
         "checkpoint_global_step": int(payload["progress"]["global_step"]),
         "split": split,
         "item_count": len(items),
