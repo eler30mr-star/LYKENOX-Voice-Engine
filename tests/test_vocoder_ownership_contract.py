@@ -16,22 +16,24 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         self.assertFalse(decision.THIRD_PARTY_VOCODER_CHECKPOINT_AUTHORIZED)
         self.assertTrue(decision.DISTRIBUTION_REQUIRES_LYKENOX_OWNED_WEIGHTS)
 
-    def test_loss_contract_is_frozen_but_model_work_stays_blocked(self) -> None:
+    def test_model_instantiation_is_open_but_optimizer_and_training_remain_blocked(self) -> None:
         self.assertTrue(decision.LOSS_WEIGHT_CONTRACT_AUTHORIZED)
         self.assertTrue(decision.LOSS_V2_WEIGHT_CONTRACT_FROZEN)
         self.assertFalse(decision.NEW_VOCODER_ARCHITECTURE_AUTHORIZED)
         self.assertFalse(decision.SCRATCH_VOCODER_ITERATION_AUTHORIZED)
-        self.assertFalse(decision.MODEL_INSTANTIATION_AUTHORIZED)
+        self.assertTrue(decision.FRAME_RATE_CEPSTRAL_PREDICTOR_IMPLEMENTATION_AUTHORIZED)
+        self.assertTrue(decision.MODEL_INSTANTIATION_AUTHORIZED)
         self.assertFalse(decision.OPTIMIZER_CREATION_AUTHORIZED)
         self.assertFalse(decision.PERSISTENT_TRAINING_AUTHORIZED)
+        self.assertFalse(decision.NEW_VOCODER_CHECKPOINT_AUTHORIZED)
         self.assertTrue(decision.VOCODER_ARCHITECTURE_SELECTION_AUTHORIZED)
         self.assertEqual(
             decision.NEXT_ARCHITECTURE,
-            "undecided_owned_architecture_after_loss_v2_weight_contract",
+            "owned_minimum_phase_time_varying_filter_over_neutral_excitation",
         )
         self.assertEqual(
             decision.NEXT_GATE,
-            "define_owned_vocoder_architecture_contract_before_model_instantiation",
+            "prove_owned_frame_rate_cepstral_predictor_shapes_neutral_init_gradients_and_grid_safety_before_optimizer",
         )
 
     def test_owned_pipeline_contracts_are_exact(self) -> None:
@@ -51,9 +53,17 @@ class VocoderOwnershipContractTests(unittest.TestCase):
             decision.OWNED_VOCODER_LOSS_WEIGHT_CONTRACT,
             "owned-vocoder-loss-v2-weight-contract-v1",
         )
+        self.assertEqual(
+            decision.OWNED_VOCODER_ARCHITECTURE_CONTRACT,
+            "owned-vocoder-architecture-contract-v1",
+        )
+        self.assertEqual(
+            decision.OWNED_STATIC_RENDERER,
+            "owned-minimum-phase-time-varying-renderer-v1",
+        )
         self.assertTrue(decision.HISTORICAL_PRESENCE_EDGE_SEMANTICS_REJECTED)
 
-    def test_forensic_and_loss_gates_are_all_recorded_pass(self) -> None:
+    def test_forensic_loss_architecture_and_renderer_gates_are_recorded_pass(self) -> None:
         self.assertEqual(decision.CONDITIONING_FORENSICS_STATUS, "pass")
         self.assertEqual(decision.LOSS_EDGE_FORENSICS_STATUS, "pass")
         self.assertEqual(decision.LOSS_V2_TARGET_CONSISTENCY_STATUS, "pass")
@@ -61,6 +71,22 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         self.assertEqual(decision.LOSS_V2_FOUR_OBJECTIVE_CALIBRATION_STATUS, "pass")
         self.assertEqual(decision.LOSS_V2_WEIGHT_CONTRACT_SENSITIVITY_STATUS, "pass")
         self.assertFalse(decision.LOSS_V2_WEIGHT_CONTRACT_SENSITIVITY_REQUIRED)
+        self.assertEqual(decision.ARCHITECTURE_CONTRACT_STATUS, "pass")
+        self.assertEqual(decision.ARCHITECTURE_CONTRACT_VALIDATION_TEST_COUNT, 21)
+        self.assertEqual(decision.STATIC_RENDERER_SAFETY_STATUS, "pass")
+        self.assertEqual(decision.STATIC_RENDERER_SAFETY_TEST_COUNT, 24)
+
+    def test_renderer_safety_evidence_supports_instantiation_only(self) -> None:
+        metrics = decision.STATIC_RENDERER_SAFETY_METRICS
+        self.assertLess(metrics["maximum_log_magnitude_factorization_error"], 1e-10)
+        self.assertLess(metrics["maximum_reference_oracle_roundtrip_error"], 1e-10)
+        self.assertEqual(metrics["flat_envelope_max_abs_identity_error"], 0.0)
+        self.assertTrue(metrics["source_bypass_absent"])
+        self.assertTrue(metrics["exact_output_length"])
+        self.assertLess(abs(metrics["unvoiced_hop_autocorrelation_excess"]), 0.01)
+        self.assertLess(abs(metrics["voiced_hop_autocorrelation_excess"]), 0.01)
+        self.assertFalse(decision.OPTIMIZER_CREATION_AUTHORIZED)
+        self.assertFalse(decision.PERSISTENT_TRAINING_AUTHORIZED)
 
     def test_decision_records_boundary_dominant_conditioning_mismatch(self) -> None:
         metrics = decision.CONDITIONING_FORENSIC_METRICS
