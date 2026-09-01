@@ -11,25 +11,33 @@ from lykenox_voice_engine.training import (
 
 
 class MinimumPhaseLossWeightContractTests(unittest.TestCase):
-    def test_v2_contract_is_architecture_coupled_and_fixed(self) -> None:
+    def test_v2_contract_is_historical_and_directionally_rejected(self) -> None:
         self.assertEqual(
             contract.OWNED_MINIMUM_PHASE_LOSS_WEIGHT_CONTRACT_VERSION,
             "owned-vocoder-loss-v2-minimum-phase-weight-contract-v2",
         )
-        self.assertEqual(
-            contract.ARCHITECTURE_FAMILY,
-            "owned_minimum_phase_time_varying_filter_over_neutral_excitation",
-        )
-        self.assertEqual(contract.DERIVATION_SPACE, "cepstrum_space")
-        self.assertEqual(contract.CROSS_CHECK_SPACE, "parameter_space")
         self.assertTrue(contract.MINIMUM_PHASE_WEIGHT_V2_IMPLEMENTED)
-        self.assertTrue(contract.MINIMUM_PHASE_WEIGHT_V2_IS_ACTIVE_CANDIDATE)
+        self.assertFalse(contract.MINIMUM_PHASE_WEIGHT_V2_DIRECTIONALLY_COMPATIBLE)
+        self.assertFalse(contract.MINIMUM_PHASE_WEIGHT_V2_IS_ACTIVE_CANDIDATE)
+        self.assertEqual(contract.DIRECTIONAL_PREFLIGHT_STATUS, "fail")
+        self.assertLess(
+            contract.DIRECTIONAL_FAILURE_EVIDENCE[
+                "parameter_neutral_envelope_alignment"
+            ],
+            0.0,
+        )
+        self.assertLess(
+            contract.DIRECTIONAL_FAILURE_EVIDENCE[
+                "cepstrum_connected_presence_descent_dot"
+            ],
+            0.0,
+        )
         self.assertFalse(contract.ADAPTIVE_LOSS_REWEIGHTING_AUTHORIZED)
         self.assertFalse(contract.RUNTIME_WEIGHT_OVERRIDE_AUTHORIZED)
         self.assertFalse(contract.AUTOMATIC_WEIGHT_REDERIVATION_DURING_TRAINING_AUTHORIZED)
         self.assertFalse(contract.PERSISTENT_TRAINING_AUTHORIZED)
 
-    def test_v2_corrects_measured_authority_collapse(self) -> None:
+    def test_historical_numbers_are_preserved_for_forensics(self) -> None:
         self.assertEqual(
             contract.FROZEN_MINIMUM_PHASE_WEIGHTS.as_dict(),
             {
@@ -39,20 +47,10 @@ class MinimumPhaseLossWeightContractTests(unittest.TestCase):
                 "spectral_balance": 3.3202,
             },
         )
-        cep = contract.PROJECTED_CEPSTRUM_MEAN_WEIGHTED_SHARES
-        for value in cep.values():
+        for value in contract.PROJECTED_CEPSTRUM_MEAN_WEIGHTED_SHARES.values():
             self.assertAlmostEqual(value, 0.25, places=12)
-        param = contract.PROJECTED_PARAMETER_MEAN_WEIGHTED_SHARES
-        self.assertGreater(min(param.values()), 0.20)
-        self.assertLess(max(param.values()), 0.28)
-        self.assertLess(
-            contract.PARAMETER_VS_CEPSTRUM_RELATIVE_DIFFERENCE["envelope"], 0.05
-        )
-        self.assertLess(
-            contract.PARAMETER_VS_CEPSTRUM_RELATIVE_DIFFERENCE["presence"], 0.06
-        )
 
-    def test_combiner_uses_only_v2_weights(self) -> None:
+    def test_historical_combiner_remains_reproducible(self) -> None:
         values = {
             "reconstruction": torch.tensor(2.0, dtype=torch.float64),
             "envelope": torch.tensor(3.0, dtype=torch.float64),
