@@ -1,13 +1,13 @@
-"""Architecture-coupled Loss V2 weights for the owned minimum-phase vocoder.
+"""Historical equal-norm Loss V2 weights for the owned minimum-phase vocoder.
 
-Waveform-space weight contract v1 remains valid evidence in its original calibration space,
-but the measured minimum-phase Jacobian made it unsuitable for this architecture: spectral
-balance dominated and envelope could become anti-aligned.  This module defines the corrected
-architecture-coupled v2 weights from the measured cepstrum-space authority and records the
-parameter-space cross-check.
+Waveform-space weight contract v1 remains valid evidence in its original calibration space.
+This v2 candidate then equalized mean gradient norms in cepstrum space, but the real-data
+integrated preflight proved that equal norm is not enough: several objectives remained
+anti-aligned with the combined direction in cepstrum and predictor parameter space.
 
-No adaptive/runtime reweighting is allowed.  These numbers are fixed for the minimum-phase
-candidate and may only be changed by a new explicit contract version.
+Therefore these weights are retained only for forensic reproducibility and are rejected for
+training.  The active path uses deterministic pre-training directional calibration to choose
+one fixed common-descent vector, then freezes it for the whole run and resume.
 """
 
 from __future__ import annotations
@@ -25,9 +25,6 @@ ARCHITECTURE_FAMILY = "owned_minimum_phase_time_varying_filter_over_neutral_exci
 DERIVATION_SPACE = "cepstrum_space"
 CROSS_CHECK_SPACE = "parameter_space"
 
-# Measured with v1 on the real-data Jacobian audit.  The v2 correction rescales each
-# objective relative to reconstruction so the mean weighted norm is equalized in cepstrum
-# space.  This is a fixed architecture contract, not an online/adaptive weighting scheme.
 V1_WEIGHTS = {
     "reconstruction": 1.0,
     "envelope": 3.1475,
@@ -70,17 +67,12 @@ class OwnedMinimumPhaseLossV2Weights:
 
 
 FROZEN_MINIMUM_PHASE_WEIGHTS = OwnedMinimumPhaseLossV2Weights()
-
-# Unrounded values implied by the reported cepstrum-space authority.
 DERIVED_CEPSTRUM_WEIGHTS = {
     "reconstruction": 1.0,
     "envelope": 16.13476991635949,
     "presence": 4.084225244830007,
     "spectral_balance": 3.32022248068645,
 }
-
-# Independent cross-check implied by the reported parameter-space authority.  It is not the
-# derivation authority because the distortion was already present before the predictor.
 DERIVED_PARAMETER_CROSS_CHECK_WEIGHTS = {
     "reconstruction": 1.0,
     "envelope": 15.499404979157768,
@@ -93,10 +85,6 @@ PARAMETER_VS_CEPSTRUM_RELATIVE_DIFFERENCE = {
     "presence": 0.05203339699993233,
     "spectral_balance": 0.21477077483772827,
 }
-
-# Aggregate share projection from the already-measured v1 Jacobian evidence.  This is an
-# algebraic consequence of rescaling the same gradients; it is not a replacement for held-out
-# audio acceptance.
 PROJECTED_CEPSTRUM_MEAN_WEIGHTED_SHARES = {
     "reconstruction": 0.25,
     "envelope": 0.25,
@@ -110,15 +98,31 @@ PROJECTED_PARAMETER_MEAN_WEIGHTED_SHARES = {
     "spectral_balance": 0.21004928754041263,
 }
 
+# Real integrated preflight evidence rejecting this candidate for training.
+DIRECTIONAL_PREFLIGHT_STATUS = "fail"
+DIRECTIONAL_REJECTION_REASON = (
+    "equalized_norms_but_negative_common_direction_alignments_and_descent_dots_remained"
+)
+DIRECTIONAL_FAILURE_EVIDENCE = {
+    "cepstrum_neutral_spectral_balance_alignment": -0.0285,
+    "cepstrum_neutral_spectral_balance_descent_dot": -591.84,
+    "cepstrum_connected_presence_alignment": -0.0108,
+    "cepstrum_connected_spectral_balance_alignment": -0.0134,
+    "cepstrum_connected_presence_descent_dot": -131647.89,
+    "cepstrum_connected_spectral_balance_descent_dot": -51244.09,
+    "parameter_neutral_envelope_alignment": -0.0519,
+    "parameter_neutral_envelope_descent_dot": -1580.42,
+    "parameter_connected_presence_alignment": -0.0216,
+    "parameter_connected_presence_descent_dot": -1879.15,
+}
+
 ADAPTIVE_LOSS_REWEIGHTING_AUTHORIZED = False
 RUNTIME_WEIGHT_OVERRIDE_AUTHORIZED = False
 AUTOMATIC_WEIGHT_REDERIVATION_DURING_TRAINING_AUTHORIZED = False
 THIRD_PARTY_MODEL_OR_CHECKPOINT_AUTHORIZED = False
-
-# The correction is implemented and is the only allowed weight candidate for this
-# architecture.  Persistent training remains independently gated.
 MINIMUM_PHASE_WEIGHT_V2_IMPLEMENTED = True
-MINIMUM_PHASE_WEIGHT_V2_IS_ACTIVE_CANDIDATE = True
+MINIMUM_PHASE_WEIGHT_V2_DIRECTIONALLY_COMPATIBLE = False
+MINIMUM_PHASE_WEIGHT_V2_IS_ACTIVE_CANDIDATE = False
 PERSISTENT_TRAINING_AUTHORIZED = False
 
 
@@ -129,7 +133,7 @@ def combine_owned_minimum_phase_loss_v2(
     presence: torch.Tensor,
     spectral_balance: torch.Tensor,
 ) -> torch.Tensor:
-    """Combine Loss V2 objectives with the fixed minimum-phase v2 authority contract."""
+    """Historical v2 combination retained for forensic reproducibility only."""
 
     values = (reconstruction, envelope, presence, spectral_balance)
     if any(value.ndim != 0 for value in values):
