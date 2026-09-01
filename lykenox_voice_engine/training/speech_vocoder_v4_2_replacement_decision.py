@@ -6,7 +6,7 @@ pretrained vocoder checkpoints are not an authorized product dependency, fallbac
 or replacement path.
 """
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v8"
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v9"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
@@ -26,6 +26,10 @@ OWNED_VOCODER_DATA_CONTRACT = (
 OWNED_VOCODER_LOSS_CONTRACT = (
     "owned-vocoder-loss-v2-valid-context-conditioning-aligned"
 )
+OWNED_VOCODER_PRESENCE_CONTRACT = (
+    "owned-vocoder-presence-v2-valid-context-target-relative"
+)
+HISTORICAL_PRESENCE_EDGE_SEMANTICS_REJECTED = True
 
 FORENSIC_BASELINE = {
     "spectral_centroid_relative_pct": -16.468669,
@@ -131,5 +135,34 @@ LOSS_V2_TARGET_CONSISTENCY_FINDING = (
     "it does not authorize loss weights, a new architecture, or persistent training."
 )
 
+LOSS_V2_GRADIENT_BALANCE_STATUS = "pass"
+LOSS_V2_GRADIENT_BALANCE_METRICS = {
+    "mean_reconstruction_gradient_norm": 11.3107378483,
+    "mean_envelope_gradient_norm": 3.5935441388,
+    "mean_spectral_balance_gradient_norm": 0.1855753782,
+    "mean_reference_weighted_reconstruction_share": 0.854356,
+    "mean_reference_weighted_envelope_share": 0.142148,
+    "mean_reference_weighted_spectral_balance_share": 0.003496,
+    "mean_reconstruction_vs_envelope_cosine": 0.344321,
+    "mean_reconstruction_vs_spectral_balance_cosine": 0.039248,
+    "mean_envelope_vs_spectral_balance_cosine": 0.075625,
+    "minimum_pairwise_gradient_cosine": -0.001014,
+    "mean_combined_reconstruction_alignment": 0.988408,
+    "mean_combined_envelope_alignment": 0.4742,
+    "mean_combined_spectral_balance_alignment": 0.050277,
+    "minimum_combined_gradient_alignment_cosine": 0.005388,
+    "maximum_reference_weighted_gradient_norm_share": 0.929409,
+}
+LOSS_V2_GRADIENT_BALANCE_FINDING = (
+    "The three-objective diagnostic gradient audit passed numerically and showed no strong "
+    "directional conflict, but the historical reference weights are not an acceptable "
+    "future contract. Reconstruction carried 85.4356% mean weighted gradient authority "
+    "and reached 92.9409%, while spectral balance carried only 0.3496% mean authority. "
+    "The historical presence objective cannot simply be added because its centered crop "
+    "STFT includes the same artificial edge context already rejected by Loss V2. A new "
+    "valid-context Presence V2 must therefore participate in a four-objective, data-derived "
+    "gradient calibration before any loss weights or architecture can be authorized."
+)
+
 NEXT_ARCHITECTURE = "undecided_after_owned_pipeline_forensics"
-NEXT_GATE = "audit_owned_vocoder_loss_v2_gradient_balance_before_architecture_selection"
+NEXT_GATE = "audit_owned_vocoder_four_objective_gradient_calibration_before_weight_contract"
