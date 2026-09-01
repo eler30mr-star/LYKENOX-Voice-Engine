@@ -6,7 +6,7 @@ pretrained vocoder checkpoints are not an authorized product dependency, fallbac
 or replacement path.
 """
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v13"
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v14"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
@@ -19,16 +19,20 @@ THIRD_PARTY_PRETRAINED_VOCODER_AUTHORIZED = False
 THIRD_PARTY_VOCODER_CHECKPOINT_AUTHORIZED = False
 DISTRIBUTION_REQUIRES_LYKENOX_OWNED_WEIGHTS = True
 
-# Data/loss/architecture/renderer/predictor structural gates are frozen. Only the explicit
-# two-update real-data optimizer smoke is open; trainer and persistent training remain blocked.
+# Data/loss/architecture/renderer/predictor and the two-update optimizer smoke are frozen.
+# The smoke is consumed; only the read-only parameter/Jacobian authority audit is open.
 LOSS_WEIGHT_CONTRACT_AUTHORIZED = True
 LOSS_V2_WEIGHT_CONTRACT_FROZEN = True
 MODEL_INSTANTIATION_AUTHORIZED = True
 FRAME_RATE_CEPSTRAL_PREDICTOR_IMPLEMENTATION_AUTHORIZED = True
-BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED = True
+BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED = False
 BOUNDED_OPTIMIZER_SMOKE_MAX_UPDATES = 2
 BOUNDED_OPTIMIZER_SMOKE_SEGMENT_FRAMES = 32
 BOUNDED_OPTIMIZER_SMOKE_MAX_ITEMS = 1
+BOUNDED_OPTIMIZER_SMOKE_STATUS = "pass"
+BOUNDED_OPTIMIZER_SMOKE_CONSUMED = True
+PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED = True
+EXTENDED_TRAINABILITY_SMOKE_AUTHORIZED = False
 OPTIMIZER_CREATION_AUTHORIZED = False
 TRAINER_IMPLEMENTATION_AUTHORIZED = False
 PERSISTENT_TRAINING_AUTHORIZED = False
@@ -345,11 +349,51 @@ FRAME_RATE_PREDICTOR_STRUCTURAL_FINDING = (
     "Its zero-initialized output is exactly neutral, the fixed renderer remains exact "
     "identity with exact frames*256 length, no frame-grid excess is introduced at neutral "
     "initialization, and all 30 trainable parameter tensors receive finite non-zero gradient "
-    "in the deterministic connectivity probe. This opens only the explicit two-update "
-    "real-data optimizer smoke; persistent training remains forbidden."
+    "in the deterministic connectivity probe. This opened only the explicit two-update "
+    "real-data optimizer smoke; persistent training remained forbidden."
+)
+
+BOUNDED_OPTIMIZER_SMOKE_VERSION = "owned-minimum-phase-bounded-optimizer-smoke-v1"
+BOUNDED_OPTIMIZER_SMOKE_TEST_COUNT = 33
+BOUNDED_OPTIMIZER_SMOKE_METRICS = {
+    "utterance_id": "speech_0021_6cd35984e877_seg_002",
+    "start_frame": 717,
+    "segment_mel_frames": 32,
+    "update_count": 2,
+    "learning_rate": 0.0002,
+    "max_gradient_norm": 1.0,
+    "initial_total": 195.1538543701,
+    "final_total": 194.9214477539,
+    "relative_total_change": -0.0011908892,
+    "initial_reconstruction": 19.2587738037,
+    "final_reconstruction": 19.2581729889,
+    "initial_envelope": 4.7642612457,
+    "final_envelope": 4.7644839287,
+    "initial_presence": 3.1395702362,
+    "final_presence": 3.1374154091,
+    "initial_spectral_balance": 1.6438173056,
+    "final_spectral_balance": 1.640686512,
+    "update_1_raw_gradient_norm": 580.735168457,
+    "update_2_raw_gradient_norm": 580.9564819336,
+    "parameter_delta_norm": 0.0004,
+    "parameter_delta_max_abs": 0.0000964731,
+    "final_hop_autocorrelation_excess": -0.00002784491516649723,
+    "final_double_hop_autocorrelation_excess": 0.00002341344952583313,
+    "final_grid_harmonic_power_fraction_excess": 0.000048296526074409485,
+    "severe_grid_excess": False,
+    "checkpoints_unchanged": True,
+}
+BOUNDED_OPTIMIZER_SMOKE_FINDING = (
+    "The exactly-two-update owned real-data smoke passed: the frozen Loss V2 total decreased "
+    "by 0.1191%, parameters moved by L2=0.0004, exact output length and grid safety remained "
+    "intact, and protected checkpoints were unchanged. However, raw parameter-gradient norms "
+    "were about 581 against a clip limit of 1.0 on both steps, and the envelope term increased "
+    "slightly while the total decreased through reconstruction/presence/balance. This is "
+    "valid minimum trainability evidence but not sufficient to authorize a longer smoke. The "
+    "next gate must audit frozen objective authority after the renderer/predictor Jacobians."
 )
 
 NEXT_ARCHITECTURE = "owned_minimum_phase_time_varying_filter_over_neutral_excitation"
 NEXT_GATE = (
-    "prove_owned_predictor_real_data_bounded_optimizer_descent_without_grid_or_checkpoint_regression"
+    "audit_owned_predictor_parameter_space_loss_v2_authority_before_extended_trainability"
 )
