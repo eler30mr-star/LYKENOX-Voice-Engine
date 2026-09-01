@@ -6,7 +6,7 @@ pretrained vocoder checkpoints are not an authorized product dependency, fallbac
 or replacement path.
 """
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v10"
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v11"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
@@ -18,8 +18,16 @@ VOCODER_OWNERSHIP_CONTRACT = "lykenox_owned_architecture_and_weights_only"
 THIRD_PARTY_PRETRAINED_VOCODER_AUTHORIZED = False
 THIRD_PARTY_VOCODER_CHECKPOINT_AUTHORIZED = False
 DISTRIBUTION_REQUIRES_LYKENOX_OWNED_WEIGHTS = True
+
+# Loss/data contracts are now frozen. Architecture/model/training work remains gated.
+LOSS_WEIGHT_CONTRACT_AUTHORIZED = True
+LOSS_V2_WEIGHT_CONTRACT_FROZEN = True
+MODEL_INSTANTIATION_AUTHORIZED = False
+OPTIMIZER_CREATION_AUTHORIZED = False
+PERSISTENT_TRAINING_AUTHORIZED = False
 NEW_VOCODER_ARCHITECTURE_AUTHORIZED = False
-LOSS_WEIGHT_CONTRACT_AUTHORIZED = False
+VOCODER_ARCHITECTURE_SELECTION_AUTHORIZED = True
+
 OWNED_VOCODER_DATA_CONTRACT = (
     "vocoder-segment-v2-full-utterance-mel-pitch-conditioning"
 )
@@ -29,6 +37,7 @@ OWNED_VOCODER_LOSS_CONTRACT = (
 OWNED_VOCODER_PRESENCE_CONTRACT = (
     "owned-vocoder-presence-v2-valid-context-target-relative"
 )
+OWNED_VOCODER_LOSS_WEIGHT_CONTRACT = "owned-vocoder-loss-v2-weight-contract-v1"
 HISTORICAL_PRESENCE_EDGE_SEMANTICS_REJECTED = True
 
 FORENSIC_BASELINE = {
@@ -132,7 +141,7 @@ LOSS_V2_TARGET_CONSISTENCY_FINDING = (
     "the target waveform against its owned cached conditioning mel is numerically zero "
     "(~1e-8) on the 61 valid conditioning frames. The 65th crop-local mel frame is excluded "
     "because no conditioning slot exists for it. This validates objective semantics only; "
-    "it does not authorize loss weights, a new architecture, or persistent training."
+    "it does not authorize a new architecture or persistent training."
 )
 
 LOSS_V2_GRADIENT_BALANCE_STATUS = "pass"
@@ -155,13 +164,9 @@ LOSS_V2_GRADIENT_BALANCE_METRICS = {
 }
 LOSS_V2_GRADIENT_BALANCE_FINDING = (
     "The three-objective diagnostic gradient audit passed numerically and showed no strong "
-    "directional conflict, but the historical reference weights are not an acceptable "
-    "future contract. Reconstruction carried 85.4356% mean weighted gradient authority "
-    "and reached 92.9409%, while spectral balance carried only 0.3496% mean authority. "
-    "The historical presence objective cannot simply be added because its centered crop "
-    "STFT includes the same artificial edge context already rejected by Loss V2. A new "
-    "valid-context Presence V2 must therefore participate in a four-objective, data-derived "
-    "gradient calibration before any loss weights or architecture can be authorized."
+    "directional conflict, but the historical reference weights are rejected for future "
+    "work. Reconstruction carried 85.4356% mean weighted gradient authority and reached "
+    "92.9409%, while spectral balance carried only 0.3496% mean authority."
 )
 
 LOSS_V2_FOUR_OBJECTIVE_CALIBRATION_STATUS = "pass"
@@ -200,20 +205,82 @@ LOSS_V2_FOUR_OBJECTIVE_CALIBRATION_FINDING = (
     "The valid-context four-objective calibration passed and removed the historical "
     "reconstruction monopoly. Mean weighted gradient authority is distributed across "
     "reconstruction/envelope/presence/spectral balance at roughly 23-27%, every objective "
-    "retains at least about 10% authority on the measured probes, every minimum combined "
-    "alignment is positive (>0.31), and every minimum first-order descent dot is positive. "
-    "The large numerical spectral-balance coefficient (~60.95) reflects its much smaller "
-    "raw waveform-gradient scale; coefficient magnitude alone is therefore not evidence of "
-    "excess authority. The exact vector is not frozen yet: it must survive a bounded "
-    "relative-weight sensitivity audit so the contract is not a knife-edge calibration."
+    "retains meaningful authority, and all measured combined alignments and first-order "
+    "descent dots are positive."
 )
+
 LOSS_V2_WEIGHT_CONTRACT_CANDIDATE = {
     "reconstruction": 1.0,
     "envelope": 3.1475,
     "presence": 19.3369,
     "spectral_balance": 60.9496,
 }
-LOSS_V2_WEIGHT_CONTRACT_SENSITIVITY_REQUIRED = True
+LOSS_V2_WEIGHT_CONTRACT_SENSITIVITY_STATUS = "pass"
+LOSS_V2_WEIGHT_CONTRACT_SENSITIVITY_REQUIRED = False
+LOSS_V2_WEIGHT_CONTRACT_SENSITIVITY_METRICS = {
+    "scenario_count": 23,
+    "relative_weight_perturbation": 0.10,
+    "candidate_derivation_relative_errors": {
+        "reconstruction": 0.0,
+        "envelope": 0.0000051,
+        "presence": 0.00000069,
+        "spectral_balance": 0.00000064,
+    },
+    "baseline_minimum_weighted_gradient_norm_shares": {
+        "reconstruction": 0.16015,
+        "envelope": 0.119818,
+        "presence": 0.102618,
+        "spectral_balance": 0.122951,
+    },
+    "all_scenarios_minimum_weighted_gradient_norm_shares": {
+        "reconstruction": 0.134961,
+        "envelope": 0.100216,
+        "presence": 0.085556,
+        "spectral_balance": 0.102896,
+    },
+    "baseline_minimum_combined_gradient_alignment_cosines": {
+        "reconstruction": 0.34519,
+        "envelope": 0.3184,
+        "presence": 0.357462,
+        "spectral_balance": 0.351217,
+    },
+    "all_scenarios_minimum_combined_gradient_alignment_cosines": {
+        "reconstruction": 0.306252,
+        "envelope": 0.271811,
+        "presence": 0.310115,
+        "spectral_balance": 0.302829,
+    },
+    "all_scenarios_minimum_first_order_descent_dots": {
+        "reconstruction": 57.8851928711,
+        "envelope": 10.8785772324,
+        "presence": 0.8195143342,
+        "spectral_balance": 0.3058912754,
+    },
+    "baseline_maximum_weighted_gradient_norm_share": 0.526076,
+    "all_scenarios_maximum_weighted_gradient_norm_share": 0.575682,
+    "candidate_tracks_derivation": True,
+    "authority_retained": True,
+    "alignment_positive": True,
+    "alignment_retained": True,
+    "descent_positive": True,
+    "dominance_bounded": True,
+}
+LOSS_V2_WEIGHT_CONTRACT_FROZEN_WEIGHTS = {
+    "reconstruction": 1.0,
+    "envelope": 3.1475,
+    "presence": 19.3369,
+    "spectral_balance": 60.9496,
+}
+LOSS_V2_WEIGHT_CONTRACT_FINDING = (
+    "The data-derived four-objective weight vector survived 23 bounded sensitivity "
+    "scenarios spanning +/-10% relative perturbations. Across all scenarios every objective "
+    "retained at least 8.5556% weighted-gradient authority, every combined-gradient "
+    "alignment remained positive (minimum 0.271811), every first-order descent dot remained "
+    "positive, and maximum single-objective authority remained bounded at 57.5682%. The "
+    "rounded candidate tracks the rederived equalization weights to far below 0.5% relative "
+    "error. The weight contract is therefore frozen as v1. Any change or adaptive "
+    "reweighting requires a new explicit contract version and audit."
+)
 
-NEXT_ARCHITECTURE = "undecided_after_owned_pipeline_forensics"
-NEXT_GATE = "audit_owned_vocoder_loss_v2_weight_contract_sensitivity_before_freezing_weights"
+NEXT_ARCHITECTURE = "undecided_owned_architecture_after_loss_v2_weight_contract"
+NEXT_GATE = "define_owned_vocoder_architecture_contract_before_model_instantiation"
