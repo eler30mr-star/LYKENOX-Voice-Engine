@@ -6,16 +6,17 @@ supported by the positive real-residual oracle: when the owned real residual rep
 excitation, complete held-out resynthesis was reported clean and natural, matching the original
 voice audio.
 
-The calibrated Rosenberg pulse + measured four-band aperiodicity candidate is now also rejected.
-The owner reports that a local calibration based on 97,168 pitch-synchronous cycles still produced
-gangoso/rough held-out oracle audio. This moves the active engineering problem from pulse tuning to
-predicting the owned residual/excitation detail itself while keeping the proven filter path fixed.
+The calibrated Rosenberg pulse + measured four-band aperiodicity candidate is also rejected. The
+owner reports that a local calibration based on 97,168 pitch-synchronous cycles still produced
+gangoso/rough held-out oracle audio. The next authorized step is therefore a CELP-style capacity
+test using a codebook made exclusively from owned train residuals. No selector is trained until
+that representation demonstrates audible held-out capacity under oracle search.
 """
 
-DECISION_VERSION = "owned-minimum-phase-v3-decision-v4-residual-predictor-pivot"
+DECISION_VERSION = "owned-minimum-phase-v3-decision-v5-residual-codebook-oracle-first"
 POLICY_ID = "LYX-POL-001"
 SUPERSEDES_GATE_STATE_FROM = "owned-vocoder-architecture-contract-v1"
-ARCHITECTURE_FAMILY = "owned_minimum_phase_filter_over_owned_predicted_residual_candidate"
+ARCHITECTURE_FAMILY = "owned_minimum_phase_filter_over_owned_residual_codebook_candidate"
 
 V2_WEIGHT_CONTRACT_VERSION = "owned-vocoder-loss-v2-minimum-phase-weight-contract-v2"
 V2_WEIGHT_CONTRACT_STATUS = "rejected_for_training_directional_conflict"
@@ -65,6 +66,7 @@ REAL_RESIDUAL_CHECKPOINT_USED = False
 REAL_RESIDUAL_SYNTHETIC_EXCITATION_USED = False
 REAL_RESIDUAL_HUMAN_LISTENING_RESULT = "clean_natural_matches_original_voice_audio"
 REAL_RESIDUAL_FILTER_ENVELOPE_PATH_STATUS = "clean_oracle_resynthesis_demonstrated"
+MINIMUM_PHASE_FILTER_PATH_FROZEN = True
 
 # Rejected synthetic-excitation evidence.
 BAND_SPLIT_DIAGNOSTIC_STATUS = "partial_improvement_not_sufficient"
@@ -79,28 +81,34 @@ CALIBRATED_EXCITATION_STATUS = "rejected_perceptual_structural_limit"
 CALIBRATED_EXCITATION_PRODUCTION_ACTIVE = False
 SYNTHETIC_PARAMETRIC_EXCITATION_STATUS = "rejected_as_dominant_quality_path"
 
-# CELP/codebook clarification for TTS.
-PURE_CELP_ANALYSIS_BY_SYNTHESIS_SELECTED = False
-PURE_CELP_REASON = (
-    "inference_has_no_target_residual_for_codebook_search; any codebook path still needs an owned selector"
-)
-OWNED_RESIDUAL_CODEBOOK_ALLOWED_AS_INTERNAL_REPRESENTATION = True
+# CELP-style owned residual codebook capacity diagnostic.
+RESIDUAL_CODEBOOK_DECISION_DOC = "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_ORACLE_DECISION.md"
+RESIDUAL_CODEBOOK_MODULE = "lykenox_voice_engine/training/speech_residual_codebook_v1.py"
+RESIDUAL_CODEBOOK_ORACLE_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v1.py"
+RESIDUAL_CODEBOOK_SOURCE = "owned_train_real_residual_only"
+RESIDUAL_CODEBOOK_THIRD_PARTY_DATA_ALLOWED = False
+RESIDUAL_CODEBOOK_THIRD_PARTY_MODEL_OR_CHECKPOINT_ALLOWED = False
+RESIDUAL_CODEBOOK_REMOTE_INFERENCE_ALLOWED = False
+RESIDUAL_CODEBOOK_PRODUCTION_ACTIVE = False
+RESIDUAL_CODEBOOK_ORACLE_CAPACITY_TEST_SELECTED = True
+CELP_STYLE_ANALYSIS_BY_SYNTHESIS_ORACLE_ALLOWED = True
+HELDOUT_RESIDUAL_ALLOWED_AS_ORACLE_SEARCH_TARGET_ONLY = True
+HELDOUT_RESIDUAL_ALLOWED_IN_CODEBOOK = False
+ORACLE_SELECTED_INDICES_OR_GAINS_VALID_FOR_PRODUCT_INFERENCE = False
+
+# A literal CELP codec path is not selected for product inference because new-text TTS has no target
+# residual available for analysis-by-synthesis search. If the codebook oracle succeeds, a separate
+# LYKENOX-owned selector/gain predictor may be considered under a new explicit training gate.
+PURE_CELP_PRODUCT_INFERENCE_SELECTED = False
 OWNED_RESIDUAL_SELECTOR_MUST_BE_LYKENOX_TRAINED = True
+RESIDUAL_SELECTOR_TRAINING_CURRENTLY_AUTHORIZED = False
+RESIDUAL_PREDICTOR_CANDIDATE_SELECTED = False
 
-# Active next candidate: narrowly scoped excitation/residual prediction only.
-RESIDUAL_PREDICTOR_CANDIDATE_SELECTED = True
-RESIDUAL_PREDICTOR_SCOPE = "predict_owned_real_residual_detail_only"
-RESIDUAL_TARGET_SOURCE = "owned_real_residual_extracted_with_step3f_method"
-MINIMUM_PHASE_FILTER_PATH_FROZEN = True
-RESIDUAL_PREDICTOR_CPU_ONLY = True
-RESIDUAL_PREDICTOR_THIRD_PARTY_WEIGHTS_ALLOWED = False
-RESIDUAL_PREDICTOR_PRODUCT_ACCEPTANCE_REQUIRES_FULL_HELDOUT_LISTENING = True
-
-# Existing bounded end-to-end training/checkpoint creation stays blocked until the residual predictor
-# has its own target contract, bounded CPU smoke and oracle/full-utterance evidence.
+# Existing end-to-end training/checkpoint creation remains blocked until the codebook itself proves
+# sufficient audible held-out capacity. Metrics can reject but cannot grant this gate.
 TRAINING_BLOCKED_BY_SYNTHETIC_EXCITATION = True
 BOUNDED_MODEL_OPTIMIZER_CURRENTLY_AUTHORIZED = False
 SCOPED_NEW_CHECKPOINT_CURRENTLY_AUTHORIZED = False
 PRODUCTION_RENDERER_MODIFICATION_AUTHORIZED_BY_THIS_EVIDENCE = False
 
-NEXT_ACTION = "define_owned_real_residual_target_and_small_cpu_residual_predictor_then_oracle_validate_before_end_to_end_training"
+NEXT_ACTION = "build_owned_train_residual_codebook_then_run_heldout_celp_style_oracle_search_and_listen"
