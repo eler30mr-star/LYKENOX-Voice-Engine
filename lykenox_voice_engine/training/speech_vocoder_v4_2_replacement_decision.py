@@ -6,7 +6,7 @@ pretrained vocoder checkpoints are not an authorized product dependency, fallbac
 or replacement path.
 """
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v5"
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v6"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
@@ -50,15 +50,26 @@ V9_VERDICT = (
     "perceptually rejected and persistent training is forbidden."
 )
 
+CONDITIONING_FORENSICS_STATUS = "pass"
+CONDITIONING_FORENSIC_METRICS = {
+    "mean_all_voicing_disagreement_fraction": 0.026042,
+    "mean_all_periodicity_l1": 0.002821,
+    "mean_all_f0_mae_cents_on_common_voiced": 5.12231,
+    "mean_boundary_voicing_disagreement_fraction": 0.166667,
+    "mean_boundary_periodicity_l1": 0.045135,
+    "mean_boundary_f0_mae_cents_on_common_voiced": 79.25969,
+    "mean_interior_voicing_disagreement_fraction": 0.016667,
+    "mean_interior_periodicity_l1": 0.0,
+    "mean_interior_f0_mae_cents_on_common_voiced": 0.0,
+}
 CONDITIONING_FORENSIC_FINDING = (
-    "Historical vocoder segment training re-extracted F0/voicing from each waveform crop, "
-    "while the acoustic model is supervised from the versioned full-utterance pitch cache. "
-    "Crop-local extraction changes reflected boundary context and the RMS-relative voicing "
-    "threshold. New vocoder work must slice mel/F0/voicing from the same full-utterance "
-    "frame origin before any architecture is selected."
+    "Historical v1 crop-local pitch conditioning was measurably inconsistent with the "
+    "owned full-utterance pitch cache, predominantly at crop boundaries: 16.6667% mean "
+    "boundary voicing disagreement and 79.25969 cents mean boundary F0 error, versus 0 "
+    "cents and exact periodicity in the interior. The corrected v2 contract was verified "
+    "as an exact slice of the same hashed full-utterance pitch cache used by the acoustic "
+    "model. V1 remains historical only; all future vocoder work must use v2."
 )
 
 NEXT_ARCHITECTURE = "undecided_after_owned_pipeline_forensics"
-NEXT_GATE = (
-    "run_owned_vocoder_conditioning_pipeline_forensics_before_loss_or_architecture_work"
-)
+NEXT_GATE = "audit_owned_vocoder_loss_edge_and_objective_semantics"
