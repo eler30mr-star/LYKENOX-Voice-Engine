@@ -1,4 +1,4 @@
-"""Frozen engineering decision after direct v4.2/V8/V9 vocoder forensics.
+"""Frozen engineering decision after direct v4.2/V8/V9 and owned-pipeline forensics.
 
 LYKENOX is an identity-voice product intended for distribution. The vocoder architecture,
 training state, and distributable model weights must remain LYKENOX-owned. Third-party
@@ -6,7 +6,7 @@ pretrained vocoder checkpoints are not an authorized product dependency, fallbac
 or replacement path.
 """
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v6"
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v7"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
@@ -21,6 +21,9 @@ DISTRIBUTION_REQUIRES_LYKENOX_OWNED_WEIGHTS = True
 NEW_VOCODER_ARCHITECTURE_AUTHORIZED = False
 OWNED_VOCODER_DATA_CONTRACT = (
     "vocoder-segment-v2-full-utterance-mel-pitch-conditioning"
+)
+OWNED_VOCODER_LOSS_CONTRACT = (
+    "owned-vocoder-loss-v2-valid-context-conditioning-aligned"
 )
 
 FORENSIC_BASELINE = {
@@ -71,5 +74,35 @@ CONDITIONING_FORENSIC_FINDING = (
     "model. V1 remains historical only; all future vocoder work must use v2."
 )
 
+LOSS_EDGE_FORENSICS_STATUS = "pass"
+LOSS_EDGE_FORENSIC_METRICS = {
+    "mel_crop_local_frame_count": 65,
+    "mel_conditioning_frame_count": 64,
+    "mel_extra_terminal_frame_without_conditioning": True,
+    "mean_mel_all_log_l1": 0.00786993,
+    "mean_mel_artificial_log_l1": 0.16789168,
+    "mean_mel_interior_log_l1": 0.00000001,
+    "stft_256_64_mean_artificial_context_fraction": 0.0155642,
+    "stft_256_64_mean_artificial_log_magnitude_l1": 0.5867609,
+    "stft_256_64_mean_interior_log_magnitude_l1": 0.0,
+    "stft_512_128_mean_artificial_context_fraction": 0.03100775,
+    "stft_512_128_mean_artificial_log_magnitude_l1": 0.57506599,
+    "stft_512_128_mean_interior_log_magnitude_l1": 0.0,
+    "stft_1024_256_mean_artificial_context_fraction": 0.06153846,
+    "stft_1024_256_mean_artificial_log_magnitude_l1": 0.5766321,
+    "stft_1024_256_mean_interior_log_magnitude_l1": 0.0,
+}
+LOSS_EDGE_FORENSIC_FINDING = (
+    "Historical centered crop-local spectral losses supervised artificial reflected context "
+    "at crop boundaries even though full-utterance context exists in the owned dataset. "
+    "Across all three STFT resolutions the measured interior log-magnitude discrepancy "
+    "was exactly 0 while artificial boundary frames were about 0.57 log-L1. The historical "
+    "crop-local mel analysis also produced 65 frames for 64 conditioning frames, including "
+    "one terminal frame with no conditioning authority. Future owned vocoder objectives "
+    "must score only centered frames with complete crop context and compare generated mel "
+    "directly to the cached 64-frame conditioning grid. Historical V1 losses remain frozen "
+    "for reproducibility only."
+)
+
 NEXT_ARCHITECTURE = "undecided_after_owned_pipeline_forensics"
-NEXT_GATE = "audit_owned_vocoder_loss_edge_and_objective_semantics"
+NEXT_GATE = "run_owned_vocoder_loss_v2_target_consistency_audit_before_architecture_selection"
