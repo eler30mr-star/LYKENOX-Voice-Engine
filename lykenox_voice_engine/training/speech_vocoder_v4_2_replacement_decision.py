@@ -6,7 +6,7 @@ pretrained vocoder checkpoints are not an authorized product dependency, fallbac
 or replacement path.
 """
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v14"
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v15"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
@@ -19,10 +19,15 @@ THIRD_PARTY_PRETRAINED_VOCODER_AUTHORIZED = False
 THIRD_PARTY_VOCODER_CHECKPOINT_AUTHORIZED = False
 DISTRIBUTION_REQUIRES_LYKENOX_OWNED_WEIGHTS = True
 
-# Data/loss/architecture/renderer/predictor and the two-update optimizer smoke are frozen.
-# The smoke is consumed; only the read-only parameter/Jacobian authority audit is open.
+# The waveform-space v1 loss-weight contract remains frozen as valid historical evidence,
+# but the minimum-phase Jacobian audit proved it is not authority-compatible for training
+# this architecture. Only a read-only cepstrum-derived / parameter-cross-checked v2 weight
+# recalibration is open. No optimizer, longer smoke, trainer, checkpoint, or persistent
+# training is authorized.
 LOSS_WEIGHT_CONTRACT_AUTHORIZED = True
 LOSS_V2_WEIGHT_CONTRACT_FROZEN = True
+LOSS_V2_WEIGHT_CONTRACT_V1_ARCHITECTURE_COMPATIBLE = False
+ACTIVE_ARCHITECTURE_WEIGHT_CONTRACT_AUTHORIZED = False
 MODEL_INSTANTIATION_AUTHORIZED = True
 FRAME_RATE_CEPSTRAL_PREDICTOR_IMPLEMENTATION_AUTHORIZED = True
 BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED = False
@@ -31,7 +36,10 @@ BOUNDED_OPTIMIZER_SMOKE_SEGMENT_FRAMES = 32
 BOUNDED_OPTIMIZER_SMOKE_MAX_ITEMS = 1
 BOUNDED_OPTIMIZER_SMOKE_STATUS = "pass"
 BOUNDED_OPTIMIZER_SMOKE_CONSUMED = True
-PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED = True
+PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED = False
+PARAMETER_SPACE_GRADIENT_AUDIT_STATUS = "pass"
+ARCHITECTURE_WEIGHT_RECALIBRATION_AUDIT_AUTHORIZED = True
+ARCHITECTURE_WEIGHT_CONTRACT_V2_AUTHORIZED = False
 EXTENDED_TRAINABILITY_SMOKE_AUTHORIZED = False
 OPTIMIZER_CREATION_AUTHORIZED = False
 TRAINER_IMPLEMENTATION_AUTHORIZED = False
@@ -53,6 +61,12 @@ OWNED_VOCODER_LOSS_WEIGHT_CONTRACT = "owned-vocoder-loss-v2-weight-contract-v1"
 OWNED_VOCODER_ARCHITECTURE_CONTRACT = "owned-vocoder-architecture-contract-v1"
 OWNED_STATIC_RENDERER = "owned-minimum-phase-time-varying-renderer-v1"
 OWNED_FRAME_RATE_PREDICTOR = "lykenox_owned_frame_rate_cepstral_predictor_v1"
+ARCHITECTURE_WEIGHT_RECALIBRATION_AUDIT_VERSION = (
+    "owned-minimum-phase-architecture-weight-recalibration-audit-v1"
+)
+ARCHITECTURE_WEIGHT_RECALIBRATION_CANDIDATE_VERSION = (
+    "owned-vocoder-loss-v2-minimum-phase-weight-contract-v2-candidate"
+)
 HISTORICAL_PRESENCE_EDGE_SEMANTICS_REJECTED = True
 
 FORENSIC_BASELINE = {
@@ -293,8 +307,9 @@ LOSS_V2_WEIGHT_CONTRACT_FINDING = (
     "alignment remained positive (minimum 0.271811), every first-order descent dot remained "
     "positive, and maximum single-objective authority remained bounded at 57.5682%. The "
     "rounded candidate tracks the rederived equalization weights to far below 0.5% relative "
-    "error. The weight contract is therefore frozen as v1. Any change or adaptive "
-    "reweighting requires a new explicit contract version and audit."
+    "error. The weight contract is therefore frozen as v1 in its original waveform-space "
+    "calibration. The later architecture Jacobian audit does not alter that historical fact; "
+    "it proves v1 must not be used as the active training weights for the minimum-phase path."
 )
 
 ARCHITECTURE_CONTRACT_STATUS = "pass"
@@ -324,8 +339,7 @@ STATIC_RENDERER_SAFETY_FINDING = (
     "numerically exact, a flat envelope is exact identity, an attenuating filter suppresses "
     "the excitation without a source bypass, output length is exactly frames*256, same-seed "
     "excitation is deterministic, and paired voiced/unvoiced grid-excess metrics remain far "
-    "below the severe-grid thresholds. This authorizes frame-rate predictor instantiation "
-    "only; it does not authorize persistent training or a checkpoint."
+    "below the severe-grid thresholds."
 )
 
 FRAME_RATE_PREDICTOR_STRUCTURAL_STATUS = "pass"
@@ -349,8 +363,7 @@ FRAME_RATE_PREDICTOR_STRUCTURAL_FINDING = (
     "Its zero-initialized output is exactly neutral, the fixed renderer remains exact "
     "identity with exact frames*256 length, no frame-grid excess is introduced at neutral "
     "initialization, and all 30 trainable parameter tensors receive finite non-zero gradient "
-    "in the deterministic connectivity probe. This opened only the explicit two-update "
-    "real-data optimizer smoke; persistent training remained forbidden."
+    "in the deterministic connectivity probe."
 )
 
 BOUNDED_OPTIMIZER_SMOKE_VERSION = "owned-minimum-phase-bounded-optimizer-smoke-v1"
@@ -388,12 +401,67 @@ BOUNDED_OPTIMIZER_SMOKE_FINDING = (
     "by 0.1191%, parameters moved by L2=0.0004, exact output length and grid safety remained "
     "intact, and protected checkpoints were unchanged. However, raw parameter-gradient norms "
     "were about 581 against a clip limit of 1.0 on both steps, and the envelope term increased "
-    "slightly while the total decreased through reconstruction/presence/balance. This is "
-    "valid minimum trainability evidence but not sufficient to authorize a longer smoke. The "
-    "next gate must audit frozen objective authority after the renderer/predictor Jacobians."
+    "slightly while the total decreased. This required the later Jacobian authority audit."
+)
+
+PARAMETER_SPACE_GRADIENT_AUDIT_VERSION = (
+    "owned-minimum-phase-parameter-gradient-authority-audit-v1"
+)
+PARAMETER_SPACE_GRADIENT_AUDIT_TEST_COUNT = 41
+PARAMETER_SPACE_GRADIENT_AUDIT_PROBE_COUNT = 8
+PARAMETER_SPACE_GRADIENT_AUDIT_METRICS = {
+    "neutral_mean_weighted_gradient_norm_shares": {
+        "reconstruction": 0.046928433266268124,
+        "envelope": 0.009529865430589276,
+        "presence": 0.234379802425534,
+        "spectral_balance": 0.7091618988776086,
+    },
+    "neutral_minimum_combined_gradient_alignment_cosines": {
+        "reconstruction": 0.08097482472658157,
+        "envelope": -0.3273468315601349,
+        "presence": 0.8204574584960938,
+        "spectral_balance": 0.976812481880188,
+    },
+    "neutral_minimum_first_order_descent_dots": {
+        "reconstruction": 478.39349365234375,
+        "envelope": -387.89593505859375,
+        "presence": 2462.26708984375,
+        "spectral_balance": 2270.551025390625,
+    },
+    "neutral_mean_combined_gradient_norm": 524.2026596069336,
+    "neutral_mean_clip_scale_if_max_norm_1": 0.0019496183077621803,
+    "neutral_maximum_weighted_gradient_norm_share": 0.765470299656555,
+    "connected_mean_weighted_gradient_norm_shares": {
+        "reconstruction": 0.046930590150991255,
+        "envelope": 0.009529655236837993,
+        "presence": 0.2343777644546192,
+        "spectral_balance": 0.7091619901575515,
+    },
+    "connected_minimum_envelope_alignment": -0.32732290029525757,
+    "connected_minimum_envelope_descent_dot": -387.87164306640625,
+    "connected_mean_combined_gradient_norm": 524.2039108276367,
+    "connected_mean_clip_scale_if_max_norm_1": 0.00194961708097689,
+    "connected_maximum_weighted_gradient_norm_share": 0.7654694679457218,
+    "cepstrum_neutral_mean_weighted_gradient_norm_shares": {
+        "reconstruction": 0.04117481310162209,
+        "envelope": 0.008032201568982572,
+        "presence": 0.1949435194527072,
+        "spectral_balance": 0.7558494658766881,
+    },
+    "cepstrum_neutral_minimum_envelope_alignment": -0.2579599916934967,
+    "cepstrum_connected_minimum_envelope_alignment": -0.2580244839191437,
+}
+PARAMETER_SPACE_GRADIENT_AUDIT_FINDING = (
+    "The read-only Jacobian audit passed as a valid measurement but rejected waveform-space "
+    "weight contract v1 for active minimum-phase training. In cepstrum space spectral balance "
+    "holds 75.5849% mean weighted authority while envelope holds 0.8032%, and envelope can be "
+    "anti-aligned with the combined direction (minimum cosine about -0.258). Parameter space "
+    "repeats the failure: spectral balance about 70.9162%, envelope about 0.9530%, minimum "
+    "envelope alignment about -0.327 and negative first-order descent dot. Because the defect "
+    "already exists before the predictor, LR/clip changes cannot repair the objective geometry."
 )
 
 NEXT_ARCHITECTURE = "owned_minimum_phase_time_varying_filter_over_neutral_excitation"
 NEXT_GATE = (
-    "audit_owned_predictor_parameter_space_loss_v2_authority_before_extended_trainability"
+    "audit_owned_minimum_phase_architecture_coupled_loss_v2_weight_recalibration"
 )
