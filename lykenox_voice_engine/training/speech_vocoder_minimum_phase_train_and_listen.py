@@ -1,8 +1,8 @@
 """One-shot owned minimum-phase train -> complete held-out listening pipeline.
 
-The command runs the scoped CPU-only candidate path.  The trainer performs its V2 authority
-preflight internally before creating an optimizer.  Only a validation-selected ``best.pt``
-may be rendered for listening.  Metrics never accept product voice quality.
+Fresh runs derive and verify one fixed directional loss-weight vector before any model
+optimizer exists.  If no static common-descent vector is verified, the command blocks without
+training.  If training passes, only validation-selected best.pt is rendered for listening.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from pathlib import Path
 from lykenox_voice_engine.training.speech_vocoder_minimum_phase_heldout_audio import (
     render_heldout_audio,
 )
-from lykenox_voice_engine.training.speech_vocoder_minimum_phase_train_v2 import (
+from lykenox_voice_engine.training.speech_vocoder_minimum_phase_train_v3 import (
     DEFAULT_BATCH_SIZE,
     DEFAULT_GRAD_CLIP,
     DEFAULT_LEARNING_RATE,
@@ -23,14 +23,14 @@ from lykenox_voice_engine.training.speech_vocoder_minimum_phase_train_v2 import 
     DEFAULT_TRAIN_ITEMS,
     DEFAULT_VAL_ITEMS,
     TRAINER_VERSION,
-    run_minimum_phase_training_v2,
+    run_minimum_phase_training_v3,
 )
-from lykenox_voice_engine.training.speech_vocoder_minimum_phase_train_and_listen_contract import (
+from lykenox_voice_engine.training.speech_vocoder_minimum_phase_train_and_listen_contract_v2 import (
     CONTRACT_VERSION as TRAIN_AND_LISTEN_CONTRACT_VERSION,
 )
 
 
-PIPELINE_VERSION = "owned-minimum-phase-train-and-listen-v2"
+PIPELINE_VERSION = "owned-minimum-phase-train-and-listen-v3-directional-fixed"
 
 
 def run_train_and_listen(
@@ -47,7 +47,7 @@ def run_train_and_listen(
     heldout_items: int = 5,
 ) -> dict[str, object]:
     root = Path(root).resolve()
-    training = run_minimum_phase_training_v2(
+    training = run_minimum_phase_training_v3(
         root,
         max_updates=max_updates,
         max_updates_this_run=max_updates_this_run,
@@ -71,7 +71,7 @@ def run_train_and_listen(
 
     best_checkpoint = training.get("best_checkpoint")
     if not isinstance(best_checkpoint, str) or not best_checkpoint:
-        raise RuntimeError("training reported pass without a validation-selected best checkpoint")
+        raise RuntimeError("training reported pass without validation-selected best.pt")
     heldout = render_heldout_audio(
         root,
         checkpoint=Path(best_checkpoint),
