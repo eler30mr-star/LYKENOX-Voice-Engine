@@ -16,17 +16,18 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         self.assertFalse(decision.THIRD_PARTY_VOCODER_CHECKPOINT_AUTHORIZED)
         self.assertTrue(decision.DISTRIBUTION_REQUIRES_LYKENOX_OWNED_WEIGHTS)
 
-    def test_only_bounded_optimizer_smoke_is_open(self) -> None:
+    def test_only_parameter_space_gradient_audit_is_open(self) -> None:
         self.assertTrue(decision.LOSS_WEIGHT_CONTRACT_AUTHORIZED)
         self.assertTrue(decision.LOSS_V2_WEIGHT_CONTRACT_FROZEN)
         self.assertFalse(decision.NEW_VOCODER_ARCHITECTURE_AUTHORIZED)
         self.assertFalse(decision.SCRATCH_VOCODER_ITERATION_AUTHORIZED)
         self.assertTrue(decision.FRAME_RATE_CEPSTRAL_PREDICTOR_IMPLEMENTATION_AUTHORIZED)
         self.assertTrue(decision.MODEL_INSTANTIATION_AUTHORIZED)
-        self.assertTrue(decision.BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED)
-        self.assertEqual(decision.BOUNDED_OPTIMIZER_SMOKE_MAX_UPDATES, 2)
-        self.assertEqual(decision.BOUNDED_OPTIMIZER_SMOKE_SEGMENT_FRAMES, 32)
-        self.assertEqual(decision.BOUNDED_OPTIMIZER_SMOKE_MAX_ITEMS, 1)
+        self.assertEqual(decision.BOUNDED_OPTIMIZER_SMOKE_STATUS, "pass")
+        self.assertTrue(decision.BOUNDED_OPTIMIZER_SMOKE_CONSUMED)
+        self.assertFalse(decision.BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED)
+        self.assertTrue(decision.PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED)
+        self.assertFalse(decision.EXTENDED_TRAINABILITY_SMOKE_AUTHORIZED)
         self.assertFalse(decision.OPTIMIZER_CREATION_AUTHORIZED)
         self.assertFalse(decision.TRAINER_IMPLEMENTATION_AUTHORIZED)
         self.assertFalse(decision.PERSISTENT_TRAINING_AUTHORIZED)
@@ -38,7 +39,7 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         )
         self.assertEqual(
             decision.NEXT_GATE,
-            "prove_owned_predictor_real_data_bounded_optimizer_descent_without_grid_or_checkpoint_regression",
+            "audit_owned_predictor_parameter_space_loss_v2_authority_before_extended_trainability",
         )
 
     def test_owned_pipeline_contracts_are_exact(self) -> None:
@@ -72,7 +73,7 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         )
         self.assertTrue(decision.HISTORICAL_PRESENCE_EDGE_SEMANTICS_REJECTED)
 
-    def test_all_pre_optimizer_gates_are_recorded_pass(self) -> None:
+    def test_all_completed_gates_are_recorded_pass(self) -> None:
         self.assertEqual(decision.CONDITIONING_FORENSICS_STATUS, "pass")
         self.assertEqual(decision.LOSS_EDGE_FORENSICS_STATUS, "pass")
         self.assertEqual(decision.LOSS_V2_TARGET_CONSISTENCY_STATUS, "pass")
@@ -86,8 +87,24 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         self.assertEqual(decision.STATIC_RENDERER_SAFETY_TEST_COUNT, 24)
         self.assertEqual(decision.FRAME_RATE_PREDICTOR_STRUCTURAL_STATUS, "pass")
         self.assertEqual(decision.FRAME_RATE_PREDICTOR_STRUCTURAL_TEST_COUNT, 36)
+        self.assertEqual(decision.BOUNDED_OPTIMIZER_SMOKE_STATUS, "pass")
+        self.assertEqual(decision.BOUNDED_OPTIMIZER_SMOKE_TEST_COUNT, 33)
 
-    def test_predictor_structural_evidence_supports_bounded_smoke_only(self) -> None:
+    def test_bounded_optimizer_evidence_requires_jacobian_review_before_scaling(self) -> None:
+        metrics = decision.BOUNDED_OPTIMIZER_SMOKE_METRICS
+        self.assertEqual(metrics["update_count"], 2)
+        self.assertLess(metrics["final_total"], metrics["initial_total"])
+        self.assertGreater(metrics["final_envelope"], metrics["initial_envelope"])
+        self.assertGreater(metrics["update_1_raw_gradient_norm"], 500.0)
+        self.assertGreater(metrics["update_2_raw_gradient_norm"], 500.0)
+        self.assertEqual(metrics["parameter_delta_norm"], 0.0004)
+        self.assertFalse(metrics["severe_grid_excess"])
+        self.assertTrue(metrics["checkpoints_unchanged"])
+        self.assertTrue(decision.PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED)
+        self.assertFalse(decision.EXTENDED_TRAINABILITY_SMOKE_AUTHORIZED)
+        self.assertFalse(decision.PERSISTENT_TRAINING_AUTHORIZED)
+
+    def test_predictor_structural_evidence_remains_valid(self) -> None:
         metrics = decision.FRAME_RATE_PREDICTOR_STRUCTURAL_METRICS
         self.assertEqual(metrics["predictor_output_shape"], (2, 48, 64))
         self.assertEqual(metrics["maximum_abs_initial_cepstrum"], 0.0)
@@ -96,9 +113,6 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         self.assertEqual(metrics["actual_waveform_samples"], 12288)
         self.assertEqual(metrics["connected_nonzero_gradient_tensor_count"], 30)
         self.assertEqual(metrics["trainable_parameter_tensor_count"], 30)
-        self.assertTrue(decision.BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED)
-        self.assertFalse(decision.TRAINER_IMPLEMENTATION_AUTHORIZED)
-        self.assertFalse(decision.PERSISTENT_TRAINING_AUTHORIZED)
 
     def test_renderer_safety_evidence_remains_valid(self) -> None:
         metrics = decision.STATIC_RENDERER_SAFETY_METRICS
