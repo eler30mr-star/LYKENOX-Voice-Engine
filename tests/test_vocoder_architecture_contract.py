@@ -13,6 +13,14 @@ class VocoderArchitectureContractTests(unittest.TestCase):
             contract.OWNED_VOCODER_ARCHITECTURE_CONTRACT_VERSION,
             "owned-vocoder-architecture-contract-v1",
         )
+        self.assertEqual(contract.ARCHITECTURE_CONTRACT_VALIDATION_STATUS, "pass")
+        self.assertEqual(contract.ARCHITECTURE_CONTRACT_VALIDATION_TEST_COUNT, 21)
+        self.assertEqual(
+            contract.STATIC_RENDERER_VERSION,
+            "owned-minimum-phase-time-varying-renderer-v1",
+        )
+        self.assertTrue(contract.STATIC_RENDERER_SAFETY_AUDIT_REQUIRED)
+        self.assertEqual(contract.STATIC_RENDERER_SAFETY_AUDIT_STATUS, "pending")
         self.assertEqual(
             contract.SELECTED_ARCHITECTURE_FAMILY,
             "owned_minimum_phase_time_varying_filter_over_neutral_excitation",
