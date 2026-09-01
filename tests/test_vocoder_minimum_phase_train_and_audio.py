@@ -13,6 +13,7 @@ from lykenox_voice_engine.models.vocoder.network_minimum_phase_v1 import (
 from lykenox_voice_engine.training import speech_vocoder_minimum_phase_artifact as artifact
 from lykenox_voice_engine.training import speech_vocoder_minimum_phase_heldout_audio as heldout
 from lykenox_voice_engine.training import speech_vocoder_minimum_phase_train as trainer
+from lykenox_voice_engine.training import speech_vocoder_minimum_phase_train_and_listen as pipeline
 from lykenox_voice_engine.training.speech_vocoder_minimum_phase_objective import (
     ACTIVE_LOSS_WEIGHT_CONTRACT_VERSION,
 )
@@ -119,10 +120,23 @@ class MinimumPhaseTrainAndAudioTests(unittest.TestCase):
         self.assertIn('subtype="float"', source)
         self.assertIn('"metrics_accept_voice_quality": false', source)
         self.assertIn('"product_acceptance_requires_human_listening": true', source)
+        self.assertIn("collect_owned_vocoder_utterances", source)
+        self.assertIn("expected_samples = utterance.mel_frames * hop_length", source)
         self.assertNotIn("normalize(", source)
         self.assertNotIn("equalizer", source)
         self.assertNotIn("denoise", source.replace("posthoc_denoising_used", ""))
         self.assertNotIn("from_pretrained", source)
+
+    def test_one_shot_pipeline_trains_then_renders_complete_val_audio(self) -> None:
+        source = inspect.getsource(pipeline)
+        lowered = source.lower()
+        self.assertIn("run_minimum_phase_training", source)
+        self.assertIn("render_heldout_audio", source)
+        self.assertIn('split="val"', source)
+        self.assertIn('"ready_for_listening"', source)
+        self.assertIn('"metrics_accept_voice_quality": False', source)
+        self.assertNotIn("speech_vocoder_loss_v2_weight_contract", lowered)
+        self.assertNotIn("from_pretrained", lowered)
 
 
 if __name__ == "__main__":
