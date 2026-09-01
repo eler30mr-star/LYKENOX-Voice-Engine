@@ -92,14 +92,32 @@ class VocoderArchitectureContractTests(unittest.TestCase):
         self.assertTrue(contract.REFERENCE_ENVELOPE_ORACLE_DIAGNOSTIC_REQUIRED)
         self.assertFalse(contract.REFERENCE_ENVELOPE_ORACLE_PRODUCT_PATH_AUTHORIZED)
 
-    def test_only_bounded_optimizer_smoke_is_authorized(self) -> None:
+    def test_bounded_optimizer_smoke_is_recorded_pass_and_consumed(self) -> None:
+        self.assertEqual(
+            contract.BOUNDED_OPTIMIZER_SMOKE_VERSION,
+            "owned-minimum-phase-bounded-optimizer-smoke-v1",
+        )
+        self.assertEqual(contract.BOUNDED_OPTIMIZER_SMOKE_STATUS, "pass")
+        self.assertEqual(contract.BOUNDED_OPTIMIZER_SMOKE_TEST_COUNT, 33)
+        self.assertTrue(contract.BOUNDED_OPTIMIZER_SMOKE_CONSUMED)
+        self.assertTrue(contract.BOUNDED_OPTIMIZER_TOTAL_DESCENT_CONFIRMED)
+        self.assertTrue(contract.BOUNDED_OPTIMIZER_CLIP_REGIME_REVIEW_REQUIRED)
+        self.assertTrue(contract.BOUNDED_OPTIMIZER_ENVELOPE_LOCAL_INCREASE_OBSERVED)
+        evidence = contract.BOUNDED_OPTIMIZER_SMOKE_EVIDENCE
+        self.assertEqual(evidence["max_updates"], 2)
+        self.assertLess(evidence["final_total"], evidence["initial_total"])
+        self.assertGreater(evidence["final_envelope"], evidence["initial_envelope"])
+        self.assertGreater(evidence["update_1_raw_gradient_norm"], 500.0)
+        self.assertGreater(evidence["update_2_raw_gradient_norm"], 500.0)
+        self.assertTrue(evidence["checkpoints_unchanged"])
+
+    def test_only_parameter_space_gradient_audit_is_open_now(self) -> None:
         self.assertTrue(contract.STATIC_RENDERER_IMPLEMENTATION_AUTHORIZED)
         self.assertTrue(contract.FRAME_RATE_CEPSTRAL_PREDICTOR_IMPLEMENTATION_AUTHORIZED)
         self.assertTrue(contract.MODEL_INSTANTIATION_AUTHORIZED)
-        self.assertTrue(contract.BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED)
-        self.assertEqual(contract.BOUNDED_OPTIMIZER_SMOKE_MAX_UPDATES, 2)
-        self.assertEqual(contract.BOUNDED_OPTIMIZER_SMOKE_SEGMENT_FRAMES, 32)
-        self.assertEqual(contract.BOUNDED_OPTIMIZER_SMOKE_MAX_ITEMS, 1)
+        self.assertFalse(contract.BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED)
+        self.assertTrue(contract.PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED)
+        self.assertFalse(contract.EXTENDED_TRAINABILITY_SMOKE_AUTHORIZED)
         self.assertFalse(contract.OPTIMIZER_CREATION_AUTHORIZED)
         self.assertFalse(contract.TRAINER_IMPLEMENTATION_AUTHORIZED)
         self.assertFalse(contract.PERSISTENT_TRAINING_AUTHORIZED)
@@ -108,7 +126,7 @@ class VocoderArchitectureContractTests(unittest.TestCase):
         self.assertTrue(contract.FULL_HELD_OUT_AUDIO_REQUIRED_FOR_PRODUCT_ACCEPTANCE)
         self.assertEqual(
             contract.NEXT_GATE,
-            "prove_owned_predictor_real_data_bounded_optimizer_descent_without_grid_or_checkpoint_regression",
+            "audit_owned_predictor_parameter_space_loss_v2_authority_before_extended_trainability",
         )
 
     def test_contract_has_no_model_or_training_implementation(self) -> None:
