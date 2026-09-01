@@ -1,13 +1,17 @@
-"""Current minimum-phase vocoder decision after the failed v2 authority preflight.
+"""Current minimum-phase vocoder decision after directional and real-residual diagnostics.
 
 This file supersedes the open-gate state recorded in the earlier architecture contract without
-rewriting historical evidence.  The v2 equal-norm weight candidate is rejected for training
-because real owned probes showed negative common-direction alignments/descent dots.  The only
-active path is deterministic pre-training directional calibration -> disjoint verification ->
-one fixed run weight vector -> bounded CPU training -> complete held-out listening.
+rewriting historical evidence. The v2 equal-norm weight candidate remains rejected because real
+owned probes showed negative common-direction alignments/descent dots.
+
+Subsequent pure-DSP oracle diagnostics isolated the dominant audible degradation. Removing the
+synthetic pulse+noise excitation and resynthesizing with the owned real residual produced a clean,
+natural result reported by the owner as sounding like the original voice audio. Therefore bounded
+training is currently blocked until the LYKENOX-owned synthetic excitation path is redesigned and
+passes its own oracle/full-utterance listening evidence.
 """
 
-DECISION_VERSION = "owned-minimum-phase-v3-directional-decision-v1"
+DECISION_VERSION = "owned-minimum-phase-v3-decision-v2-real-residual-evidence"
 POLICY_ID = "LYX-POL-001"
 SUPERSEDES_GATE_STATE_FROM = "owned-vocoder-architecture-contract-v1"
 ARCHITECTURE_FAMILY = "owned_minimum_phase_time_varying_filter_over_neutral_excitation"
@@ -41,9 +45,7 @@ DISJOINT_DIRECTIONAL_VERIFICATION_REQUIRED = True
 WEIGHTS_FIXED_FOR_WHOLE_RUN_AND_RESUME = True
 ADAPTIVE_REWEIGHTING_DURING_TRAINING_AUTHORIZED = False
 RUNTIME_REDERIVATION_AFTER_TRAINING_START_AUTHORIZED = False
-BOUNDED_MODEL_OPTIMIZER_AUTHORIZED_AFTER_VERIFIED_CALIBRATION_ONLY = True
 MAX_UPDATES_AUTHORIZED = 400
-SCOPED_NEW_CHECKPOINT_AUTHORIZED_AFTER_VERIFIED_CALIBRATION_ONLY = True
 GENERAL_PERSISTENT_TRAINING_AUTHORIZED = False
 THIRD_PARTY_MODEL_OR_CHECKPOINT_AUTHORIZED = False
 PREDICTED_DURATION_MODIFICATION_AUTHORIZED = False
@@ -53,4 +55,27 @@ POSTHOC_DENOISING_AUTHORIZED = False
 METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 FULL_HELD_OUT_AUDIO_REQUIRED_FOR_PRODUCT_ACCEPTANCE = True
 
-NEXT_ACTION = "run_integrated_directional_calibration_then_bounded_train_and_listen"
+# Pure-DSP renderer/excitation isolation evidence.
+REAL_RESIDUAL_DIAGNOSTIC_SCRIPT = "scripts/diagnostic_real_residual_resynthesis_v1.py"
+REAL_RESIDUAL_EVIDENCE_DOC = "docs/LYKENOX_VOCODER_MINIMUM_PHASE_REAL_RESIDUAL_EVIDENCE.md"
+REAL_RESIDUAL_MODEL_USED = False
+REAL_RESIDUAL_TRAINING_EXECUTED = False
+REAL_RESIDUAL_CHECKPOINT_USED = False
+REAL_RESIDUAL_SYNTHETIC_EXCITATION_USED = False
+REAL_RESIDUAL_HUMAN_LISTENING_RESULT = "clean_natural_matches_original_voice_audio"
+REAL_RESIDUAL_FILTER_ENVELOPE_PATH_STATUS = "clean_oracle_resynthesis_demonstrated"
+SYNTHETIC_EXCITATION_STATUS = "dominant_unresolved_perceptual_degradation"
+BAND_SPLIT_DIAGNOSTIC_STATUS = "partial_improvement_not_sufficient"
+CROSSFADE_DIAGNOSTIC_STATUS = "not_dominant_cause"
+GAUSSIAN_NOISE_DIAGNOSTIC_STATUS = "not_dominant_cause"
+LOW_CEPSTRAL_ORDER_DIAGNOSTIC_STATUS = "not_dominant_cause"
+
+# The historical bounded-training authorization is no longer the immediate executable action.
+# New evidence requires excitation redesign first so training does not optimize around a known
+# defective source path.
+TRAINING_BLOCKED_BY_SYNTHETIC_EXCITATION = True
+BOUNDED_MODEL_OPTIMIZER_CURRENTLY_AUTHORIZED = False
+SCOPED_NEW_CHECKPOINT_CURRENTLY_AUTHORIZED = False
+PRODUCTION_RENDERER_MODIFICATION_AUTHORIZED_BY_THIS_EVIDENCE = False
+
+NEXT_ACTION = "redesign_and_oracle_validate_owned_synthetic_excitation_before_any_bounded_training"
