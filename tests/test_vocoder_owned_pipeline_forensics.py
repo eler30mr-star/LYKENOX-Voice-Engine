@@ -57,14 +57,25 @@ class OwnedVocoderPipelineForensicsTests(unittest.TestCase):
 
     def test_forensics_is_read_only_and_blocks_model_work(self) -> None:
         source = inspect.getsource(audit)
+        source_lower = source.lower()
         run_source = inspect.getsource(audit.run_owned_vocoder_conditioning_forensics)
         self.assertEqual(
             audit.AUDIT_VERSION,
             "owned-vocoder-conditioning-pipeline-forensics-v1",
         )
-        self.assertNotIn("optimizer", source.lower())
-        self.assertNotIn("torch.save(", source)
-        self.assertNotIn("from_pretrained", source)
+        # Guard executable training mechanisms rather than incidental prose in docstrings.
+        # The audit may accurately say "no optimizer step" without that being evidence of
+        # optimizer creation or a parameter update.
+        for forbidden in (
+            "torch.optim.",
+            "optim.adam(",
+            "optim.adamw(",
+            ".backward(",
+            ".step(",
+        ):
+            self.assertNotIn(forbidden, source_lower)
+        self.assertNotIn("torch.save(", source_lower)
+        self.assertNotIn("from_pretrained", source_lower)
         self.assertIn('"training_started": False', run_source)
         self.assertIn('"persistent_training_authorized": False', run_source)
         self.assertIn('"new_vocoder_architecture_authorized": False', run_source)
