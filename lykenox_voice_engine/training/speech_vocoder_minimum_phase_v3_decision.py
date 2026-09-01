@@ -10,14 +10,16 @@ The calibrated Rosenberg pulse + measured four-band aperiodicity candidate is al
 owner reports that a local calibration based on 97,168 pitch-synchronous cycles still produced
 gangoso/rough held-out oracle audio.
 
-The first CELP-style capacity run has now completed locally. An owned-train real-residual codebook
-was built with 6,234 retained codewords across 58 buckets and used to generate three complete
-held-out oracle utterances on CPU. No selector training, optimizer, or checkpoint occurred. The
-codebook remains diagnostic and no selector training is authorized until the owner listens to all
-three oracle utterances against both the references and the clean real-residual ceiling.
+The first CELP-style codebook capacity run completed with 6,234 owned-train codewords across 58
+buckets, but its v1 listening output is not a valid perceptual gate because the diagnostic imposed
+an arbitrary maximum oracle gain of 4.0 and the resulting audio was reported too quiet to judge.
+The owned codebook itself is retained. A v2 level-valid oracle now separates codevector shape from
+excitation gain by selecting the best normalized-correlation codevector and matching target residual
+energy before the unchanged minimum-phase filter. No selector training is authorized until the owner
+listens to all three v2 utterances against both the references and the clean real-residual ceiling.
 """
 
-DECISION_VERSION = "owned-minimum-phase-v3-decision-v6-codebook-built-awaiting-listening"
+DECISION_VERSION = "owned-minimum-phase-v3-decision-v7-codebook-v2-level-valid-listening"
 POLICY_ID = "LYX-POL-001"
 SUPERSEDES_GATE_STATE_FROM = "owned-vocoder-architecture-contract-v1"
 ARCHITECTURE_FAMILY = "owned_minimum_phase_filter_over_owned_residual_codebook_candidate"
@@ -91,7 +93,8 @@ RESIDUAL_CODEBOOK_EXECUTION_EVIDENCE_DOC = (
     "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_ORACLE_EXECUTION_EVIDENCE.md"
 )
 RESIDUAL_CODEBOOK_MODULE = "lykenox_voice_engine/training/speech_residual_codebook_v1.py"
-RESIDUAL_CODEBOOK_ORACLE_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v1.py"
+RESIDUAL_CODEBOOK_ORACLE_V1_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v1.py"
+RESIDUAL_CODEBOOK_ORACLE_V2_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v2.py"
 RESIDUAL_CODEBOOK_SOURCE = "owned_train_real_residual_only"
 RESIDUAL_CODEBOOK_THIRD_PARTY_DATA_ALLOWED = False
 RESIDUAL_CODEBOOK_THIRD_PARTY_MODEL_OR_CHECKPOINT_ALLOWED = False
@@ -113,7 +116,22 @@ RESIDUAL_CODEBOOK_TRAINING_EXECUTED = False
 RESIDUAL_CODEBOOK_OPTIMIZER_CREATED = False
 RESIDUAL_CODEBOOK_CHECKPOINT_WRITTEN = False
 RESIDUAL_CODEBOOK_SELECTOR_TRAINING_AUTHORIZED_BY_RUN = False
-RESIDUAL_CODEBOOK_LISTENING_STATUS = "awaiting_owner_complete_heldout_listening"
+
+# V1 generated valid files but is invalid as a human listening gate because an arbitrary gain cap
+# made the result too quiet to judge. The codebook artifact is not rejected by this failure.
+RESIDUAL_CODEBOOK_ORACLE_V1_GAIN_CAP = 4.0
+RESIDUAL_CODEBOOK_ORACLE_V1_LISTENING_RESULT = "too_quiet_to_judge"
+RESIDUAL_CODEBOOK_ORACLE_V1_PERCEPTUAL_GATE_VALID = False
+RESIDUAL_CODEBOOK_ORACLE_V1_CODEBOOK_REJECTED = False
+
+# V2 removes the arbitrary cap and treats gain as an oracle excitation parameter before filtering.
+# This is not post-hoc output normalization and cannot be reused in product inference.
+RESIDUAL_CODEBOOK_ORACLE_V2_STATUS = "implemented_awaiting_owner_complete_heldout_listening"
+RESIDUAL_CODEBOOK_ORACLE_V2_SELECTION = "max_abs_normalized_correlation"
+RESIDUAL_CODEBOOK_ORACLE_V2_GAIN = "signed_target_energy_over_codeword_energy"
+RESIDUAL_CODEBOOK_ORACLE_V2_POSTHOC_OUTPUT_GAIN_NORMALIZATION = False
+RESIDUAL_CODEBOOK_ORACLE_V2_ORACLE_GAIN_VALID_FOR_PRODUCT = False
+RESIDUAL_CODEBOOK_LISTENING_STATUS = "awaiting_owner_level_valid_v2_complete_heldout_listening"
 
 # A literal CELP codec path is not selected for product inference because new-text TTS has no target
 # residual available for analysis-by-synthesis search. If the codebook oracle succeeds, a separate
@@ -131,4 +149,4 @@ BOUNDED_MODEL_OPTIMIZER_CURRENTLY_AUTHORIZED = False
 SCOPED_NEW_CHECKPOINT_CURRENTLY_AUTHORIZED = False
 PRODUCTION_RENDERER_MODIFICATION_AUTHORIZED_BY_THIS_EVIDENCE = False
 
-NEXT_ACTION = "listen_to_codebook_oracle_vs_reference_and_real_residual_ceiling_before_training_any_selector"
+NEXT_ACTION = "run_level_valid_residual_codebook_oracle_v2_and_listen_before_training_any_selector"
