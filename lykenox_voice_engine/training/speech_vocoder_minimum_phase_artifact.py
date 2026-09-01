@@ -1,9 +1,8 @@
 """Owned checkpoint artifact for the minimum-phase vocoder trainer.
 
 The artifact is self-describing and refuses cross-contract resume.  It stores model,
-optimizer, CPU/CUDA RNG, deterministic epoch position, run configuration and training
-history so a bounded run can resume exactly instead of silently changing data order or
-objective weights.
+optimizer, RNG, deterministic epoch position, run configuration and training history so a
+bounded run can resume exactly instead of silently changing data order or objective weights.
 """
 
 from __future__ import annotations
@@ -75,7 +74,6 @@ def save_minimum_phase_checkpoint(
         "model_state": model.state_dict(),
         "optimizer_state": optimizer.state_dict(),
         "torch_rng_state": torch.get_rng_state(),
-        "cuda_rng_state_all": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
     }
     temporary = path.with_suffix(path.suffix + ".tmp")
     torch.save(payload, temporary)
@@ -86,7 +84,6 @@ def load_minimum_phase_checkpoint(
     path: Path,
     *,
     expected_run_config: dict[str, object] | None = None,
-    device: torch.device | str = "cpu",
 ) -> tuple[
     LykenoxFrameRateCepstralPredictorV1,
     dict[str, Any],
@@ -104,27 +101,9 @@ def load_minimum_phase_checkpoint(
     if "optimizer_state" not in payload or "torch_rng_state" not in payload:
         raise RuntimeError("minimum-phase checkpoint is missing exact-resume state")
 
-    model = LykenoxFrameRateCepstralPredictorV1().to(torch.device(device))
+    model = LykenoxFrameRateCepstralPredictorV1().cpu()
     model.load_state_dict(payload["model_state"], strict=True)
     return model, payload
-
-
-def move_optimizer_state_to_device(
-    optimizer: torch.optim.Optimizer,
-    device: torch.device | str,
-) -> None:
-    target = torch.device(device)
-    for state in optimizer.state.values():
-        for key, value in list(state.items()):
-            if torch.is_tensor(value):
-                state[key] = value.to(target)
-
-
-def restore_rng_state(payload: dict[str, Any]) -> None:
-    torch.set_rng_state(payload["torch_rng_state"].cpu())
-    cuda_states = payload.get("cuda_rng_state_all")
-    if cuda_states is not None and torch.cuda.is_available():
-        torch.cuda.set_rng_state_all([state.cpu() for state in cuda_states])
 
 
 __all__ = [
@@ -132,6 +111,4 @@ __all__ = [
     "checkpoint_contract",
     "save_minimum_phase_checkpoint",
     "load_minimum_phase_checkpoint",
-    "move_optimizer_state_to_device",
-    "restore_rng_state",
 ]
