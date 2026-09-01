@@ -16,6 +16,11 @@ from __future__ import annotations
 
 
 OWNED_VOCODER_ARCHITECTURE_CONTRACT_VERSION = "owned-vocoder-architecture-contract-v1"
+ARCHITECTURE_CONTRACT_VALIDATION_STATUS = "pass"
+ARCHITECTURE_CONTRACT_VALIDATION_TEST_COUNT = 21
+STATIC_RENDERER_VERSION = "owned-minimum-phase-time-varying-renderer-v1"
+STATIC_RENDERER_SAFETY_AUDIT_REQUIRED = True
+STATIC_RENDERER_SAFETY_AUDIT_STATUS = "pending"
 SELECTED_ARCHITECTURE_FAMILY = (
     "owned_minimum_phase_time_varying_filter_over_neutral_excitation"
 )
