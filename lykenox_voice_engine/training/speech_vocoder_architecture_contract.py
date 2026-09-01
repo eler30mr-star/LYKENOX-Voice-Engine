@@ -1,14 +1,15 @@
-"""Owned LYKENOX vocoder architecture contract after fixed-renderer safety proof.
+"""Owned LYKENOX vocoder architecture contract after predictor structural proof.
 
-The owned architecture family and fixed minimum-phase renderer have now passed their
-structural gates.  This contract therefore authorizes exactly one additional capability:
-instantiation of the frame-rate cepstral envelope predictor.  It still does not authorize an
-optimizer, training, a new checkpoint, or product-quality acceptance.
+The owned architecture family, fixed minimum-phase renderer, and frame-rate cepstral
+predictor have passed their structural gates.  This contract now authorizes exactly one
+additional capability: an ephemeral, tightly bounded optimizer smoke over owned V2 data.
+It still does not authorize a trainer, persistent training, checkpoint creation, or
+product-quality acceptance.
 
 The selected family keeps pitch timing information while excluding the historical shortcuts
 that allowed a carrier, learned upsampler, or frame-phase representation to dominate the
-waveform.  Voice identity must be carried by a learned time-varying spectral envelope/filter
-trained only from LYKENOX-owned data.  Excitation remains fixed, spectrally neutral, and has
+waveform. Voice identity must be carried by a learned time-varying spectral envelope/filter
+trained only from LYKENOX-owned data. Excitation remains fixed, spectrally neutral, and has
 no direct output bypass.
 """
 
@@ -37,6 +38,25 @@ STATIC_RENDERER_SAFETY_EVIDENCE = {
     "voiced_grid_harmonic_power_fraction_excess": 0.00040792484893605215,
     "same_seed_max_abs_error": 0.0,
 }
+FRAME_RATE_PREDICTOR_ARCHITECTURE = "lykenox_owned_frame_rate_cepstral_predictor_v1"
+FRAME_RATE_PREDICTOR_STRUCTURAL_SMOKE_VERSION = (
+    "owned-frame-rate-cepstral-predictor-structural-smoke-v1"
+)
+FRAME_RATE_PREDICTOR_STRUCTURAL_SMOKE_STATUS = "pass"
+FRAME_RATE_PREDICTOR_STRUCTURAL_SMOKE_TEST_COUNT = 36
+FRAME_RATE_PREDICTOR_STRUCTURAL_EVIDENCE = {
+    "predictor_output_shape": (2, 48, 64),
+    "maximum_abs_initial_cepstrum": 0.0,
+    "renderer_identity_max_abs_error": 0.0,
+    "expected_waveform_samples": 12288,
+    "actual_waveform_samples": 12288,
+    "hop_autocorrelation_excess": 0.0,
+    "double_hop_autocorrelation_excess": 0.0,
+    "grid_harmonic_power_fraction_excess": 0.0,
+    "parameter_count": 236736,
+    "connected_nonzero_gradient_tensor_count": 30,
+    "trainable_parameter_tensor_count": 30,
+}
 SELECTED_ARCHITECTURE_FAMILY = (
     "owned_minimum_phase_time_varying_filter_over_neutral_excitation"
 )
@@ -59,8 +79,6 @@ CONDITIONING_INPUTS = (
     "periodicity_from_full_utterance_pitch_cache",
 )
 
-# The trainable path is frame-rate only. It may predict a smooth real-cepstral spectral
-# envelope, but it may not directly predict waveform samples or phase-bearing STFT bins.
 TRAINABLE_REPRESENTATION = "frame_rate_real_cepstral_log_spectral_envelope"
 FIXED_ENVELOPE_TO_FILTER_TRANSFORM = "real_cepstrum_to_minimum_phase_fir"
 FIXED_EXCITATION = "bandlimited_impulse_train_plus_deterministic_aperiodic_noise"
@@ -85,7 +103,7 @@ POSTHOC_EQ_AUTHORIZED = False
 POSTHOC_DENOISING_AUTHORIZED = False
 THIRD_PARTY_MODEL_OR_CHECKPOINT_AUTHORIZED = False
 
-# Renderer invariants remain mandatory for every model-level smoke.
+# Renderer invariants remain mandatory for every model/optimizer smoke.
 EXACT_OUTPUT_LENGTH_REQUIRED = True
 OUTPUT_LENGTH_RULE = "waveform_samples=conditioning_frames*256"
 FIXED_FRAME_TO_SAMPLE_INTERPOLATION_REQUIRED = True
@@ -98,20 +116,23 @@ DOUBLE_HOP_GRID_CARRIER_REJECTION_REQUIRED = True
 FLAT_ENVELOPE_RENDERER_IDENTITY_TEST_REQUIRED = True
 REFERENCE_ENVELOPE_ORACLE_DIAGNOSTIC_REQUIRED = True
 
-# The reference-envelope oracle is structural only: it may prove the renderer can express
-# the target envelope, but it is never a product inference path and cannot accept quality.
 REFERENCE_ENVELOPE_ORACLE_PRODUCT_PATH_AUTHORIZED = False
 METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 FULL_HELD_OUT_AUDIO_REQUIRED_FOR_PRODUCT_ACCEPTANCE = True
 
-# Renderer safety is proven.  Only predictor instantiation is now authorized.
+# Scoped authorization: exactly one bounded smoke may create an ephemeral optimizer.
 STATIC_RENDERER_IMPLEMENTATION_AUTHORIZED = True
 FRAME_RATE_CEPSTRAL_PREDICTOR_IMPLEMENTATION_AUTHORIZED = True
 MODEL_INSTANTIATION_AUTHORIZED = True
-OPTIMIZER_CREATION_AUTHORIZED = False
+BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED = True
+BOUNDED_OPTIMIZER_SMOKE_MAX_UPDATES = 2
+BOUNDED_OPTIMIZER_SMOKE_SEGMENT_FRAMES = 32
+BOUNDED_OPTIMIZER_SMOKE_MAX_ITEMS = 1
+OPTIMIZER_CREATION_AUTHORIZED = False  # general/trainer optimizer creation remains blocked
+TRAINER_IMPLEMENTATION_AUTHORIZED = False
 PERSISTENT_TRAINING_AUTHORIZED = False
 NEW_VOCODER_CHECKPOINT_AUTHORIZED = False
 
 NEXT_GATE = (
-    "prove_owned_frame_rate_cepstral_predictor_shapes_neutral_init_gradients_and_grid_safety_before_optimizer"
+    "prove_owned_predictor_real_data_bounded_optimizer_descent_without_grid_or_checkpoint_regression"
 )
