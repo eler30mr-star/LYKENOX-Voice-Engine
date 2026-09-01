@@ -1,15 +1,15 @@
-"""Owned LYKENOX vocoder architecture contract before any model instantiation.
+"""Owned LYKENOX vocoder architecture contract after fixed-renderer safety proof.
 
-This contract selects one architecture *family* for the next static renderer gate. It does
-not instantiate a neural network, create an optimizer, start training, or authorize a new
-checkpoint. The family is chosen from failures already measured in LYKENOX V4.2/V7/V8/V9
-and from the validated owned data/loss/weight contracts.
+The owned architecture family and fixed minimum-phase renderer have now passed their
+structural gates.  This contract therefore authorizes exactly one additional capability:
+instantiation of the frame-rate cepstral envelope predictor.  It still does not authorize an
+optimizer, training, a new checkpoint, or product-quality acceptance.
 
-The next candidate keeps pitch timing information but removes the historical shortcuts that
-let a carrier, learned upsampler, or frame-phase representation dominate the waveform. Voice
-identity must be carried by a learned time-varying spectral envelope/filter trained from
-LYKENOX-owned data. The excitation is required to be spectrally neutral and has no direct
-output bypass.
+The selected family keeps pitch timing information while excluding the historical shortcuts
+that allowed a carrier, learned upsampler, or frame-phase representation to dominate the
+waveform.  Voice identity must be carried by a learned time-varying spectral envelope/filter
+trained only from LYKENOX-owned data.  Excitation remains fixed, spectrally neutral, and has
+no direct output bypass.
 """
 
 from __future__ import annotations
@@ -20,7 +20,23 @@ ARCHITECTURE_CONTRACT_VALIDATION_STATUS = "pass"
 ARCHITECTURE_CONTRACT_VALIDATION_TEST_COUNT = 21
 STATIC_RENDERER_VERSION = "owned-minimum-phase-time-varying-renderer-v1"
 STATIC_RENDERER_SAFETY_AUDIT_REQUIRED = True
-STATIC_RENDERER_SAFETY_AUDIT_STATUS = "pending"
+STATIC_RENDERER_SAFETY_AUDIT_VERSION = "owned-minimum-phase-renderer-safety-audit-v1"
+STATIC_RENDERER_SAFETY_AUDIT_STATUS = "pass"
+STATIC_RENDERER_SAFETY_AUDIT_TEST_COUNT = 24
+STATIC_RENDERER_SAFETY_EVIDENCE = {
+    "maximum_log_magnitude_factorization_error": 1.0685896612017132e-15,
+    "maximum_reference_oracle_roundtrip_error": 6.938893903907228e-18,
+    "flat_envelope_max_abs_identity_error": 0.0,
+    "attenuating_filter_measured_rms_ratio": 0.002478752176666358,
+    "attenuating_filter_max_abs_expected_error": 8.673617379884035e-19,
+    "unvoiced_hop_autocorrelation_excess": -0.001309794233417115,
+    "unvoiced_double_hop_autocorrelation_excess": -0.0013493497067419598,
+    "unvoiced_grid_harmonic_power_fraction_excess": 0.00012359877649464196,
+    "voiced_hop_autocorrelation_excess": 9.394839821898096e-05,
+    "voiced_double_hop_autocorrelation_excess": 0.0005020093189166902,
+    "voiced_grid_harmonic_power_fraction_excess": 0.00040792484893605215,
+    "same_seed_max_abs_error": 0.0,
+}
 SELECTED_ARCHITECTURE_FAMILY = (
     "owned_minimum_phase_time_varying_filter_over_neutral_excitation"
 )
@@ -69,7 +85,7 @@ POSTHOC_EQ_AUTHORIZED = False
 POSTHOC_DENOISING_AUTHORIZED = False
 THIRD_PARTY_MODEL_OR_CHECKPOINT_AUTHORIZED = False
 
-# Required renderer invariants before any neural model class may be instantiated.
+# Renderer invariants remain mandatory for every model-level smoke.
 EXACT_OUTPUT_LENGTH_REQUIRED = True
 OUTPUT_LENGTH_RULE = "waveform_samples=conditioning_frames*256"
 FIXED_FRAME_TO_SAMPLE_INTERPOLATION_REQUIRED = True
@@ -88,13 +104,14 @@ REFERENCE_ENVELOPE_ORACLE_PRODUCT_PATH_AUTHORIZED = False
 METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 FULL_HELD_OUT_AUDIO_REQUIRED_FOR_PRODUCT_ACCEPTANCE = True
 
-# Model/training remain blocked until the fixed renderer itself passes the next gate.
+# Renderer safety is proven.  Only predictor instantiation is now authorized.
 STATIC_RENDERER_IMPLEMENTATION_AUTHORIZED = True
-MODEL_INSTANTIATION_AUTHORIZED = False
+FRAME_RATE_CEPSTRAL_PREDICTOR_IMPLEMENTATION_AUTHORIZED = True
+MODEL_INSTANTIATION_AUTHORIZED = True
 OPTIMIZER_CREATION_AUTHORIZED = False
 PERSISTENT_TRAINING_AUTHORIZED = False
 NEW_VOCODER_CHECKPOINT_AUTHORIZED = False
 
 NEXT_GATE = (
-    "prove_owned_minimum_phase_renderer_factorization_length_and_grid_safety_before_model"
+    "prove_owned_frame_rate_cepstral_predictor_shapes_neutral_init_gradients_and_grid_safety_before_optimizer"
 )
