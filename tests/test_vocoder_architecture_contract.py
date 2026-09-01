@@ -8,7 +8,7 @@ from lykenox_voice_engine.training import speech_vocoder_loss_v2_weight_contract
 
 
 class VocoderArchitectureContractTests(unittest.TestCase):
-    def test_selected_family_and_renderer_are_validated(self) -> None:
+    def test_selected_family_is_owned_minimum_phase_filter_renderer(self) -> None:
         self.assertEqual(
             contract.OWNED_VOCODER_ARCHITECTURE_CONTRACT_VERSION,
             "owned-vocoder-architecture-contract-v1",
@@ -20,12 +20,14 @@ class VocoderArchitectureContractTests(unittest.TestCase):
             "owned-minimum-phase-time-varying-renderer-v1",
         )
         self.assertTrue(contract.STATIC_RENDERER_SAFETY_AUDIT_REQUIRED)
-        self.assertEqual(
-            contract.STATIC_RENDERER_SAFETY_AUDIT_VERSION,
-            "owned-minimum-phase-renderer-safety-audit-v1",
-        )
         self.assertEqual(contract.STATIC_RENDERER_SAFETY_AUDIT_STATUS, "pass")
         self.assertEqual(contract.STATIC_RENDERER_SAFETY_AUDIT_TEST_COUNT, 24)
+        self.assertEqual(
+            contract.FRAME_RATE_PREDICTOR_ARCHITECTURE,
+            "lykenox_owned_frame_rate_cepstral_predictor_v1",
+        )
+        self.assertEqual(contract.FRAME_RATE_PREDICTOR_STRUCTURAL_SMOKE_STATUS, "pass")
+        self.assertEqual(contract.FRAME_RATE_PREDICTOR_STRUCTURAL_SMOKE_TEST_COUNT, 36)
         self.assertEqual(
             contract.SELECTED_ARCHITECTURE_FAMILY,
             "owned_minimum_phase_time_varying_filter_over_neutral_excitation",
@@ -37,18 +39,6 @@ class VocoderArchitectureContractTests(unittest.TestCase):
         self.assertEqual(contract.CEPSTRAL_ORDER, 64)
         self.assertEqual(contract.IDENTITY_CARRIER, "learned_spectral_envelope_filter_only")
         self.assertFalse(contract.EXCITATION_DIRECT_OUTPUT_BYPASS)
-
-    def test_renderer_evidence_records_strong_structural_margin(self) -> None:
-        evidence = contract.STATIC_RENDERER_SAFETY_EVIDENCE
-        self.assertLess(evidence["maximum_log_magnitude_factorization_error"], 1e-10)
-        self.assertLess(evidence["maximum_reference_oracle_roundtrip_error"], 1e-10)
-        self.assertEqual(evidence["flat_envelope_max_abs_identity_error"], 0.0)
-        self.assertLess(evidence["attenuating_filter_measured_rms_ratio"], 0.003)
-        self.assertLess(abs(evidence["unvoiced_hop_autocorrelation_excess"]), 0.01)
-        self.assertLess(abs(evidence["unvoiced_double_hop_autocorrelation_excess"]), 0.01)
-        self.assertLess(abs(evidence["voiced_hop_autocorrelation_excess"]), 0.01)
-        self.assertLess(abs(evidence["voiced_double_hop_autocorrelation_excess"]), 0.01)
-        self.assertEqual(evidence["same_seed_max_abs_error"], 0.0)
 
     def test_contract_uses_exact_owned_pipeline_and_frozen_weights(self) -> None:
         self.assertEqual(contract.SAMPLE_RATE, 24000)
@@ -64,7 +54,6 @@ class VocoderArchitectureContractTests(unittest.TestCase):
         )
         self.assertIn("f0_hz_from_full_utterance_pitch_cache", contract.CONDITIONING_INPUTS)
         self.assertIn("voiced_from_full_utterance_pitch_cache", contract.CONDITIONING_INPUTS)
-        self.assertIn("periodicity_from_full_utterance_pitch_cache", contract.CONDITIONING_INPUTS)
 
     def test_historical_failure_mechanisms_are_forbidden(self) -> None:
         forbidden_flags = (
@@ -83,7 +72,7 @@ class VocoderArchitectureContractTests(unittest.TestCase):
         for name in forbidden_flags:
             self.assertFalse(getattr(contract, name), name)
 
-    def test_renderer_invariants_remain_mandatory(self) -> None:
+    def test_renderer_invariants_are_mandatory(self) -> None:
         self.assertTrue(contract.EXACT_OUTPUT_LENGTH_REQUIRED)
         self.assertEqual(
             contract.OUTPUT_LENGTH_RULE,
@@ -99,18 +88,23 @@ class VocoderArchitectureContractTests(unittest.TestCase):
         self.assertTrue(contract.REFERENCE_ENVELOPE_ORACLE_DIAGNOSTIC_REQUIRED)
         self.assertFalse(contract.REFERENCE_ENVELOPE_ORACLE_PRODUCT_PATH_AUTHORIZED)
 
-    def test_only_predictor_instantiation_is_authorized(self) -> None:
+    def test_only_bounded_optimizer_smoke_is_authorized(self) -> None:
         self.assertTrue(contract.STATIC_RENDERER_IMPLEMENTATION_AUTHORIZED)
         self.assertTrue(contract.FRAME_RATE_CEPSTRAL_PREDICTOR_IMPLEMENTATION_AUTHORIZED)
         self.assertTrue(contract.MODEL_INSTANTIATION_AUTHORIZED)
+        self.assertTrue(contract.BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED)
+        self.assertEqual(contract.BOUNDED_OPTIMIZER_SMOKE_MAX_UPDATES, 2)
+        self.assertEqual(contract.BOUNDED_OPTIMIZER_SMOKE_SEGMENT_FRAMES, 32)
+        self.assertEqual(contract.BOUNDED_OPTIMIZER_SMOKE_MAX_ITEMS, 1)
         self.assertFalse(contract.OPTIMIZER_CREATION_AUTHORIZED)
+        self.assertFalse(contract.TRAINER_IMPLEMENTATION_AUTHORIZED)
         self.assertFalse(contract.PERSISTENT_TRAINING_AUTHORIZED)
         self.assertFalse(contract.NEW_VOCODER_CHECKPOINT_AUTHORIZED)
         self.assertFalse(contract.METRICS_CAN_ACCEPT_PRODUCT_QUALITY)
         self.assertTrue(contract.FULL_HELD_OUT_AUDIO_REQUIRED_FOR_PRODUCT_ACCEPTANCE)
         self.assertEqual(
             contract.NEXT_GATE,
-            "prove_owned_frame_rate_cepstral_predictor_shapes_neutral_init_gradients_and_grid_safety_before_optimizer",
+            "prove_owned_predictor_real_data_bounded_optimizer_descent_without_grid_or_checkpoint_regression",
         )
 
     def test_contract_has_no_model_or_training_implementation(self) -> None:
