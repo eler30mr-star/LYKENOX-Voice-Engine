@@ -41,9 +41,11 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         self.assertEqual(decision.LOSS_EDGE_FORENSICS_STATUS, "pass")
         self.assertEqual(decision.LOSS_V2_TARGET_CONSISTENCY_STATUS, "pass")
         self.assertEqual(decision.LOSS_V2_GRADIENT_BALANCE_STATUS, "pass")
+        self.assertEqual(decision.LOSS_V2_FOUR_OBJECTIVE_CALIBRATION_STATUS, "pass")
+        self.assertTrue(decision.LOSS_V2_WEIGHT_CONTRACT_SENSITIVITY_REQUIRED)
         self.assertEqual(
             decision.NEXT_GATE,
-            "audit_owned_vocoder_four_objective_gradient_calibration_before_weight_contract",
+            "audit_owned_vocoder_loss_v2_weight_contract_sensitivity_before_freezing_weights",
         )
 
     def test_decision_records_boundary_dominant_conditioning_mismatch(self) -> None:
@@ -98,6 +100,32 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         self.assertGreater(metrics["mean_reference_weighted_reconstruction_share"], 0.80)
         self.assertLess(metrics["mean_reference_weighted_spectral_balance_share"], 0.01)
         self.assertGreater(metrics["maximum_reference_weighted_gradient_norm_share"], 0.90)
+        self.assertFalse(decision.LOSS_WEIGHT_CONTRACT_AUTHORIZED)
+
+    def test_four_objective_calibration_is_balanced_but_only_candidate(self) -> None:
+        metrics = decision.LOSS_V2_FOUR_OBJECTIVE_CALIBRATION_METRICS
+        for key in (
+            "mean_reconstruction_share",
+            "mean_envelope_share",
+            "mean_presence_share",
+            "mean_spectral_balance_share",
+        ):
+            self.assertGreater(metrics[key], 0.20)
+            self.assertLess(metrics[key], 0.30)
+        self.assertLess(metrics["maximum_derived_weighted_gradient_norm_share"], 0.55)
+        self.assertGreater(metrics["minimum_reconstruction_combined_alignment"], 0.0)
+        self.assertGreater(metrics["minimum_envelope_combined_alignment"], 0.0)
+        self.assertGreater(metrics["minimum_presence_combined_alignment"], 0.0)
+        self.assertGreater(metrics["minimum_spectral_balance_combined_alignment"], 0.0)
+        self.assertEqual(
+            decision.LOSS_V2_WEIGHT_CONTRACT_CANDIDATE,
+            {
+                "reconstruction": 1.0,
+                "envelope": 3.1475,
+                "presence": 19.3369,
+                "spectral_balance": 60.9496,
+            },
+        )
         self.assertFalse(decision.LOSS_WEIGHT_CONTRACT_AUTHORIZED)
 
     def test_decision_contains_no_external_pretrained_replacement_route(self) -> None:
