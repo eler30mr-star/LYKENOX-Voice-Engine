@@ -63,10 +63,10 @@ class VocoderLossV2WeightContractTests(unittest.TestCase):
         )
 
     def test_combiner_uses_exact_contract(self) -> None:
-        reconstruction = torch.tensor(1.0)
-        envelope = torch.tensor(2.0)
-        presence = torch.tensor(3.0)
-        spectral_balance = torch.tensor(4.0)
+        reconstruction = torch.tensor(1.0, dtype=torch.float64)
+        envelope = torch.tensor(2.0, dtype=torch.float64)
+        presence = torch.tensor(3.0, dtype=torch.float64)
+        spectral_balance = torch.tensor(4.0, dtype=torch.float64)
         expected = (
             1.0
             + 3.1475 * 2.0
@@ -79,7 +79,7 @@ class VocoderLossV2WeightContractTests(unittest.TestCase):
             presence=presence,
             spectral_balance=spectral_balance,
         )
-        self.assertAlmostEqual(float(actual), expected, places=5)
+        self.assertAlmostEqual(float(actual), expected, places=10)
 
     def test_contract_rejects_silent_dynamic_reweighting_and_model_work(self) -> None:
         self.assertFalse(contract.ADAPTIVE_LOSS_REWEIGHTING_AUTHORIZED)
