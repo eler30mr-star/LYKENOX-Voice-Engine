@@ -6,7 +6,7 @@ pretrained vocoder checkpoints are not an authorized product dependency, fallbac
 or replacement path.
 """
 
-DECISION_VERSION = "vocoder-v4-2-replacement-decision-v7"
+DECISION_VERSION = "vocoder-v4-2-replacement-decision-v8"
 V4_2_ROLE = "intelligible_colored_baseline_only"
 V4_2_FURTHER_TRAINING_AUTHORIZED = False
 ACOUSTIC_TRAINING_AUTHORIZED = False
@@ -19,6 +19,7 @@ THIRD_PARTY_PRETRAINED_VOCODER_AUTHORIZED = False
 THIRD_PARTY_VOCODER_CHECKPOINT_AUTHORIZED = False
 DISTRIBUTION_REQUIRES_LYKENOX_OWNED_WEIGHTS = True
 NEW_VOCODER_ARCHITECTURE_AUTHORIZED = False
+LOSS_WEIGHT_CONTRACT_AUTHORIZED = False
 OWNED_VOCODER_DATA_CONTRACT = (
     "vocoder-segment-v2-full-utterance-mel-pitch-conditioning"
 )
@@ -104,5 +105,31 @@ LOSS_EDGE_FORENSIC_FINDING = (
     "for reproducibility only."
 )
 
+LOSS_V2_TARGET_CONSISTENCY_STATUS = "pass"
+LOSS_V2_TARGET_CONSISTENCY_METRICS = {
+    "exact_conditioning_frame_contract": True,
+    "target_reconstruction_exact_on_valid_context": True,
+    "conditioning_envelope_exact_on_valid_context": True,
+    "mean_reconstruction_target_self_total": 0.0,
+    "mean_reconstruction_target_self_log_magnitude": 0.0,
+    "mean_conditioning_aligned_envelope_total": 0.0000000263,
+    "mean_conditioning_aligned_log_mel_l1": 0.000000012,
+    "mean_conditioning_aligned_spectral_slope_l1": 0.0000000188,
+    "mean_conditioning_aligned_temporal_delta_l1": 0.0000000197,
+    "conditioning_frames": 64,
+    "analysis_frames": 65,
+    "valid_conditioning_frames": 61,
+    "reconstruction_valid_frame_counts": (253, 125, 61),
+    "reconstruction_analysis_frame_counts": (257, 129, 65),
+}
+LOSS_V2_TARGET_CONSISTENCY_FINDING = (
+    "Owned Loss V2 passed the real-data target-consistency contract. Target waveform "
+    "against itself is exactly zero on valid-context multi-resolution reconstruction, and "
+    "the target waveform against its owned cached conditioning mel is numerically zero "
+    "(~1e-8) on the 61 valid conditioning frames. The 65th crop-local mel frame is excluded "
+    "because no conditioning slot exists for it. This validates objective semantics only; "
+    "it does not authorize loss weights, a new architecture, or persistent training."
+)
+
 NEXT_ARCHITECTURE = "undecided_after_owned_pipeline_forensics"
-NEXT_GATE = "run_owned_vocoder_loss_v2_target_consistency_audit_before_architecture_selection"
+NEXT_GATE = "audit_owned_vocoder_loss_v2_gradient_balance_before_architecture_selection"
