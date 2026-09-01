@@ -24,7 +24,10 @@ class VocoderMinimumPhaseBoundedOptimizerSmokeTests(unittest.TestCase):
         self.assertEqual(contract.BOUNDED_OPTIMIZER_SMOKE_STATUS, "pass")
         self.assertTrue(contract.BOUNDED_OPTIMIZER_SMOKE_CONSUMED)
         self.assertFalse(contract.BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED)
-        self.assertTrue(contract.PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED)
+        self.assertEqual(contract.PARAMETER_SPACE_GRADIENT_AUDIT_STATUS, "pass")
+        self.assertFalse(contract.PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED)
+        self.assertTrue(contract.ARCHITECTURE_WEIGHT_RECALIBRATION_AUDIT_AUTHORIZED)
+        self.assertFalse(contract.ARCHITECTURE_WEIGHT_CONTRACT_V2_AUTHORIZED)
         self.assertFalse(contract.EXTENDED_TRAINABILITY_SMOKE_AUTHORIZED)
 
     def test_persistent_training_checkpoint_and_trainer_remain_forbidden(self) -> None:
