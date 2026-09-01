@@ -15,10 +15,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 
 import soundfile as sf
 import torch
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 from lykenox_voice_engine.training.speech_vocoder_loss_v2 import (
     _centered_stft_magnitude,
