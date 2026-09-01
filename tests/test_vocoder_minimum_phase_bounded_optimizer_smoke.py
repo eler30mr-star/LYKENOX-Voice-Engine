@@ -8,8 +8,7 @@ from lykenox_voice_engine.training import speech_vocoder_minimum_phase_bounded_o
 
 
 class VocoderMinimumPhaseBoundedOptimizerSmokeTests(unittest.TestCase):
-    def test_scope_is_exactly_two_updates_on_one_owned_segment(self) -> None:
-        self.assertTrue(contract.BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED)
+    def test_historical_scope_was_exactly_two_updates_on_one_owned_segment(self) -> None:
         self.assertTrue(smoke.BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED)
         self.assertEqual(smoke.SEGMENT_MEL_FRAMES, 32)
         self.assertEqual(smoke.MAX_ITEMS, 1)
@@ -20,6 +19,13 @@ class VocoderMinimumPhaseBoundedOptimizerSmokeTests(unittest.TestCase):
         self.assertGreater(smoke.LEARNING_RATE, 0.0)
         self.assertLessEqual(smoke.LEARNING_RATE, 2.0e-4)
         self.assertEqual(smoke.MAX_GRAD_NORM, 1.0)
+
+    def test_current_contract_records_pass_and_closes_repeat_authorization(self) -> None:
+        self.assertEqual(contract.BOUNDED_OPTIMIZER_SMOKE_STATUS, "pass")
+        self.assertTrue(contract.BOUNDED_OPTIMIZER_SMOKE_CONSUMED)
+        self.assertFalse(contract.BOUNDED_OPTIMIZER_SMOKE_AUTHORIZED)
+        self.assertTrue(contract.PARAMETER_SPACE_GRADIENT_AUDIT_AUTHORIZED)
+        self.assertFalse(contract.EXTENDED_TRAINABILITY_SMOKE_AUTHORIZED)
 
     def test_persistent_training_checkpoint_and_trainer_remain_forbidden(self) -> None:
         self.assertFalse(smoke.TRAINER_IMPLEMENTATION_AUTHORIZED)
