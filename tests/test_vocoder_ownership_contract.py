@@ -32,12 +32,18 @@ class VocoderOwnershipContractTests(unittest.TestCase):
             decision.OWNED_VOCODER_LOSS_CONTRACT,
             "owned-vocoder-loss-v2-valid-context-conditioning-aligned",
         )
+        self.assertEqual(
+            decision.OWNED_VOCODER_PRESENCE_CONTRACT,
+            "owned-vocoder-presence-v2-valid-context-target-relative",
+        )
+        self.assertTrue(decision.HISTORICAL_PRESENCE_EDGE_SEMANTICS_REJECTED)
         self.assertEqual(decision.CONDITIONING_FORENSICS_STATUS, "pass")
         self.assertEqual(decision.LOSS_EDGE_FORENSICS_STATUS, "pass")
         self.assertEqual(decision.LOSS_V2_TARGET_CONSISTENCY_STATUS, "pass")
+        self.assertEqual(decision.LOSS_V2_GRADIENT_BALANCE_STATUS, "pass")
         self.assertEqual(
             decision.NEXT_GATE,
-            "audit_owned_vocoder_loss_v2_gradient_balance_before_architecture_selection",
+            "audit_owned_vocoder_four_objective_gradient_calibration_before_weight_contract",
         )
 
     def test_decision_records_boundary_dominant_conditioning_mismatch(self) -> None:
@@ -85,6 +91,13 @@ class VocoderOwnershipContractTests(unittest.TestCase):
         self.assertEqual(metrics["reconstruction_valid_frame_counts"], (253, 125, 61))
         self.assertEqual(metrics["reconstruction_analysis_frame_counts"], (257, 129, 65))
         self.assertLess(metrics["mean_conditioning_aligned_envelope_total"], 1e-6)
+        self.assertFalse(decision.LOSS_WEIGHT_CONTRACT_AUTHORIZED)
+
+    def test_historical_reference_weights_are_recorded_as_dominant_not_authorized(self) -> None:
+        metrics = decision.LOSS_V2_GRADIENT_BALANCE_METRICS
+        self.assertGreater(metrics["mean_reference_weighted_reconstruction_share"], 0.80)
+        self.assertLess(metrics["mean_reference_weighted_spectral_balance_share"], 0.01)
+        self.assertGreater(metrics["maximum_reference_weighted_gradient_norm_share"], 0.90)
         self.assertFalse(decision.LOSS_WEIGHT_CONTRACT_AUTHORIZED)
 
     def test_decision_contains_no_external_pretrained_replacement_route(self) -> None:
