@@ -11,15 +11,19 @@ owner reports that a local calibration based on 97,168 pitch-synchronous cycles 
 gangoso/rough held-out oracle audio.
 
 The first CELP-style codebook capacity run completed with 6,234 owned-train codewords across 58
-buckets, but its v1 listening output is not a valid perceptual gate because the diagnostic imposed
-an arbitrary maximum oracle gain of 4.0 and the resulting audio was reported too quiet to judge.
-The owned codebook itself is retained. A v2 level-valid oracle now separates codevector shape from
-excitation gain by selecting the best normalized-correlation codevector and matching target residual
-energy before the unchanged minimum-phase filter. No selector training is authorized until the owner
-listens to all three v2 utterances against both the references and the clean real-residual ceiling.
+buckets. V1 was too quiet to judge because of an arbitrary oracle-gain cap. V2 corrected level, but
+the owner reports that the final filtered oracle remains gangoso while the selected pre-filter
+codebook residual sounds like a high-pitched excitation rather than usable speech detail. This does
+not by itself reject the codebook because a residual need not sound like speech, but it does mean
+codeword substitution/selection has not reproduced the clean Step-3f excitation path.
+
+Before any selector training, the codebook window/OLA representation must now pass an identity
+roundtrip: analyze the exact clean held-out real residual into the same 512/256 representation,
+resynthesize the exact same vectors with no substitution or gain change, and listen after the frozen
+minimum-phase filter. Selector training remains explicitly unauthorized until this isolation passes.
 """
 
-DECISION_VERSION = "owned-minimum-phase-v3-decision-v7-codebook-v2-level-valid-listening"
+DECISION_VERSION = "owned-minimum-phase-v3-decision-v8-codebook-identity-roundtrip-first"
 POLICY_ID = "LYX-POL-001"
 SUPERSEDES_GATE_STATE_FROM = "owned-vocoder-architecture-contract-v1"
 ARCHITECTURE_FAMILY = "owned_minimum_phase_filter_over_owned_residual_codebook_candidate"
@@ -95,12 +99,14 @@ RESIDUAL_CODEBOOK_EXECUTION_EVIDENCE_DOC = (
 RESIDUAL_CODEBOOK_MODULE = "lykenox_voice_engine/training/speech_residual_codebook_v1.py"
 RESIDUAL_CODEBOOK_ORACLE_V1_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v1.py"
 RESIDUAL_CODEBOOK_ORACLE_V2_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v2.py"
+RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_SCRIPT = (
+    "scripts/diagnostic_residual_codebook_identity_roundtrip_v1.py"
+)
 RESIDUAL_CODEBOOK_SOURCE = "owned_train_real_residual_only"
 RESIDUAL_CODEBOOK_THIRD_PARTY_DATA_ALLOWED = False
 RESIDUAL_CODEBOOK_THIRD_PARTY_MODEL_OR_CHECKPOINT_ALLOWED = False
 RESIDUAL_CODEBOOK_REMOTE_INFERENCE_ALLOWED = False
 RESIDUAL_CODEBOOK_PRODUCTION_ACTIVE = False
-RESIDUAL_CODEBOOK_ORACLE_CAPACITY_TEST_SELECTED = True
 CELP_STYLE_ANALYSIS_BY_SYNTHESIS_ORACLE_ALLOWED = True
 HELDOUT_RESIDUAL_ALLOWED_AS_ORACLE_SEARCH_TARGET_ONLY = True
 HELDOUT_RESIDUAL_ALLOWED_IN_CODEBOOK = False
@@ -124,29 +130,32 @@ RESIDUAL_CODEBOOK_ORACLE_V1_LISTENING_RESULT = "too_quiet_to_judge"
 RESIDUAL_CODEBOOK_ORACLE_V1_PERCEPTUAL_GATE_VALID = False
 RESIDUAL_CODEBOOK_ORACLE_V1_CODEBOOK_REJECTED = False
 
-# V2 removes the arbitrary cap and treats gain as an oracle excitation parameter before filtering.
-# This is not post-hoc output normalization and cannot be reused in product inference.
-RESIDUAL_CODEBOOK_ORACLE_V2_STATUS = "implemented_awaiting_owner_complete_heldout_listening"
+# V2 corrected level but did not reach the Step-3f clean ceiling.
+RESIDUAL_CODEBOOK_ORACLE_V2_STATUS = "perceptually_failed_pending_representation_isolation"
 RESIDUAL_CODEBOOK_ORACLE_V2_SELECTION = "max_abs_normalized_correlation"
 RESIDUAL_CODEBOOK_ORACLE_V2_GAIN = "signed_target_energy_over_codeword_energy"
 RESIDUAL_CODEBOOK_ORACLE_V2_POSTHOC_OUTPUT_GAIN_NORMALIZATION = False
 RESIDUAL_CODEBOOK_ORACLE_V2_ORACLE_GAIN_VALID_FOR_PRODUCT = False
-RESIDUAL_CODEBOOK_LISTENING_STATUS = "awaiting_owner_level_valid_v2_complete_heldout_listening"
+RESIDUAL_CODEBOOK_ORACLE_V2_FINAL_LISTENING_RESULT = "intelligible_but_gangoso"
+RESIDUAL_CODEBOOK_ORACLE_V2_SELECTED_RESIDUAL_LISTENING_RESULT = "high_pitched_excitation_no_speech"
+RESIDUAL_CODEBOOK_ORACLE_V2_CODEBOOK_REJECTED = False
 
-# A literal CELP codec path is not selected for product inference because new-text TTS has no target
-# residual available for analysis-by-synthesis search. If the codebook oracle succeeds, a separate
-# LYKENOX-owned selector/gain predictor may be considered under a new explicit training gate.
+# Identity roundtrip gate: exact real residual vectors, no substitution, no oracle gain. This isolates
+# whether the 512/256 sqrt-Hann representation itself alters the previously clean Step-3f path.
+RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_STATUS = "implemented_awaiting_owner_listening"
+RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_CODEWORD_SUBSTITUTION = False
+RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_ORACLE_GAIN = False
+RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_REQUIRED_BEFORE_SELECTION_REDESIGN = True
+RESIDUAL_CODEBOOK_LISTENING_STATUS = "awaiting_identity_roundtrip_complete_heldout_listening"
+
 PURE_CELP_PRODUCT_INFERENCE_SELECTED = False
 OWNED_RESIDUAL_SELECTOR_MUST_BE_LYKENOX_TRAINED = True
 RESIDUAL_SELECTOR_TRAINING_CURRENTLY_AUTHORIZED = False
 RESIDUAL_PREDICTOR_CANDIDATE_SELECTED = False
 
-# Existing end-to-end training/checkpoint creation remains blocked until the codebook itself proves
-# sufficient audible held-out capacity. Metrics and successful execution can reject but cannot grant
-# this gate; complete held-out listening is required under LYX-POL-001.
 TRAINING_BLOCKED_BY_SYNTHETIC_EXCITATION = True
 BOUNDED_MODEL_OPTIMIZER_CURRENTLY_AUTHORIZED = False
 SCOPED_NEW_CHECKPOINT_CURRENTLY_AUTHORIZED = False
 PRODUCTION_RENDERER_MODIFICATION_AUTHORIZED_BY_THIS_EVIDENCE = False
 
-NEXT_ACTION = "run_level_valid_residual_codebook_oracle_v2_and_listen_before_training_any_selector"
+NEXT_ACTION = "run_and_listen_residual_codebook_identity_roundtrip_before_any_codeword_selection_redesign_or_training"
