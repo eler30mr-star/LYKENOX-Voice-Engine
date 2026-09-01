@@ -8,12 +8,16 @@ voice audio.
 
 The calibrated Rosenberg pulse + measured four-band aperiodicity candidate is also rejected. The
 owner reports that a local calibration based on 97,168 pitch-synchronous cycles still produced
-gangoso/rough held-out oracle audio. The next authorized step is therefore a CELP-style capacity
-test using a codebook made exclusively from owned train residuals. No selector is trained until
-that representation demonstrates audible held-out capacity under oracle search.
+gangoso/rough held-out oracle audio.
+
+The first CELP-style capacity run has now completed locally. An owned-train real-residual codebook
+was built with 6,234 retained codewords across 58 buckets and used to generate three complete
+held-out oracle utterances on CPU. No selector training, optimizer, or checkpoint occurred. The
+codebook remains diagnostic and no selector training is authorized until the owner listens to all
+three oracle utterances against both the references and the clean real-residual ceiling.
 """
 
-DECISION_VERSION = "owned-minimum-phase-v3-decision-v5-residual-codebook-oracle-first"
+DECISION_VERSION = "owned-minimum-phase-v3-decision-v6-codebook-built-awaiting-listening"
 POLICY_ID = "LYX-POL-001"
 SUPERSEDES_GATE_STATE_FROM = "owned-vocoder-architecture-contract-v1"
 ARCHITECTURE_FAMILY = "owned_minimum_phase_filter_over_owned_residual_codebook_candidate"
@@ -83,6 +87,9 @@ SYNTHETIC_PARAMETRIC_EXCITATION_STATUS = "rejected_as_dominant_quality_path"
 
 # CELP-style owned residual codebook capacity diagnostic.
 RESIDUAL_CODEBOOK_DECISION_DOC = "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_ORACLE_DECISION.md"
+RESIDUAL_CODEBOOK_EXECUTION_EVIDENCE_DOC = (
+    "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_ORACLE_EXECUTION_EVIDENCE.md"
+)
 RESIDUAL_CODEBOOK_MODULE = "lykenox_voice_engine/training/speech_residual_codebook_v1.py"
 RESIDUAL_CODEBOOK_ORACLE_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v1.py"
 RESIDUAL_CODEBOOK_SOURCE = "owned_train_real_residual_only"
@@ -96,6 +103,18 @@ HELDOUT_RESIDUAL_ALLOWED_AS_ORACLE_SEARCH_TARGET_ONLY = True
 HELDOUT_RESIDUAL_ALLOWED_IN_CODEBOOK = False
 ORACLE_SELECTED_INDICES_OR_GAINS_VALID_FOR_PRODUCT_INFERENCE = False
 
+# Owner-reported local execution evidence from 2026-09-01.
+RESIDUAL_CODEBOOK_BUILD_STATUS = "built_from_owned_train_real_residual"
+RESIDUAL_CODEBOOK_RETAINED_CODEWORD_COUNT = 6234
+RESIDUAL_CODEBOOK_BUCKET_COUNT = 58
+RESIDUAL_CODEBOOK_HELDOUT_ITEM_COUNT = 3
+RESIDUAL_CODEBOOK_LOCAL_DEVICE = "cpu"
+RESIDUAL_CODEBOOK_TRAINING_EXECUTED = False
+RESIDUAL_CODEBOOK_OPTIMIZER_CREATED = False
+RESIDUAL_CODEBOOK_CHECKPOINT_WRITTEN = False
+RESIDUAL_CODEBOOK_SELECTOR_TRAINING_AUTHORIZED_BY_RUN = False
+RESIDUAL_CODEBOOK_LISTENING_STATUS = "awaiting_owner_complete_heldout_listening"
+
 # A literal CELP codec path is not selected for product inference because new-text TTS has no target
 # residual available for analysis-by-synthesis search. If the codebook oracle succeeds, a separate
 # LYKENOX-owned selector/gain predictor may be considered under a new explicit training gate.
@@ -105,10 +124,11 @@ RESIDUAL_SELECTOR_TRAINING_CURRENTLY_AUTHORIZED = False
 RESIDUAL_PREDICTOR_CANDIDATE_SELECTED = False
 
 # Existing end-to-end training/checkpoint creation remains blocked until the codebook itself proves
-# sufficient audible held-out capacity. Metrics can reject but cannot grant this gate.
+# sufficient audible held-out capacity. Metrics and successful execution can reject but cannot grant
+# this gate; complete held-out listening is required under LYX-POL-001.
 TRAINING_BLOCKED_BY_SYNTHETIC_EXCITATION = True
 BOUNDED_MODEL_OPTIMIZER_CURRENTLY_AUTHORIZED = False
 SCOPED_NEW_CHECKPOINT_CURRENTLY_AUTHORIZED = False
 PRODUCTION_RENDERER_MODIFICATION_AUTHORIZED_BY_THIS_EVIDENCE = False
 
-NEXT_ACTION = "build_owned_train_residual_codebook_then_run_heldout_celp_style_oracle_search_and_listen"
+NEXT_ACTION = "listen_to_codebook_oracle_vs_reference_and_real_residual_ceiling_before_training_any_selector"
