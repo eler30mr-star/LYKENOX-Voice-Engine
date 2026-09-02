@@ -1,39 +1,25 @@
 """Current minimum-phase vocoder decision after residual and excitation diagnostics.
 
-Historical evidence is preserved without rewriting rejected candidates. The v2 equal-norm loss
-weights remain rejected for directional conflict. The minimum-phase envelope/filter path remains
-supported by the positive real-residual oracle: when the owned real residual replaces synthetic
-excitation, complete held-out resynthesis was reported clean and natural, matching the original
-voice audio.
+The clean Step-3f real-residual resynthesis remains the positive ceiling: with the exact owned
+held-out residual, the frozen minimum-phase renderer produces clean natural speech matching the
+original voice. Parametric synthetic excitation, residual-domain codeword selection, and filtered-
+domain sequence continuity have all failed perceptually.
 
-The calibrated Rosenberg pulse + measured four-band aperiodicity candidate is also rejected. The
-owner reports that a local calibration based on 97,168 pitch-synchronous cycles still produced
-gangoso/rough held-out oracle audio.
+The completed synthesis-coverage audit now shows two simultaneous defects in the retained residual
+codebook path. PRESELECT_K misses the best retained compatible codeword on 52.49% of held-out
+windows, but exhaustive search across every retained compatible codeword still leaves 35.47% of
+windows below filtered-response cosine 0.80. Therefore selector/preselector changes alone are not
+supported as sufficient.
 
-The CELP-style codebook line has a decisive representation isolation result. V1 was too quiet to
-judge because of an arbitrary oracle-gain cap. V2 corrected level but independently substituted each
-held-out residual window with a train codeword and remained intelligible but gangoso. The identity
-roundtrip then analyzed the exact clean held-out real residual into the same 512-sample / 256-hop
-sqrt-Hann representation, resynthesized those exact vectors without substitution or gain change, and
-the owner reports that the final filtered resynthesis again sounds correct and matches the original
-voice audio. Therefore the codevector window/OLA representation and frozen minimum-phase filter are
-exculpated when the correct residual trajectory is used.
-
-V3 added residual-domain temporal continuity and remained gangoso. V4 moved final selection/gain into
-the exact local frozen-renderer waveform domain but used independent greedy selection. V5 preserved
-V4's synthesis-domain scoring and added deterministic bounded beam continuity in that same filtered
-waveform domain over the exact 256-sample adjacent OLA overlap. The owner reports the same dominant
-gangoso problem remains. Therefore missing adjacent-window continuity is not supported as the
-dominant remaining failure mechanism for this codebook.
-
-No selector training or further codeword-selection iteration is authorized. The next gate is a pure
-coverage audit: compare V4's PRESELECT_K candidate ceiling against the best candidate among every
-compatible owned-train codeword, per held-out window, in the exact same filtered waveform domain.
-This must distinguish insufficient codebook coverage from residual-cosine preselection failure before
-any codebook expansion, redesign, selector, optimizer, checkpoint, or production change.
+The current 6,234-entry artifact is itself compressed: the builder retains at most 128 real TRAIN
+residual vectors per conditioning bucket using deterministic hash sampling. The next and only active
+gate is therefore a full-TRAIN retrieval coverage isolation using every owned TRAIN residual vector,
+the same compatibility rule, and the same exact frozen-renderer scoring. This diagnostic bank is not
+a production codebook expansion and does not authorize training, optimizer/checkpoint creation, or
+product integration.
 """
 
-DECISION_VERSION = "owned-minimum-phase-v3-decision-v12-codebook-synthesis-coverage-audit"
+DECISION_VERSION = "owned-minimum-phase-v3-decision-v13-full-train-retrieval-coverage-isolation"
 POLICY_ID = "LYX-POL-001"
 SUPERSEDES_GATE_STATE_FROM = "owned-vocoder-architecture-contract-v1"
 ARCHITECTURE_FAMILY = "owned_minimum_phase_filter_over_owned_residual_codebook_candidate"
@@ -77,7 +63,6 @@ POSTHOC_DENOISING_AUTHORIZED = False
 METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 FULL_HELD_OUT_AUDIO_REQUIRED_FOR_PRODUCT_ACCEPTANCE = True
 
-# Positive pure-DSP isolation evidence.
 REAL_RESIDUAL_DIAGNOSTIC_SCRIPT = "scripts/diagnostic_real_residual_resynthesis_v1.py"
 REAL_RESIDUAL_EVIDENCE_DOC = "docs/LYKENOX_VOCODER_MINIMUM_PHASE_REAL_RESIDUAL_EVIDENCE.md"
 REAL_RESIDUAL_MODEL_USED = False
@@ -88,7 +73,6 @@ REAL_RESIDUAL_HUMAN_LISTENING_RESULT = "clean_natural_matches_original_voice_aud
 REAL_RESIDUAL_FILTER_ENVELOPE_PATH_STATUS = "clean_oracle_resynthesis_demonstrated"
 MINIMUM_PHASE_FILTER_PATH_FROZEN = True
 
-# Rejected synthetic-excitation evidence.
 BAND_SPLIT_DIAGNOSTIC_STATUS = "partial_improvement_not_sufficient"
 CROSSFADE_DIAGNOSTIC_STATUS = "not_dominant_cause"
 GAUSSIAN_NOISE_DIAGNOSTIC_STATUS = "not_dominant_cause"
@@ -101,7 +85,6 @@ CALIBRATED_EXCITATION_STATUS = "rejected_perceptual_structural_limit"
 CALIBRATED_EXCITATION_PRODUCTION_ACTIVE = False
 SYNTHETIC_PARAMETRIC_EXCITATION_STATUS = "rejected_as_dominant_quality_path"
 
-# CELP-style owned residual codebook capacity diagnostics.
 RESIDUAL_CODEBOOK_DECISION_DOC = "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_ORACLE_DECISION.md"
 RESIDUAL_CODEBOOK_EXECUTION_EVIDENCE_DOC = (
     "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_ORACLE_EXECUTION_EVIDENCE.md"
@@ -114,6 +97,9 @@ RESIDUAL_CODEBOOK_V5_DECISION_DOC = (
     "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_V5_SYNTHESIS_DOMAIN_COHERENT.md"
 )
 RESIDUAL_CODEBOOK_V5_REJECTION_DOC = "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_V5_REJECTION.md"
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_EVIDENCE_DOC = (
+    "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_V1_EVIDENCE.md"
+)
 RESIDUAL_CODEBOOK_MODULE = "lykenox_voice_engine/training/speech_residual_codebook_v1.py"
 RESIDUAL_CODEBOOK_ORACLE_V1_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v1.py"
 RESIDUAL_CODEBOOK_ORACLE_V2_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v2.py"
@@ -132,6 +118,9 @@ RESIDUAL_CODEBOOK_ORACLE_V5_SYNTHESIS_DOMAIN_COHERENT_SCRIPT = (
 RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_SCRIPT = (
     "scripts/diagnostic_residual_codebook_synthesis_coverage_v1.py"
 )
+FULL_TRAIN_RESIDUAL_RETRIEVAL_COVERAGE_SCRIPT = (
+    "scripts/diagnostic_full_train_residual_retrieval_coverage_v1.py"
+)
 RESIDUAL_CODEBOOK_SOURCE = "owned_train_real_residual_only"
 RESIDUAL_CODEBOOK_THIRD_PARTY_DATA_ALLOWED = False
 RESIDUAL_CODEBOOK_THIRD_PARTY_MODEL_OR_CHECKPOINT_ALLOWED = False
@@ -142,10 +131,10 @@ HELDOUT_RESIDUAL_ALLOWED_AS_ORACLE_SEARCH_TARGET_ONLY = True
 HELDOUT_RESIDUAL_ALLOWED_IN_CODEBOOK = False
 ORACLE_SELECTED_INDICES_OR_GAINS_VALID_FOR_PRODUCT_INFERENCE = False
 
-# Owner-reported local codebook construction evidence from 2026-09-01.
 RESIDUAL_CODEBOOK_BUILD_STATUS = "built_from_owned_train_real_residual"
 RESIDUAL_CODEBOOK_RETAINED_CODEWORD_COUNT = 6234
 RESIDUAL_CODEBOOK_BUCKET_COUNT = 58
+RESIDUAL_CODEBOOK_MAX_PER_BUCKET = 128
 RESIDUAL_CODEBOOK_HELDOUT_ITEM_COUNT = 3
 RESIDUAL_CODEBOOK_LOCAL_DEVICE = "cpu"
 RESIDUAL_CODEBOOK_TRAINING_EXECUTED = False
@@ -153,14 +142,11 @@ RESIDUAL_CODEBOOK_OPTIMIZER_CREATED = False
 RESIDUAL_CODEBOOK_CHECKPOINT_WRITTEN = False
 RESIDUAL_CODEBOOK_SELECTOR_TRAINING_AUTHORIZED_BY_RUN = False
 
-# V1 generated valid files but is invalid as a human listening gate because an arbitrary gain cap
-# made the result too quiet to judge. The codebook artifact is not rejected by this failure.
 RESIDUAL_CODEBOOK_ORACLE_V1_GAIN_CAP = 4.0
 RESIDUAL_CODEBOOK_ORACLE_V1_LISTENING_RESULT = "too_quiet_to_judge"
 RESIDUAL_CODEBOOK_ORACLE_V1_PERCEPTUAL_GATE_VALID = False
 RESIDUAL_CODEBOOK_ORACLE_V1_CODEBOOK_REJECTED = False
 
-# V2 corrected level but independent residual-domain substitution did not reach the clean ceiling.
 RESIDUAL_CODEBOOK_ORACLE_V2_STATUS = "rejected_independent_window_substitution"
 RESIDUAL_CODEBOOK_ORACLE_V2_SELECTION = "max_abs_normalized_correlation"
 RESIDUAL_CODEBOOK_ORACLE_V2_GAIN = "signed_target_energy_over_codeword_energy"
@@ -170,17 +156,14 @@ RESIDUAL_CODEBOOK_ORACLE_V2_FINAL_LISTENING_RESULT = "intelligible_but_gangoso"
 RESIDUAL_CODEBOOK_ORACLE_V2_SELECTED_RESIDUAL_LISTENING_RESULT = "high_pitched_excitation_no_speech"
 RESIDUAL_CODEBOOK_ORACLE_V2_CODEBOOK_REJECTED = False
 
-# Identity roundtrip result: the exact residual trajectory survives the codebook representation and
-# returns clean speech after the frozen filter. The residual itself need not sound like speech.
 RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_STATUS = "pass_clean_final_resynthesis"
 RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_CODEWORD_SUBSTITUTION = False
 RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_ORACLE_GAIN = False
 RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_RESIDUAL_LISTENING_RESULT = "noisy_non_speech_like_expected_excitation"
 RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_FINAL_LISTENING_RESULT = "correct_matches_original_voice_audio"
-RESIDUAL_CODEBOOK_512_256_SQRT_HANN_REPRESENTATION_STATUS = "exculpated"
+RESIDUAL_CODEBOOK_512_256_SQRT_HANN_REPRESENTATION_STATUS = "exculpated_for_identity_roundtrip"
 RESIDUAL_CODEBOOK_FROZEN_FILTER_STATUS = "exculpated_when_correct_residual_sequence_used"
 
-# V3 used positive polarity plus residual-domain Viterbi overlap continuity and still sounded gangoso.
 RESIDUAL_CODEBOOK_ORACLE_V3_SEQUENCE_STATUS = "rejected_perceptually_gangoso"
 RESIDUAL_CODEBOOK_ORACLE_V3_PER_WINDOW_POLARITY_INVERSION_ALLOWED = False
 RESIDUAL_CODEBOOK_ORACLE_V3_SEQUENCE_SEARCH = "viterbi_topk_positive_cosine_plus_overlap_continuity"
@@ -189,9 +172,8 @@ RESIDUAL_CODEBOOK_ORACLE_V3_SELECTED_RESIDUAL_LISTENING_RESULT = "noise_non_spee
 RESIDUAL_CODEBOOK_ORACLE_V3_TRAINING_USED = False
 RESIDUAL_CODEBOOK_ORACLE_V3_PRODUCT_ACTIVE = False
 RESIDUAL_CODEBOOK_ORACLE_V3_CODEBOOK_REJECTED = False
-RESIDUAL_CODEBOOK_FAILURE_LOCALIZATION = "residual_domain_codeword_selection_is_perceptually_insufficient"
+RESIDUAL_CODEBOOK_FAILURE_LOCALIZATION = "retained_codebook_coverage_and_preselection_both_insufficient"
 
-# V4 is preserved unchanged as the synthesis-domain greedy baseline.
 RESIDUAL_CODEBOOK_ORACLE_V4_SYNTHESIS_DOMAIN_STATUS = "implemented_baseline_preserved"
 RESIDUAL_CODEBOOK_ORACLE_V4_FINAL_SELECTION_DOMAIN = "exact_local_frozen_renderer_waveform_contribution"
 RESIDUAL_CODEBOOK_ORACLE_V4_GAIN_DOMAIN = "exact_local_frozen_renderer_waveform_contribution"
@@ -201,8 +183,6 @@ RESIDUAL_CODEBOOK_ORACLE_V4_TRAINING_USED = False
 RESIDUAL_CODEBOOK_ORACLE_V4_PRODUCT_ACTIVE = False
 RESIDUAL_CODEBOOK_ORACLE_V4_ORACLE_PARAMETERS_VALID_FOR_PRODUCT = False
 
-# V5 combined V4 synthesis-domain scoring with filtered-domain sequence continuity and did not improve
-# the dominant perceptual failure. This rejects missing adjacent continuity as the dominant cause.
 RESIDUAL_CODEBOOK_ORACLE_V5_STATUS = "rejected_perceptually_same_gangoso_problem"
 RESIDUAL_CODEBOOK_ORACLE_V5_PRESELECT = "v4_broad_signed_residual_cosine_unchanged"
 RESIDUAL_CODEBOOK_ORACLE_V5_LOCAL_RESPONSE = "v4_exact_local_frozen_renderer_response_unchanged"
@@ -217,15 +197,31 @@ RESIDUAL_CODEBOOK_ORACLE_V5_TRAINING_USED = False
 RESIDUAL_CODEBOOK_ORACLE_V5_PRODUCT_ACTIVE = False
 RESIDUAL_CODEBOOK_ORACLE_V5_ORACLE_PARAMETERS_VALID_FOR_PRODUCT = False
 
-# Coverage gate: do not change selection again before measuring whether the current 6,234 codewords
-# contain close filtered-domain matches at all, and whether V4/V5 PRESELECT_K hides better matches.
-RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_STATUS = "implemented_awaiting_local_measurement"
-RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_COMPARE_PRESELECTED_VS_ALL_COMPATIBLE = True
-RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_PER_WINDOW_REQUIRED = True
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_STATUS = "owner_reported_completed"
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_HELDOUT_WINDOWS = 2151
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_PRESELECTOR_MISS_COUNT = 1129
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_PRESELECTOR_MISS_FRACTION = 0.5248721524872152
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_PRESELECTED_COSINE_MEAN = 0.7844196161257838
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_ALL_COMPATIBLE_COSINE_MEAN = 0.8070508714735868
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_PRESELECTED_FRACTION_BELOW_080 = 0.4258484425848443
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_ALL_COMPATIBLE_FRACTION_BELOW_080 = 0.35471873547187355
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_PRESELECTED_NMSE_P50 = 0.3129289150238037
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_ALL_COMPATIBLE_NMSE_P50 = 0.2766266167163849
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_PRESELECTED_NMSE_P90 = 0.6780089735984802
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_ALL_COMPATIBLE_NMSE_P90 = 0.6378332376480103
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_PRESELECTOR_SUFFICIENT = False
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_COMPRESSED_BANK_SUFFICIENTLY_DEMONSTRATED = False
 RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
+
+FULL_TRAIN_RESIDUAL_RETRIEVAL_COVERAGE_STATUS = "implemented_awaiting_local_measurement"
+FULL_TRAIN_RESIDUAL_RETRIEVAL_BANK_ROLE = "diagnostic_only_not_production_codebook_expansion"
+FULL_TRAIN_RESIDUAL_RETRIEVAL_USES_ALL_OWNED_TRAIN_WINDOWS = True
+FULL_TRAIN_RESIDUAL_RETRIEVAL_HELDOUT_DATA_ALLOWED_IN_BANK = False
+FULL_TRAIN_RESIDUAL_RETRIEVAL_SAME_COMPATIBILITY_RULE_REQUIRED = True
+FULL_TRAIN_RESIDUAL_RETRIEVAL_SAME_FILTERED_DOMAIN_SCORING_REQUIRED = True
+
 RESIDUAL_CODEBOOK_EXPANSION_CURRENTLY_AUTHORIZED = False
 FURTHER_CODEBOOK_SELECTION_ITERATION_CURRENTLY_AUTHORIZED = False
-
 PURE_CELP_PRODUCT_INFERENCE_SELECTED = False
 OWNED_RESIDUAL_SELECTOR_MUST_BE_LYKENOX_TRAINED = True
 RESIDUAL_SELECTOR_TRAINING_CURRENTLY_AUTHORIZED = False
@@ -236,4 +232,4 @@ BOUNDED_MODEL_OPTIMIZER_CURRENTLY_AUTHORIZED = False
 SCOPED_NEW_CHECKPOINT_CURRENTLY_AUTHORIZED = False
 PRODUCTION_RENDERER_MODIFICATION_AUTHORIZED_BY_THIS_EVIDENCE = False
 
-NEXT_ACTION = "run_residual_codebook_synthesis_coverage_audit_and_review_all_compatible_per_window_before_any_new_selector_or_training"
+NEXT_ACTION = "run_full_train_residual_retrieval_coverage_and_compare_against_compressed_6234_before_any_codebook_redesign_or_training"
