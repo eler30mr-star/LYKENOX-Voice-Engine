@@ -21,13 +21,17 @@ exculpated when the correct residual trajectory is used.
 
 V3 removed per-window polarity inversion and added complete-utterance residual-domain overlap
 continuity, but the owner reports the final held-out waveform remains gangoso. Therefore residual-
-domain codeword similarity/continuity is rejected as the selection criterion. No selector training
-is authorized. The next diagnostic moves the oracle decision into the frozen renderer synthesis
-domain: each candidate is judged by its exact local filtered waveform contribution against the clean
-held-out target-vector contribution.
+domain codeword similarity/continuity is rejected as the selection criterion. V4 moved final
+selection and non-negative gain into the exact local frozen-renderer waveform domain but keeps a
+purely local greedy argmin per analysis window. V5 preserves V4 unchanged and adds deterministic
+bounded beam search with continuity measured in that same filtered waveform domain over the exact
+256-sample adjacent OLA overlap.
+
+No selector training is authorized. No further algorithm iteration is authorized until V5 is run and
+the owner reports complete held-out listening against V4 and the clean identity-roundtrip ceiling.
 """
 
-DECISION_VERSION = "owned-minimum-phase-v3-decision-v10-codebook-synthesis-domain-oracle"
+DECISION_VERSION = "owned-minimum-phase-v3-decision-v11-codebook-synthesis-domain-coherent-oracle"
 POLICY_ID = "LYX-POL-001"
 SUPERSEDES_GATE_STATE_FROM = "owned-vocoder-architecture-contract-v1"
 ARCHITECTURE_FAMILY = "owned_minimum_phase_filter_over_owned_residual_codebook_candidate"
@@ -104,6 +108,9 @@ RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_EVIDENCE_DOC = (
     "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_EVIDENCE.md"
 )
 RESIDUAL_CODEBOOK_V3_REJECTION_DOC = "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_V3_REJECTION.md"
+RESIDUAL_CODEBOOK_V5_DECISION_DOC = (
+    "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_V5_SYNTHESIS_DOMAIN_COHERENT.md"
+)
 RESIDUAL_CODEBOOK_MODULE = "lykenox_voice_engine/training/speech_residual_codebook_v1.py"
 RESIDUAL_CODEBOOK_ORACLE_V1_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v1.py"
 RESIDUAL_CODEBOOK_ORACLE_V2_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v2.py"
@@ -115,6 +122,9 @@ RESIDUAL_CODEBOOK_ORACLE_V3_SEQUENCE_SCRIPT = (
 )
 RESIDUAL_CODEBOOK_ORACLE_V4_SYNTHESIS_DOMAIN_SCRIPT = (
     "scripts/diagnostic_residual_codebook_oracle_v4_synthesis_domain.py"
+)
+RESIDUAL_CODEBOOK_ORACLE_V5_SYNTHESIS_DOMAIN_COHERENT_SCRIPT = (
+    "scripts/diagnostic_residual_codebook_oracle_v5_synthesis_domain_coherent.py"
 )
 RESIDUAL_CODEBOOK_SOURCE = "owned_train_real_residual_only"
 RESIDUAL_CODEBOOK_THIRD_PARTY_DATA_ALLOWED = False
@@ -175,16 +185,30 @@ RESIDUAL_CODEBOOK_ORACLE_V3_PRODUCT_ACTIVE = False
 RESIDUAL_CODEBOOK_ORACLE_V3_CODEBOOK_REJECTED = False
 RESIDUAL_CODEBOOK_FAILURE_LOCALIZATION = "residual_domain_codeword_selection_is_perceptually_insufficient"
 
-# V4 keeps the exact same owned codebook and frozen renderer but moves selection/gain into the
-# renderer output domain. A broad residual preselection is only a CPU candidate-reduction step; final
-# choice is minimum exact local filtered-response MSE against the clean held-out target contribution.
-RESIDUAL_CODEBOOK_ORACLE_V4_SYNTHESIS_DOMAIN_STATUS = "implemented_awaiting_owner_complete_heldout_listening"
+# V4 is preserved unchanged as the synthesis-domain greedy baseline for V5 comparison.
+RESIDUAL_CODEBOOK_ORACLE_V4_SYNTHESIS_DOMAIN_STATUS = "implemented_baseline_preserved_for_v5_comparison"
 RESIDUAL_CODEBOOK_ORACLE_V4_FINAL_SELECTION_DOMAIN = "exact_local_frozen_renderer_waveform_contribution"
 RESIDUAL_CODEBOOK_ORACLE_V4_GAIN_DOMAIN = "exact_local_frozen_renderer_waveform_contribution"
 RESIDUAL_CODEBOOK_ORACLE_V4_GAIN_NON_NEGATIVE = True
+RESIDUAL_CODEBOOK_ORACLE_V4_SELECTION_MEMORY = "none_greedy_per_window_argmin"
 RESIDUAL_CODEBOOK_ORACLE_V4_TRAINING_USED = False
 RESIDUAL_CODEBOOK_ORACLE_V4_PRODUCT_ACTIVE = False
 RESIDUAL_CODEBOOK_ORACLE_V4_ORACLE_PARAMETERS_VALID_FOR_PRODUCT = False
+
+# V5 keeps V4's preselection, exact filtered response, and gain unchanged and adds bounded sequence
+# search whose continuity term is measured in the same filtered waveform domain.
+RESIDUAL_CODEBOOK_ORACLE_V5_STATUS = "implemented_awaiting_owner_complete_heldout_listening"
+RESIDUAL_CODEBOOK_ORACLE_V5_PRESELECT = "v4_broad_signed_residual_cosine_unchanged"
+RESIDUAL_CODEBOOK_ORACLE_V5_LOCAL_RESPONSE = "v4_exact_local_frozen_renderer_response_unchanged"
+RESIDUAL_CODEBOOK_ORACLE_V5_GAIN = "v4_non_negative_filtered_domain_least_squares_unchanged"
+RESIDUAL_CODEBOOK_ORACLE_V5_SEQUENCE_SEARCH = "deterministic_bounded_beam"
+RESIDUAL_CODEBOOK_ORACLE_V5_DEFAULT_BEAM_SIZE = 8
+RESIDUAL_CODEBOOK_ORACLE_V5_DEFAULT_CONTINUITY_WEIGHT = 1.0
+RESIDUAL_CODEBOOK_ORACLE_V5_CONTINUITY_DOMAIN = "filtered_waveform_256_sample_adjacent_ola_overlap"
+RESIDUAL_CODEBOOK_ORACLE_V5_TRAINING_USED = False
+RESIDUAL_CODEBOOK_ORACLE_V5_PRODUCT_ACTIVE = False
+RESIDUAL_CODEBOOK_ORACLE_V5_ORACLE_PARAMETERS_VALID_FOR_PRODUCT = False
+FURTHER_CODEBOOK_ALGORITHM_ITERATION_BEFORE_V5_LISTENING_AUTHORIZED = False
 
 PURE_CELP_PRODUCT_INFERENCE_SELECTED = False
 OWNED_RESIDUAL_SELECTOR_MUST_BE_LYKENOX_TRAINED = True
@@ -196,4 +220,4 @@ BOUNDED_MODEL_OPTIMIZER_CURRENTLY_AUTHORIZED = False
 SCOPED_NEW_CHECKPOINT_CURRENTLY_AUTHORIZED = False
 PRODUCTION_RENDERER_MODIFICATION_AUTHORIZED_BY_THIS_EVIDENCE = False
 
-NEXT_ACTION = "run_and_listen_synthesis_domain_residual_codebook_oracle_v4_before_any_selector_training"
+NEXT_ACTION = "run_v5_then_listen_vs_v4_and_identity_roundtrip_ceiling_and_report_before_any_further_iteration"
