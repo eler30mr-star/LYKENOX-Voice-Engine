@@ -1,25 +1,28 @@
-"""Current minimum-phase vocoder decision after residual and excitation diagnostics.
+"""Current minimum-phase vocoder decision after residual/excitation capacity diagnostics.
 
-The clean Step-3f real-residual resynthesis remains the positive ceiling: with the exact owned
-held-out residual, the frozen minimum-phase renderer produces clean natural speech matching the
-original voice. Parametric synthetic excitation, residual-domain codeword selection, and filtered-
-domain sequence continuity have all failed perceptually.
+The clean Step-3f real-residual resynthesis remains the positive perceptual ceiling: with the exact
+owned held-out residual, the frozen minimum-phase renderer produces clean natural speech matching the
+original voice. Parametric synthetic excitation and the prior residual-codebook selectors remain
+rejected perceptually.
 
-The completed synthesis-coverage audit now shows two simultaneous defects in the retained residual
-codebook path. PRESELECT_K misses the best retained compatible codeword on 52.49% of held-out
-windows, but exhaustive search across every retained compatible codeword still leaves 35.47% of
-windows below filtered-response cosine 0.80. Therefore selector/preselector changes alone are not
-supported as sufficient.
+The retained-codebook coverage audit showed that PRESELECT_K misses better retained candidates and
+that the 6,234-codeword artifact itself is under-covered. The completed resumable full-TRAIN audit now
+isolates the stronger cause: searching all 119,897 owned TRAIN residual windows improves filtered-
+domain normalized MSE on 2046/2151 held-out windows (95.12%). Mean filtered-response cosine rises
+from 0.8071 to 0.8719 and the fraction below cosine 0.80 falls from 35.47% to 19.15%.
 
-The current 6,234-entry artifact is itself compressed: the builder retains at most 128 real TRAIN
-residual vectors per conditioning bucket using deterministic hash sampling. The next and only active
-gate is therefore a full-TRAIN retrieval coverage isolation using every owned TRAIN residual vector,
-the same compatibility rule, and the same exact frozen-renderer scoring. This diagnostic bank is not
-a production codebook expansion and does not authorize training, optimizer/checkpoint creation, or
-product integration.
+Therefore the 512/256 residual representation is not rejected as useless; the current 128-per-bucket
+deterministic hash retention is a demonstrated dominant bottleneck. Full TRAIN is still not accepted
+as product quality: significant held-out coverage gaps remain and metrics cannot accept quality.
+
+No selector/model training or production codebook expansion is authorized. The next gate changes
+only TRAIN-only retention capacity under the existing deterministic hash rule. One diagnostic bank at
+max_per_bucket=1024 provides exact nested 256/512/1024 subsets; their held-out synthesis-domain
+coverage is compared against the completed 128 and full-TRAIN ceilings. This determines how much of
+the full-TRAIN gain is recoverable by capacity alone before designing any new signal-aware retention.
 """
 
-DECISION_VERSION = "owned-minimum-phase-v3-decision-v13-full-train-retrieval-coverage-isolation"
+DECISION_VERSION = "owned-minimum-phase-v3-decision-v14-train-only-hash-retention-capacity-curve"
 POLICY_ID = "LYX-POL-001"
 SUPERSEDES_GATE_STATE_FROM = "owned-vocoder-architecture-contract-v1"
 ARCHITECTURE_FAMILY = "owned_minimum_phase_filter_over_owned_residual_codebook_candidate"
@@ -100,6 +103,13 @@ RESIDUAL_CODEBOOK_V5_REJECTION_DOC = "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_V5_
 RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_EVIDENCE_DOC = (
     "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_V1_EVIDENCE.md"
 )
+FULL_TRAIN_RESIDUAL_RETRIEVAL_COVERAGE_EVIDENCE_DOC = (
+    "docs/LYKENOX_VOCODER_FULL_TRAIN_RETRIEVAL_COVERAGE_V2_EVIDENCE.md"
+)
+FULL_TRAIN_RESIDUAL_RETRIEVAL_RESUMABLE_EXECUTION_DOC = (
+    "docs/LYKENOX_VOCODER_FULL_TRAIN_COVERAGE_RESUMABLE_EXECUTION.md"
+)
+
 RESIDUAL_CODEBOOK_MODULE = "lykenox_voice_engine/training/speech_residual_codebook_v1.py"
 RESIDUAL_CODEBOOK_ORACLE_V1_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v1.py"
 RESIDUAL_CODEBOOK_ORACLE_V2_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v2.py"
@@ -121,6 +131,13 @@ RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_SCRIPT = (
 FULL_TRAIN_RESIDUAL_RETRIEVAL_COVERAGE_SCRIPT = (
     "scripts/diagnostic_full_train_residual_retrieval_coverage_v1.py"
 )
+FULL_TRAIN_RESIDUAL_RETRIEVAL_COVERAGE_V2_SCRIPT = (
+    "scripts/diagnostic_full_train_residual_retrieval_coverage_v2_resumable.py"
+)
+RESIDUAL_CODEBOOK_HASH_RETENTION_SWEEP_SCRIPT = (
+    "scripts/diagnostic_residual_codebook_hash_retention_sweep_v1.py"
+)
+
 RESIDUAL_CODEBOOK_SOURCE = "owned_train_real_residual_only"
 RESIDUAL_CODEBOOK_THIRD_PARTY_DATA_ALLOWED = False
 RESIDUAL_CODEBOOK_THIRD_PARTY_MODEL_OR_CHECKPOINT_ALLOWED = False
@@ -135,6 +152,7 @@ RESIDUAL_CODEBOOK_BUILD_STATUS = "built_from_owned_train_real_residual"
 RESIDUAL_CODEBOOK_RETAINED_CODEWORD_COUNT = 6234
 RESIDUAL_CODEBOOK_BUCKET_COUNT = 58
 RESIDUAL_CODEBOOK_MAX_PER_BUCKET = 128
+RESIDUAL_CODEBOOK_ORIGINAL_TRAIN_CANDIDATE_WINDOW_COUNT = 119897
 RESIDUAL_CODEBOOK_HELDOUT_ITEM_COUNT = 3
 RESIDUAL_CODEBOOK_LOCAL_DEVICE = "cpu"
 RESIDUAL_CODEBOOK_TRAINING_EXECUTED = False
@@ -161,7 +179,7 @@ RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_CODEWORD_SUBSTITUTION = False
 RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_ORACLE_GAIN = False
 RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_RESIDUAL_LISTENING_RESULT = "noisy_non_speech_like_expected_excitation"
 RESIDUAL_CODEBOOK_IDENTITY_ROUNDTRIP_FINAL_LISTENING_RESULT = "correct_matches_original_voice_audio"
-RESIDUAL_CODEBOOK_512_256_SQRT_HANN_REPRESENTATION_STATUS = "exculpated_for_identity_roundtrip"
+RESIDUAL_CODEBOOK_512_256_SQRT_HANN_REPRESENTATION_STATUS = "exculpated_for_identity_roundtrip_and_not_rejected_by_full_train_coverage"
 RESIDUAL_CODEBOOK_FROZEN_FILTER_STATUS = "exculpated_when_correct_residual_sequence_used"
 
 RESIDUAL_CODEBOOK_ORACLE_V3_SEQUENCE_STATUS = "rejected_perceptually_gangoso"
@@ -172,7 +190,7 @@ RESIDUAL_CODEBOOK_ORACLE_V3_SELECTED_RESIDUAL_LISTENING_RESULT = "noise_non_spee
 RESIDUAL_CODEBOOK_ORACLE_V3_TRAINING_USED = False
 RESIDUAL_CODEBOOK_ORACLE_V3_PRODUCT_ACTIVE = False
 RESIDUAL_CODEBOOK_ORACLE_V3_CODEBOOK_REJECTED = False
-RESIDUAL_CODEBOOK_FAILURE_LOCALIZATION = "retained_codebook_coverage_and_preselection_both_insufficient"
+RESIDUAL_CODEBOOK_FAILURE_LOCALIZATION = "aggressive_train_only_retention_is_dominant_demonstrated_bottleneck"
 
 RESIDUAL_CODEBOOK_ORACLE_V4_SYNTHESIS_DOMAIN_STATUS = "implemented_baseline_preserved"
 RESIDUAL_CODEBOOK_ORACLE_V4_FINAL_SELECTION_DOMAIN = "exact_local_frozen_renderer_waveform_contribution"
@@ -213,12 +231,34 @@ RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_PRESELECTOR_SUFFICIENT = False
 RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_COMPRESSED_BANK_SUFFICIENTLY_DEMONSTRATED = False
 RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 
-FULL_TRAIN_RESIDUAL_RETRIEVAL_COVERAGE_STATUS = "implemented_awaiting_local_measurement"
+FULL_TRAIN_RESIDUAL_RETRIEVAL_COVERAGE_STATUS = "owner_reported_completed_v2_resumable"
 FULL_TRAIN_RESIDUAL_RETRIEVAL_BANK_ROLE = "diagnostic_only_not_production_codebook_expansion"
 FULL_TRAIN_RESIDUAL_RETRIEVAL_USES_ALL_OWNED_TRAIN_WINDOWS = True
 FULL_TRAIN_RESIDUAL_RETRIEVAL_HELDOUT_DATA_ALLOWED_IN_BANK = False
 FULL_TRAIN_RESIDUAL_RETRIEVAL_SAME_COMPATIBILITY_RULE_REQUIRED = True
 FULL_TRAIN_RESIDUAL_RETRIEVAL_SAME_FILTERED_DOMAIN_SCORING_REQUIRED = True
+FULL_TRAIN_RESIDUAL_RETRIEVAL_WINDOW_COUNT = 119897
+FULL_TRAIN_RESIDUAL_RETRIEVAL_HELDOUT_WINDOW_COUNT = 2151
+FULL_TRAIN_RESIDUAL_RETRIEVAL_IMPROVEMENT_COUNT = 2046
+FULL_TRAIN_RESIDUAL_RETRIEVAL_IMPROVEMENT_FRACTION = 0.9511854951185496
+FULL_TRAIN_RESIDUAL_RETRIEVAL_COSINE_MEAN = 0.8719168362064397
+FULL_TRAIN_RESIDUAL_RETRIEVAL_COSINE_MEDIAN = 0.9133571982383728
+FULL_TRAIN_RESIDUAL_RETRIEVAL_FRACTION_BELOW_080 = 0.1915388191538819
+FULL_TRAIN_RESIDUAL_RETRIEVAL_NMSE_P50 = 0.1657785028219223
+FULL_TRAIN_RESIDUAL_RETRIEVAL_NMSE_P90 = 0.4952743649482727
+FULL_TRAIN_RESIDUAL_RETRIEVAL_TRAINING_EXECUTED = False
+FULL_TRAIN_RESIDUAL_RETRIEVAL_OPTIMIZER_CREATED = False
+FULL_TRAIN_RESIDUAL_RETRIEVAL_CHECKPOINT_WRITTEN = False
+FULL_TRAIN_RESIDUAL_RETRIEVAL_PRODUCTION_CODEBOOK_REPLACED = False
+FULL_TRAIN_RESIDUAL_RETRIEVAL_SUFFICIENT_FOR_PRODUCT_ACCEPTANCE = False
+
+RESIDUAL_CODEBOOK_HASH_RETENTION_SWEEP_STATUS = "implemented_awaiting_local_measurement"
+RESIDUAL_CODEBOOK_HASH_RETENTION_SWEEP_MAX_CAP = 1024
+RESIDUAL_CODEBOOK_HASH_RETENTION_SWEEP_CAPS = (256, 512, 1024)
+RESIDUAL_CODEBOOK_HASH_RETENTION_SWEEP_REUSES_EXISTING_HASH_RULE = True
+RESIDUAL_CODEBOOK_HASH_RETENTION_SWEEP_HELDOUT_SELECTS_CODEWORDS = False
+RESIDUAL_CODEBOOK_HASH_RETENTION_SWEEP_RESUMABLE = True
+RESIDUAL_CODEBOOK_HASH_RETENTION_SWEEP_METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 
 RESIDUAL_CODEBOOK_EXPANSION_CURRENTLY_AUTHORIZED = False
 FURTHER_CODEBOOK_SELECTION_ITERATION_CURRENTLY_AUTHORIZED = False
@@ -232,4 +272,4 @@ BOUNDED_MODEL_OPTIMIZER_CURRENTLY_AUTHORIZED = False
 SCOPED_NEW_CHECKPOINT_CURRENTLY_AUTHORIZED = False
 PRODUCTION_RENDERER_MODIFICATION_AUTHORIZED_BY_THIS_EVIDENCE = False
 
-NEXT_ACTION = "run_full_train_residual_retrieval_coverage_and_compare_against_compressed_6234_before_any_codebook_redesign_or_training"
+NEXT_ACTION = "run_train_only_hash_retention_capacity_sweep_256_512_1024_and_review_gap_recovery_before_any_new_retention_algorithm_or_training"
