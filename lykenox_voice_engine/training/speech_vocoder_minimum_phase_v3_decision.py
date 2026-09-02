@@ -10,7 +10,7 @@ The calibrated Rosenberg pulse + measured four-band aperiodicity candidate is al
 owner reports that a local calibration based on 97,168 pitch-synchronous cycles still produced
 gangoso/rough held-out oracle audio.
 
-The CELP-style codebook line now has a decisive representation isolation result. V1 was too quiet to
+The CELP-style codebook line has a decisive representation isolation result. V1 was too quiet to
 judge because of an arbitrary oracle-gain cap. V2 corrected level but independently substituted each
 held-out residual window with a train codeword and remained intelligible but gangoso. The identity
 roundtrip then analyzed the exact clean held-out real residual into the same 512-sample / 256-hop
@@ -19,19 +19,21 @@ the owner reports that the final filtered resynthesis again sounds correct and m
 voice audio. Therefore the codevector window/OLA representation and frozen minimum-phase filter are
 exculpated when the correct residual trajectory is used.
 
-V3 removed per-window polarity inversion and added complete-utterance residual-domain overlap
-continuity, but the owner reports the final held-out waveform remains gangoso. Therefore residual-
-domain codeword similarity/continuity is rejected as the selection criterion. V4 moved final
-selection and non-negative gain into the exact local frozen-renderer waveform domain but keeps a
-purely local greedy argmin per analysis window. V5 preserves V4 unchanged and adds deterministic
-bounded beam search with continuity measured in that same filtered waveform domain over the exact
-256-sample adjacent OLA overlap.
+V3 added residual-domain temporal continuity and remained gangoso. V4 moved final selection/gain into
+the exact local frozen-renderer waveform domain but used independent greedy selection. V5 preserved
+V4's synthesis-domain scoring and added deterministic bounded beam continuity in that same filtered
+waveform domain over the exact 256-sample adjacent OLA overlap. The owner reports the same dominant
+gangoso problem remains. Therefore missing adjacent-window continuity is not supported as the
+dominant remaining failure mechanism for this codebook.
 
-No selector training is authorized. No further algorithm iteration is authorized until V5 is run and
-the owner reports complete held-out listening against V4 and the clean identity-roundtrip ceiling.
+No selector training or further codeword-selection iteration is authorized. The next gate is a pure
+coverage audit: compare V4's PRESELECT_K candidate ceiling against the best candidate among every
+compatible owned-train codeword, per held-out window, in the exact same filtered waveform domain.
+This must distinguish insufficient codebook coverage from residual-cosine preselection failure before
+any codebook expansion, redesign, selector, optimizer, checkpoint, or production change.
 """
 
-DECISION_VERSION = "owned-minimum-phase-v3-decision-v11-codebook-synthesis-domain-coherent-oracle"
+DECISION_VERSION = "owned-minimum-phase-v3-decision-v12-codebook-synthesis-coverage-audit"
 POLICY_ID = "LYX-POL-001"
 SUPERSEDES_GATE_STATE_FROM = "owned-vocoder-architecture-contract-v1"
 ARCHITECTURE_FAMILY = "owned_minimum_phase_filter_over_owned_residual_codebook_candidate"
@@ -111,6 +113,7 @@ RESIDUAL_CODEBOOK_V3_REJECTION_DOC = "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_V3_
 RESIDUAL_CODEBOOK_V5_DECISION_DOC = (
     "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_V5_SYNTHESIS_DOMAIN_COHERENT.md"
 )
+RESIDUAL_CODEBOOK_V5_REJECTION_DOC = "docs/LYKENOX_VOCODER_RESIDUAL_CODEBOOK_V5_REJECTION.md"
 RESIDUAL_CODEBOOK_MODULE = "lykenox_voice_engine/training/speech_residual_codebook_v1.py"
 RESIDUAL_CODEBOOK_ORACLE_V1_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v1.py"
 RESIDUAL_CODEBOOK_ORACLE_V2_SCRIPT = "scripts/diagnostic_residual_codebook_oracle_v2.py"
@@ -125,6 +128,9 @@ RESIDUAL_CODEBOOK_ORACLE_V4_SYNTHESIS_DOMAIN_SCRIPT = (
 )
 RESIDUAL_CODEBOOK_ORACLE_V5_SYNTHESIS_DOMAIN_COHERENT_SCRIPT = (
     "scripts/diagnostic_residual_codebook_oracle_v5_synthesis_domain_coherent.py"
+)
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_SCRIPT = (
+    "scripts/diagnostic_residual_codebook_synthesis_coverage_v1.py"
 )
 RESIDUAL_CODEBOOK_SOURCE = "owned_train_real_residual_only"
 RESIDUAL_CODEBOOK_THIRD_PARTY_DATA_ALLOWED = False
@@ -185,8 +191,8 @@ RESIDUAL_CODEBOOK_ORACLE_V3_PRODUCT_ACTIVE = False
 RESIDUAL_CODEBOOK_ORACLE_V3_CODEBOOK_REJECTED = False
 RESIDUAL_CODEBOOK_FAILURE_LOCALIZATION = "residual_domain_codeword_selection_is_perceptually_insufficient"
 
-# V4 is preserved unchanged as the synthesis-domain greedy baseline for V5 comparison.
-RESIDUAL_CODEBOOK_ORACLE_V4_SYNTHESIS_DOMAIN_STATUS = "implemented_baseline_preserved_for_v5_comparison"
+# V4 is preserved unchanged as the synthesis-domain greedy baseline.
+RESIDUAL_CODEBOOK_ORACLE_V4_SYNTHESIS_DOMAIN_STATUS = "implemented_baseline_preserved"
 RESIDUAL_CODEBOOK_ORACLE_V4_FINAL_SELECTION_DOMAIN = "exact_local_frozen_renderer_waveform_contribution"
 RESIDUAL_CODEBOOK_ORACLE_V4_GAIN_DOMAIN = "exact_local_frozen_renderer_waveform_contribution"
 RESIDUAL_CODEBOOK_ORACLE_V4_GAIN_NON_NEGATIVE = True
@@ -195,9 +201,9 @@ RESIDUAL_CODEBOOK_ORACLE_V4_TRAINING_USED = False
 RESIDUAL_CODEBOOK_ORACLE_V4_PRODUCT_ACTIVE = False
 RESIDUAL_CODEBOOK_ORACLE_V4_ORACLE_PARAMETERS_VALID_FOR_PRODUCT = False
 
-# V5 keeps V4's preselection, exact filtered response, and gain unchanged and adds bounded sequence
-# search whose continuity term is measured in the same filtered waveform domain.
-RESIDUAL_CODEBOOK_ORACLE_V5_STATUS = "implemented_awaiting_owner_complete_heldout_listening"
+# V5 combined V4 synthesis-domain scoring with filtered-domain sequence continuity and did not improve
+# the dominant perceptual failure. This rejects missing adjacent continuity as the dominant cause.
+RESIDUAL_CODEBOOK_ORACLE_V5_STATUS = "rejected_perceptually_same_gangoso_problem"
 RESIDUAL_CODEBOOK_ORACLE_V5_PRESELECT = "v4_broad_signed_residual_cosine_unchanged"
 RESIDUAL_CODEBOOK_ORACLE_V5_LOCAL_RESPONSE = "v4_exact_local_frozen_renderer_response_unchanged"
 RESIDUAL_CODEBOOK_ORACLE_V5_GAIN = "v4_non_negative_filtered_domain_least_squares_unchanged"
@@ -205,10 +211,20 @@ RESIDUAL_CODEBOOK_ORACLE_V5_SEQUENCE_SEARCH = "deterministic_bounded_beam"
 RESIDUAL_CODEBOOK_ORACLE_V5_DEFAULT_BEAM_SIZE = 8
 RESIDUAL_CODEBOOK_ORACLE_V5_DEFAULT_CONTINUITY_WEIGHT = 1.0
 RESIDUAL_CODEBOOK_ORACLE_V5_CONTINUITY_DOMAIN = "filtered_waveform_256_sample_adjacent_ola_overlap"
+RESIDUAL_CODEBOOK_ORACLE_V5_FINAL_LISTENING_RESULT = "same_dominant_gangoso_problem"
+RESIDUAL_CODEBOOK_ORACLE_V5_CONTINUITY_DOMINANT_CAUSE_SUPPORTED = False
 RESIDUAL_CODEBOOK_ORACLE_V5_TRAINING_USED = False
 RESIDUAL_CODEBOOK_ORACLE_V5_PRODUCT_ACTIVE = False
 RESIDUAL_CODEBOOK_ORACLE_V5_ORACLE_PARAMETERS_VALID_FOR_PRODUCT = False
-FURTHER_CODEBOOK_ALGORITHM_ITERATION_BEFORE_V5_LISTENING_AUTHORIZED = False
+
+# Coverage gate: do not change selection again before measuring whether the current 6,234 codewords
+# contain close filtered-domain matches at all, and whether V4/V5 PRESELECT_K hides better matches.
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_STATUS = "implemented_awaiting_local_measurement"
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_COMPARE_PRESELECTED_VS_ALL_COMPATIBLE = True
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_PER_WINDOW_REQUIRED = True
+RESIDUAL_CODEBOOK_SYNTHESIS_COVERAGE_METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
+RESIDUAL_CODEBOOK_EXPANSION_CURRENTLY_AUTHORIZED = False
+FURTHER_CODEBOOK_SELECTION_ITERATION_CURRENTLY_AUTHORIZED = False
 
 PURE_CELP_PRODUCT_INFERENCE_SELECTED = False
 OWNED_RESIDUAL_SELECTOR_MUST_BE_LYKENOX_TRAINED = True
@@ -220,4 +236,4 @@ BOUNDED_MODEL_OPTIMIZER_CURRENTLY_AUTHORIZED = False
 SCOPED_NEW_CHECKPOINT_CURRENTLY_AUTHORIZED = False
 PRODUCTION_RENDERER_MODIFICATION_AUTHORIZED_BY_THIS_EVIDENCE = False
 
-NEXT_ACTION = "run_v5_then_listen_vs_v4_and_identity_roundtrip_ceiling_and_report_before_any_further_iteration"
+NEXT_ACTION = "run_residual_codebook_synthesis_coverage_audit_and_review_all_compatible_per_window_before_any_new_selector_or_training"
