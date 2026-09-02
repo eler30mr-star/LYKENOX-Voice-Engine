@@ -1,11 +1,12 @@
 """Authoritative active source-path decision for the LYKENOX vocoder.
 
-Historical codebook and continuous-source implementations remain evidence.  This file states the
-active engineering path after the 2026-09-02 held-out listening result for level-factored V2.
+Historical codebook and continuous-source implementations remain evidence. This file states the
+active engineering path after the 2026-09-02 held-out listening result for level-factored V2 and the
+completed coherent-innovation training run.
 """
 
 POLICY_ID = "LYX-POL-001"
-DECISION_VERSION = "owned-vocoder-active-source-decision-v3-coherent-stochastic-innovation"
+DECISION_VERSION = "owned-vocoder-active-source-decision-v4-coherent-innovation-awaiting-listening"
 
 ACTIVE_SOURCE_ARCHITECTURE = "lykenox_owned_coherent_innovation_residual_source_v1"
 ACTIVE_SOURCE_MODEL = "lykenox_voice_engine/models/vocoder/network_minimum_phase_coherent_innovation_source_v1.py"
@@ -28,10 +29,6 @@ CONTINUOUS_SOURCE_V1_STATUS = "rejected_for_heldout_amplitude_collapse"
 CONTINUOUS_SOURCE_V1_HELDOUT_PREDICTION_REFERENCE_RMS_RATIOS = (0.098, 0.128, 0.153)
 CONTINUOUS_SOURCE_V1_CHECKPOINT_MAY_BE_USED_FOR_PRODUCT = False
 
-# V2 is a genuine positive result but not product-acceptable: it fixed the amplitude collapse and
-# the owner reports that speech_0024 has good pronunciation with no gangoso and no chillido in the
-# final rendered waveform.  The remaining dominant audible defect is robotic timbre.  The isolated
-# predicted residual sounding like a chillido is explicitly not a voice-quality rejection criterion.
 CONTINUOUS_SOURCE_V2_STATUS = "positive_intermediate_rejected_for_robotic_naturalness"
 CONTINUOUS_SOURCE_V2_HELDOUT_PREDICTION_REFERENCE_RMS_RATIOS = (0.833, 0.905, 0.949)
 CONTINUOUS_SOURCE_V2_SPEECH_0024_PRONUNCIATION_GOOD = True
@@ -42,13 +39,22 @@ CONTINUOUS_SOURCE_V2_IDENTITY_ROUNDTRIP_CEILING_CLEAN_AND_REFERENCE_LIKE = True
 CONTINUOUS_SOURCE_V2_IS_VALID_WARM_START_FOR_OWNED_SUCCESSOR = True
 CONTINUOUS_SOURCE_V2_CHECKPOINT_MAY_BE_USED_AS_FINAL_PRODUCT = False
 
-# Root interpretation: after level and envelope were exculpated, V2 still maps one acoustic
-# conditioning trajectory to one deterministic residual fine-structure trajectory.  Aperiodic
-# residual components are not uniquely predictable from mel/F0/voicing/periodicity, so forcing them
-# through deterministic regression encourages mean/over-regularized fine structure and robotic tone.
 ACTIVE_ROOT_CAUSE_HYPOTHESIS = "deterministic_regression_of_aperiodic_residual_fine_structure"
 ACTIVE_ROOT_FIX = "separate_coherent_residual_trajectory_from_stochastic_aperiodic_innovation"
 V2_OWNED_WARM_START_AUTHORIZED = True
+
+COHERENT_INNOVATION_RUN_STATUS = "training_complete_awaiting_full_heldout_listening"
+COHERENT_INNOVATION_UPDATES = 600
+COHERENT_INNOVATION_BEST_VAL_TOTAL = 2.5877118905385337
+COHERENT_INNOVATION_CODEBOOK_USED = False
+COHERENT_INNOVATION_TEACHER_FORCING_USED = False
+COHERENT_INNOVATION_THIRD_PARTY_MODEL_OR_WEIGHT_USED = False
+COHERENT_INNOVATION_REMOTE_SERVICE_USED = False
+COHERENT_INNOVATION_POSTHOC_GAIN_NORMALIZATION_USED = False
+COHERENT_INNOVATION_POSTHOC_EQ_USED = False
+COHERENT_INNOVATION_POSTHOC_DENOISING_USED = False
+COHERENT_INNOVATION_METRICS_ACCEPT_PRODUCT_QUALITY = False
+COHERENT_INNOVATION_PERCEPTUAL_ACCEPTANCE_DECIDED = False
 
 DISCRETE_RESIDUAL_CODEBOOK_PRODUCT_PATH_CLOSED = True
 CELP_CODEBOOK_SELECTOR_TRAINING_AUTHORIZED = False
@@ -71,4 +77,5 @@ METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 FULL_HELDOUT_LISTENING_REQUIRED = True
 CPU_REFERENCE_DEVICE = True
 
-NEXT_ACTION = "train_coherent_innovation_source_from_v2_warm_start_then_listen_for_robotic_timbre_reduction"
+# No further architecture change is authorized before the owner reports the audible result.
+NEXT_ACTION = "listen_to_coherent_innovation_heldout_audio_and_decide_whether_robotic_timbre_materially_decreased"
