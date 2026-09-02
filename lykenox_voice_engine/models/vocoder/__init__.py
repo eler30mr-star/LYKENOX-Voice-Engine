@@ -71,6 +71,10 @@ from .network_minimum_phase_continuous_source_v2 import (
     CONTINUOUS_SOURCE_ARCHITECTURE_V2,
     LykenoxContinuousResidualSourceV2,
 )
+from .network_minimum_phase_coherent_innovation_source_v1 import (
+    COHERENT_INNOVATION_ARCHITECTURE,
+    LykenoxCoherentInnovationResidualSourceV1,
+)
 
 # The legacy flags on network_v6 describe only whether a waveform is directly bypassed.
 # They were too narrow to justify the former "source-free" claim: V6 injects accumulated
@@ -123,4 +127,6 @@ __all__ = [
     "LykenoxContinuousResidualSourceV1",
     "CONTINUOUS_SOURCE_ARCHITECTURE_V2",
     "LykenoxContinuousResidualSourceV2",
+    "COHERENT_INNOVATION_ARCHITECTURE",
+    "LykenoxCoherentInnovationResidualSourceV1",
 ]
