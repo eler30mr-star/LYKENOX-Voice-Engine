@@ -1,4 +1,4 @@
-"""One-command entrypoint for the active LYKENOX continuous residual source training path."""
+"""One-command train-and-listen entrypoint for the active LYKENOX continuous residual source."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from lykenox_voice_engine.training.speech_vocoder_continuous_residual_source_tra
     DEFAULT_VAL_ITEMS,
     train_continuous_residual_source,
 )
+from scripts.render_continuous_residual_source_v1 import render_heldout
 
 
 def main() -> None:
@@ -32,7 +33,7 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--no-resume", action="store_true")
     args = parser.parse_args()
-    report = train_continuous_residual_source(
+    training = train_continuous_residual_source(
         args.root,
         train_items=args.train_items,
         val_items=args.val_items,
@@ -42,7 +43,22 @@ def main() -> None:
         resume=not args.no_resume,
         seed=args.seed,
     )
-    print(json.dumps(report, indent=2, ensure_ascii=False))
+    listening = render_heldout(
+        args.root,
+        heldout_items=args.val_items,
+        checkpoint=Path(str(training["best_checkpoint"])),
+    )
+    print(
+        json.dumps(
+            {
+                "status": "continuous_residual_source_train_and_listen_complete",
+                "training": training,
+                "listening": listening,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
 
 
 if __name__ == "__main__":
