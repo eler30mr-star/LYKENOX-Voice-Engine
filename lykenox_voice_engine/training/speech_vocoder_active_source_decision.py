@@ -1,24 +1,33 @@
 """Authoritative active source-path decision for the LYKENOX vocoder.
 
-Historical vocoder/codebook decision modules remain immutable evidence. This file states only the
-current engineering direction after the 2026-09-02 root-cause work.
+Historical vocoder/codebook and continuous-source V1 files remain immutable evidence. This file
+states the active engineering path after the 2026-09-02 held-out V1 amplitude-collapse result.
 """
 
 POLICY_ID = "LYX-POL-001"
-DECISION_VERSION = "owned-vocoder-active-source-decision-v1-continuous-residual"
+DECISION_VERSION = "owned-vocoder-active-source-decision-v2-level-factored-continuous-residual"
 
-ACTIVE_SOURCE_ARCHITECTURE = "lykenox_owned_continuous_residual_source_v1"
-ACTIVE_SOURCE_MODEL = "lykenox_voice_engine/models/vocoder/network_minimum_phase_continuous_source_v1.py"
-ACTIVE_SOURCE_TRAINER = "lykenox_voice_engine/training/speech_vocoder_continuous_residual_source_train_v1.py"
-ACTIVE_SOURCE_HELDOUT_RENDERER = "scripts/render_continuous_residual_source_v1.py"
-ACTIVE_ARCHITECTURE_DOC = "docs/LYKENOX_VOCODER_CONTINUOUS_RESIDUAL_SOURCE_ARCHITECTURE.md"
+ACTIVE_SOURCE_ARCHITECTURE = "lykenox_owned_continuous_residual_source_v2_level_factored"
+ACTIVE_SOURCE_MODEL = "lykenox_voice_engine/models/vocoder/network_minimum_phase_continuous_source_v2.py"
+ACTIVE_SOURCE_TRAINER = "lykenox_voice_engine/training/speech_vocoder_continuous_residual_source_train_v2.py"
+ACTIVE_SOURCE_HELDOUT_RENDERER = "scripts/render_continuous_residual_source_v2.py"
+ACTIVE_ONE_COMMAND_ENTRYPOINT = "scripts/train_continuous_residual_source_v2.py"
 
 FIXED_MINIMUM_PHASE_RENDERER_RETAINED = True
 FIXED_MINIMUM_PHASE_RENDERER_MODIFICATION_AUTHORIZED = False
 STEP3F_REAL_RESIDUAL_IS_SOURCE_TRAINING_TARGET = True
 RESIDUAL_512_256_SQRT_HANN_REPRESENTATION_RETAINED = True
-FRAME_RATE_AUTOREGRESSIVE_CONTINUOUS_SOURCE = True
+FRAME_RATE_AUTOREGRESSIVE_CONTINUOUS_SHAPE = True
+EXPLICIT_RESIDUAL_LOG_RMS_HEAD = True
+PREVIOUS_AMPLITUDE_RECURRENT_FEEDBACK = False
 SAMPLE_RATE_AUTOREGRESSIVE_MODEL = False
+
+CONTINUOUS_SOURCE_V1_STATUS = "rejected_for_heldout_amplitude_collapse"
+CONTINUOUS_SOURCE_V1_HELDOUT_PREDICTION_REFERENCE_RMS_RATIOS = (0.098, 0.128, 0.153)
+CONTINUOUS_SOURCE_V1_ROOT_CAUSE = (
+    "shape_and_absolute_level_coupled_in_one_512_sample_head_with_weak_indirect_level_authority"
+)
+CONTINUOUS_SOURCE_V1_CHECKPOINT_MAY_BE_USED_FOR_PRODUCT = False
 
 DISCRETE_RESIDUAL_CODEBOOK_PRODUCT_PATH_CLOSED = True
 CELP_CODEBOOK_SELECTOR_TRAINING_AUTHORIZED = False
@@ -35,11 +44,10 @@ POSTHOC_DENOISING_AUTHORIZED = False
 PREDICTED_DURATION_MODIFICATION_AUTHORIZED = False
 
 TRAIN_SPLIT_ONLY_FOR_OPTIMIZER_UPDATES = True
-VAL_ALLOWED_FOR_REJECTION_ONLY = True
+VAL_ALLOWED_FOR_REJECTION_AND_CHECKPOINT_SELECTION = True
+COMPLETE_HELDOUT_FREE_RUNNING_VALIDATION_REQUIRED = True
 METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 FULL_HELDOUT_LISTENING_REQUIRED = True
 CPU_REFERENCE_DEVICE = True
 
-# This is no longer an architecture-search gate. The next execution is the actual owned source
-# training run followed by complete held-out listening of the resulting source path.
-NEXT_ACTION = "train_owned_continuous_residual_source_then_render_complete_heldout_audio"
+NEXT_ACTION = "train_level_factored_continuous_residual_source_v2_then_listen_to_complete_heldout_audio"
