@@ -1,18 +1,26 @@
 """Authoritative active source-path decision for the LYKENOX vocoder.
 
 Historical codebook and source implementations remain evidence. This file states the active
-engineering path after the 2026-09-03 unified phase residual source training run.
+engineering gate after the 2026-09-03 unified phase residual source listening failure.
 """
 
 POLICY_ID = "LYX-POL-001"
-DECISION_VERSION = "owned-vocoder-active-source-decision-v10-unified-phase-awaiting-listening"
+DECISION_VERSION = "owned-vocoder-active-source-decision-v11-cross-variant-reference-diagnostic"
 
+# The most recent learned source is retained only as forensic evidence. Human listening reports that
+# the same unacceptable audible defects remain, so no new source architecture is authorized until the
+# already-generated WAV population is compared directly against reference and the clean identity
+# roundtrip ceiling by one common diagnostic.
 ACTIVE_SOURCE_ARCHITECTURE = "lykenox_owned_unified_phase_residual_source_v1"
 ACTIVE_SOURCE_MODEL = "lykenox_voice_engine/models/vocoder/network_minimum_phase_unified_phase_residual_source_v1.py"
 ACTIVE_SOURCE_TRAINER = "lykenox_voice_engine/training/speech_vocoder_unified_phase_residual_source_train_v1.py"
 ACTIVE_SOURCE_HELDOUT_RENDERER = "scripts/render_unified_phase_residual_source_v1.py"
-ACTIVE_ONE_COMMAND_ENTRYPOINT = "scripts/train_unified_phase_residual_source_v1.py"
 ACTIVE_SOURCE_CHECKPOINT = "models/lykenox_identity/training/unified_phase_residual_source_v1/best.pt"
+ACTIVE_SOURCE_STATUS = "rejected_same_audible_defects_persist"
+ACTIVE_ENGINEERING_GATE = "direct_generated_vs_reference_cross_variant_diagnostic"
+ACTIVE_DIAGNOSTIC = "scripts/diagnose_vocoder_generated_vs_reference_v1.py"
+FURTHER_SOURCE_ARCHITECTURE_CHANGES_AUTHORIZED = False
+FURTHER_SOURCE_TRAINING_AUTHORIZED = False
 
 FIXED_MINIMUM_PHASE_RENDERER_RETAINED = True
 FIXED_MINIMUM_PHASE_RENDERER_MODIFICATION_AUTHORIZED = False
@@ -23,9 +31,6 @@ CONTINUOUS_SOURCE_V1_STATUS = "rejected_for_heldout_amplitude_collapse"
 CONTINUOUS_SOURCE_V1_HELDOUT_PREDICTION_REFERENCE_RMS_RATIOS = (0.098, 0.128, 0.153)
 CONTINUOUS_SOURCE_V1_CHECKPOINT_MAY_BE_USED_FOR_PRODUCT = False
 
-# V2 fixed the amplitude collapse and remains a useful historical source baseline, but its held-out
-# voice remained robotic. It may not be used as a final product source or as an independent fallback
-# branch in the active architecture.
 CONTINUOUS_SOURCE_V2_STATUS = "positive_historical_baseline_rejected_for_robotic_naturalness"
 CONTINUOUS_SOURCE_V2_HELDOUT_PREDICTION_REFERENCE_RMS_RATIOS = (0.833, 0.905, 0.949)
 CONTINUOUS_SOURCE_V2_CHECKPOINT_MAY_BE_USED_AS_FINAL_PRODUCT = False
@@ -36,8 +41,7 @@ FURTHER_COHERENT_INNOVATION_TUNING_AUTHORIZED = False
 
 # Pitch-synchronous real Step3f residual cycles produced the strongest learned voiced source so far.
 # On speech_0021 the owner reported the V1 pitch-synchronous waveform as almost like the original,
-# with a remaining robotic whistle/chirp. This proves the useful representation is F0-relative phase,
-# not fixed 512/256 absolute sample phase.
+# with a remaining robotic whistle/chirp. This remains important evidence but not a complete source.
 PITCH_SYNCHRONOUS_CYCLE_STATUS = "strongest_voiced_representation_not_complete_source"
 PITCH_SYNCHRONOUS_CYCLE_UPDATES = 600
 PITCH_SYNCHRONOUS_CYCLE_BEST_VAL_TOTAL = 2.6395082473754883
@@ -45,19 +49,11 @@ PITCH_SYNCHRONOUS_CYCLE_SPEECH_0021_NEAR_REFERENCE_VOICE = True
 PITCH_SYNCHRONOUS_CYCLE_CHECKPOINT_RETAINED_FOR_FORENSICS = True
 PITCH_SYNCHRONOUS_CYCLE_CHECKPOINT_MAY_BE_USED_AS_FINAL_PRODUCT = False
 
-# Hard-splice decoding was structurally invalid and phase-continuous Fourier decoding removed that
-# defect, but the terminal chirp remained. No further cycle-decoder tuning is authorized.
 PITCH_SYNCHRONOUS_V1_HARD_SPLICE_DECODER_REJECTED = True
 PHASE_CONTINUOUS_DECODER_STATUS = "retained_for_forensics_but_insufficient"
 FURTHER_HARD_SPLICE_DECODER_USE_AUTHORIZED = False
 FURTHER_PHASE_CONTINUOUS_DECODER_TUNING_AUTHORIZED = False
 
-# Phase-exclusive V3 replaced raw source crossfade with pitch-sync authority inside complete cycles,
-# V2 authority elsewhere, and a period-derived C1 Hermite bridge at every handoff. Held-out listening
-# regressed: the owner reports nasal coloration, slight robotization, wind-like noise and residual
-# chirp. Therefore the defect is not merely mathematical continuity at a boundary; the hybrid source
-# architecture itself is rejected. Two independently learned residual identities cannot be treated as
-# one source by increasingly sophisticated handoff logic.
 PHASE_EXCLUSIVE_HANDOFF_STATUS = "rejected_for_nasal_wind_robotic_regression"
 PHASE_EXCLUSIVE_HANDOFF_TRAINING_EXECUTED = False
 PHASE_EXCLUSIVE_HANDOFF_RAW_SAMPLEWISE_MIX_USED = False
@@ -68,48 +64,39 @@ PHASE_EXCLUSIVE_HANDOFF_OWNER_REPORTED_RESIDUAL_CHIRP = True
 FURTHER_SOURCE_HANDOFF_OR_BRIDGE_TUNING_AUTHORIZED = False
 HYBRID_V2_PLUS_PITCH_SYNC_PRODUCT_PATH_CLOSED = True
 
-# Root interpretation supported by the sequence of listening gates:
-# - exact Step3f residual + fixed renderer is clean;
-# - fixed-frame V2 can preserve pronunciation/level but is robotic;
-# - pitch-relative cycles recover near-reference voiced identity;
-# - every architecture that switches from pitch-sync to an independently generated V2 residual at
-#   voiced offsets leaves or worsens the terminal artifact, even when the join is mathematically C1;
-# therefore the product source must be one jointly trained residual generator whose periodic and
-# aperiodic behavior are two coordinates of the SAME state/output, not two checkpoint identities.
-ACTIVE_ROOT_CAUSE_HYPOTHESIS = "independent_residual_source_identity_handoff_between_periodic_and_aperiodic_regions"
-ACTIVE_ROOT_FIX = "single_joint_source_with_explicit_f0_phase_coordinate_and_complementary_periodic_aperiodic_energy"
-ACTIVE_ROOT_FIX_REQUIRES_RETRAINING = True
-ACTIVE_ROOT_FIX_POSTHOC_ENHANCEMENT = False
-
-# Unified-source contract: one acoustic encoder, one recurrent state, and one jointly optimized
-# residual waveform. A phase-harmonic component is evaluated from accumulated F0 phase and an
-# aperiodic frame component is overlap-added from the same hidden state. sqrt(periodicity) and
-# sqrt(1-periodicity) form a complementary energy partition inside this one source; there is no
-# source switch, gate to another checkpoint, bridge, crossfade or external fallback.
-UNIFIED_SOURCE_SINGLE_MODEL = True
-UNIFIED_SOURCE_SINGLE_RECURRENT_STATE = True
-UNIFIED_SOURCE_EXPLICIT_F0_PHASE = True
-UNIFIED_SOURCE_PERIODIC_APERIODIC_COMPLEMENTARY_ENERGY = True
-UNIFIED_SOURCE_SECOND_CHECKPOINT_FALLBACK = False
-UNIFIED_SOURCE_HANDOFF_OR_BRIDGE = False
-
-# Completed unified run. Metrics remain rejection-only. Held-out waveform level is below reference
-# on all three utterances, but no post-hoc gain is authorized; listening must determine whether the
-# source also lost body/naturalness or retains wind/chirp defects.
-UNIFIED_SOURCE_RUN_STATUS = "training_complete_awaiting_full_heldout_listening"
+# Unified source removed the checkpoint handoff structurally and completed 600 updates, but the owner
+# reports that the same unacceptable audible problem remains. Therefore the prior root hypothesis was
+# insufficient. The run is rejected rather than tuned. Its level deficit is additional rejection
+# evidence, not something to compensate with output gain.
+UNIFIED_SOURCE_RUN_STATUS = "rejected_same_audible_defects_persist"
 UNIFIED_SOURCE_UPDATES = 600
 UNIFIED_SOURCE_BEST_VAL_TOTAL = 4.632137616475423
 UNIFIED_SOURCE_HELDOUT_PREDICTION_REFERENCE_RMS_RATIOS = (0.695, 0.728, 0.740)
 UNIFIED_SOURCE_HELDOUT_LEVEL_DEFICIT_PRESENT = True
+UNIFIED_SOURCE_SINGLE_MODEL = True
+UNIFIED_SOURCE_SINGLE_RECURRENT_STATE = True
+UNIFIED_SOURCE_SOURCE_HANDOFF_OR_BRIDGE_USED = False
 UNIFIED_SOURCE_CODEBOOK_USED = False
 UNIFIED_SOURCE_TEACHER_FORCING_USED = False
-UNIFIED_SOURCE_SOURCE_HANDOFF_OR_BRIDGE_USED = False
 UNIFIED_SOURCE_STOCHASTIC_INNOVATION_USED = False
 UNIFIED_SOURCE_POSTHOC_GAIN_NORMALIZATION_USED = False
 UNIFIED_SOURCE_POSTHOC_EQ_USED = False
 UNIFIED_SOURCE_POSTHOC_DENOISING_USED = False
 UNIFIED_SOURCE_METRICS_ACCEPT_PRODUCT_QUALITY = False
-UNIFIED_SOURCE_PERCEPTUAL_ACCEPTANCE_DECIDED = False
+UNIFIED_SOURCE_CHECKPOINT_MAY_BE_USED_AS_FINAL_PRODUCT = False
+
+# New engineering gate: stop inferring the root cause from architecture changes. Compare every
+# already-generated final speech waveform directly against its aligned reference and calibrate each
+# metric against the clean identity-roundtrip ceiling. The diagnostic reports global level/spectral
+# error, band-energy deltas, high-band flatness, tonal prominence, terminal-region anomalies and the
+# strongest anomaly timestamps. It writes JSON/CSV only and synthesizes no audio.
+CROSS_VARIANT_REFERENCE_DIAGNOSTIC_REQUIRED = True
+CROSS_VARIANT_REFERENCE_DIAGNOSTIC_VERSION = "owned-vocoder-generated-vs-reference-diagnostic-v1"
+CROSS_VARIANT_REFERENCE_DIAGNOSTIC_GENERATES_AUDIO = False
+CROSS_VARIANT_REFERENCE_DIAGNOSTIC_RUNS_MODEL_INFERENCE = False
+CROSS_VARIANT_REFERENCE_DIAGNOSTIC_WRITES_CHECKPOINT = False
+CROSS_VARIANT_REFERENCE_DIAGNOSTIC_USES_IDENTITY_CEILING_AS_METRIC_FLOOR = True
+CROSS_VARIANT_REFERENCE_DIAGNOSTIC_METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 
 PITCH_SYNCHRONOUS_REAL_CYCLE_EXTRACTION_AVAILABLE = True
 PITCH_SYNCHRONOUS_REAL_CYCLE_SOURCE_IS_PARAMETRIC_ROSENBERG = False
@@ -134,4 +121,4 @@ METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 FULL_HELDOUT_LISTENING_REQUIRED = True
 CPU_REFERENCE_DEVICE = True
 
-NEXT_ACTION = "listen_to_complete_unified_phase_heldout_audio_and_reject_if_level_deficit_coincides_with_lost_body_naturalness_or_wind_chirp"
+NEXT_ACTION = "run_direct_generated_vs_reference_diagnostic_and_use_cross_variant_common_anomalies_to_select_the_next_root_fix"
