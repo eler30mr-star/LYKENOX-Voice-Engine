@@ -1,17 +1,18 @@
 """Authoritative active source-path decision for the LYKENOX vocoder.
 
 Historical codebook and source implementations remain evidence. This file states the active
-engineering path after the 2026-09-03 phase-exclusive handoff listening regression.
+engineering path after the 2026-09-03 unified phase residual source training run.
 """
 
 POLICY_ID = "LYX-POL-001"
-DECISION_VERSION = "owned-vocoder-active-source-decision-v9-unified-phase-residual-source"
+DECISION_VERSION = "owned-vocoder-active-source-decision-v10-unified-phase-awaiting-listening"
 
 ACTIVE_SOURCE_ARCHITECTURE = "lykenox_owned_unified_phase_residual_source_v1"
 ACTIVE_SOURCE_MODEL = "lykenox_voice_engine/models/vocoder/network_minimum_phase_unified_phase_residual_source_v1.py"
 ACTIVE_SOURCE_TRAINER = "lykenox_voice_engine/training/speech_vocoder_unified_phase_residual_source_train_v1.py"
 ACTIVE_SOURCE_HELDOUT_RENDERER = "scripts/render_unified_phase_residual_source_v1.py"
 ACTIVE_ONE_COMMAND_ENTRYPOINT = "scripts/train_unified_phase_residual_source_v1.py"
+ACTIVE_SOURCE_CHECKPOINT = "models/lykenox_identity/training/unified_phase_residual_source_v1/best.pt"
 
 FIXED_MINIMUM_PHASE_RENDERER_RETAINED = True
 FIXED_MINIMUM_PHASE_RENDERER_MODIFICATION_AUTHORIZED = False
@@ -92,6 +93,24 @@ UNIFIED_SOURCE_PERIODIC_APERIODIC_COMPLEMENTARY_ENERGY = True
 UNIFIED_SOURCE_SECOND_CHECKPOINT_FALLBACK = False
 UNIFIED_SOURCE_HANDOFF_OR_BRIDGE = False
 
+# Completed unified run. Metrics remain rejection-only. Held-out waveform level is below reference
+# on all three utterances, but no post-hoc gain is authorized; listening must determine whether the
+# source also lost body/naturalness or retains wind/chirp defects.
+UNIFIED_SOURCE_RUN_STATUS = "training_complete_awaiting_full_heldout_listening"
+UNIFIED_SOURCE_UPDATES = 600
+UNIFIED_SOURCE_BEST_VAL_TOTAL = 4.632137616475423
+UNIFIED_SOURCE_HELDOUT_PREDICTION_REFERENCE_RMS_RATIOS = (0.695, 0.728, 0.740)
+UNIFIED_SOURCE_HELDOUT_LEVEL_DEFICIT_PRESENT = True
+UNIFIED_SOURCE_CODEBOOK_USED = False
+UNIFIED_SOURCE_TEACHER_FORCING_USED = False
+UNIFIED_SOURCE_SOURCE_HANDOFF_OR_BRIDGE_USED = False
+UNIFIED_SOURCE_STOCHASTIC_INNOVATION_USED = False
+UNIFIED_SOURCE_POSTHOC_GAIN_NORMALIZATION_USED = False
+UNIFIED_SOURCE_POSTHOC_EQ_USED = False
+UNIFIED_SOURCE_POSTHOC_DENOISING_USED = False
+UNIFIED_SOURCE_METRICS_ACCEPT_PRODUCT_QUALITY = False
+UNIFIED_SOURCE_PERCEPTUAL_ACCEPTANCE_DECIDED = False
+
 PITCH_SYNCHRONOUS_REAL_CYCLE_EXTRACTION_AVAILABLE = True
 PITCH_SYNCHRONOUS_REAL_CYCLE_SOURCE_IS_PARAMETRIC_ROSENBERG = False
 DISCRETE_RESIDUAL_CODEBOOK_PRODUCT_PATH_CLOSED = True
@@ -115,4 +134,4 @@ METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 FULL_HELDOUT_LISTENING_REQUIRED = True
 CPU_REFERENCE_DEVICE = True
 
-NEXT_ACTION = "implement_and_train_unified_phase_residual_source_then_compare_complete_heldout_audio_to_pitch_sync_and_identity_ceiling"
+NEXT_ACTION = "listen_to_complete_unified_phase_heldout_audio_and_reject_if_level_deficit_coincides_with_lost_body_naturalness_or_wind_chirp"
