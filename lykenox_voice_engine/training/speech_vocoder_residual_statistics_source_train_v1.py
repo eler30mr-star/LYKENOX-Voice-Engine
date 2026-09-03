@@ -247,12 +247,25 @@ def _high_band_flatness(value: torch.Tensor) -> torch.Tensor:
     n_fft = 1024
     hop = 256
     window = torch.hann_window(n_fft, dtype=value.dtype, device=value.device)
-    magnitude = torch.stft(value, n_fft=n_fft, hop_length=hop, win_length=n_fft, window=window, center=True, return_complex=True).abs().clamp_min(1.0e-6)
+    magnitude = torch.stft(
+        value,
+        n_fft=n_fft,
+        hop_length=hop,
+        win_length=n_fft,
+        window=window,
+        center=True,
+        return_complex=True,
+    ).abs().clamp_min(1.0e-6)
     frequencies = torch.fft.rfftfreq(n_fft, 1.0 / float(SAMPLE_RATE)).to(value.device)
     mask = (frequencies >= HIGH_BAND_LOW_HZ) & (frequencies <= HIGH_BAND_HIGH_HZ)
-    band = magnitude[..., mask]
-    geometric = torch.exp(torch.log(band).mean(dim=-1))
-    arithmetic = band.mean(dim=-1).clamp_min(1.0e-6)
+    frequency_indices = torch.nonzero(mask, as_tuple=False).squeeze(-1)
+    if frequency_indices.numel() < 2:
+        raise RuntimeError("high-band flatness mask selected too few frequency bins")
+    if magnitude.shape[-2] != frequencies.numel():
+        raise RuntimeError("STFT frequency axis geometry changed")
+    band = magnitude.index_select(-2, frequency_indices)
+    geometric = torch.exp(torch.log(band).mean(dim=-2))
+    arithmetic = band.mean(dim=-2).clamp_min(1.0e-6)
     return (geometric / arithmetic).mean()
 
 
