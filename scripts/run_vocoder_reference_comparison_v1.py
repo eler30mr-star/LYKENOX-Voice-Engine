@@ -31,6 +31,15 @@ def _common_anomalies(comparisons: list[dict[str, Any]]) -> dict[str, list[dict[
     result: dict[str, list[dict[str, Any]]] = {}
     for utterance_id, items in by_utterance.items():
         buckets: dict[float, dict[str, Any]] = {}
+        metric_lists = {
+            "locator_score": "locator_scores",
+            "log_spectral_mae_db": "log_spectral_mae_db",
+            "rms_delta_db": "rms_delta_db",
+            "tonal_prominence_excess_db": "tonal_prominence_excess_db",
+            "high_band_excess_db": "high_band_excess_db",
+            "air_band_excess_db": "air_band_excess_db",
+            "high_band_flatness_delta": "high_band_flatness_delta",
+        }
         for item in items:
             candidate_key = str(item["candidate_key"])
             # One vote per candidate per time bin prevents a single candidate's adjacent top frames
@@ -56,16 +65,8 @@ def _common_anomalies(comparisons: list[dict[str, Any]]) -> dict[str, list[dict[
                     },
                 )
                 bucket["candidate_keys"].add(candidate_key)
-                for key in (
-                    "locator_score",
-                    "log_spectral_mae_db",
-                    "rms_delta_db",
-                    "tonal_prominence_excess_db",
-                    "high_band_excess_db",
-                    "air_band_excess_db",
-                    "high_band_flatness_delta",
-                ):
-                    bucket[key + "s" if key != "locator_score" else "locator_scores"].append(float(anomaly[key]))
+                for source_key, list_key in metric_lists.items():
+                    bucket[list_key].append(float(anomaly[source_key]))
 
         rows: list[dict[str, Any]] = []
         for bucket in buckets.values():
@@ -73,6 +74,7 @@ def _common_anomalies(comparisons: list[dict[str, Any]]) -> dict[str, list[dict[
             count = len(candidate_keys)
             if count < 2:
                 continue
+
             def mean(key: str) -> float:
                 values = bucket[key]
                 return sum(values) / max(len(values), 1)
@@ -83,12 +85,12 @@ def _common_anomalies(comparisons: list[dict[str, Any]]) -> dict[str, list[dict[
                     "candidate_count": count,
                     "candidate_keys": candidate_keys,
                     "mean_locator_score": mean("locator_scores"),
-                    "mean_log_spectral_mae_db": mean("log_spectral_mae_dbs"),
-                    "mean_rms_delta_db": mean("rms_delta_dbs"),
-                    "mean_tonal_prominence_excess_db": mean("tonal_prominence_excess_dbs"),
-                    "mean_high_band_excess_db": mean("high_band_excess_dbs"),
-                    "mean_air_band_excess_db": mean("air_band_excess_dbs"),
-                    "mean_high_band_flatness_delta": mean("high_band_flatness_deltas"),
+                    "mean_log_spectral_mae_db": mean("log_spectral_mae_db"),
+                    "mean_rms_delta_db": mean("rms_delta_db"),
+                    "mean_tonal_prominence_excess_db": mean("tonal_prominence_excess_db"),
+                    "mean_high_band_excess_db": mean("high_band_excess_db"),
+                    "mean_air_band_excess_db": mean("air_band_excess_db"),
+                    "mean_high_band_flatness_delta": mean("high_band_flatness_delta"),
                 }
             )
         rows.sort(key=lambda row: (-int(row["candidate_count"]), -float(row["mean_locator_score"])))
