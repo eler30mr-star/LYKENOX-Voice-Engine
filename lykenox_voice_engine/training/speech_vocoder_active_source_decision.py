@@ -1,18 +1,18 @@
 """Authoritative active source-path decision for the LYKENOX vocoder.
 
 Historical codebook and continuous-source implementations remain evidence. This file states the
-active engineering path after the 2026-09-02 held-out listening results and the completed
-pitch-synchronous cycle-source training run on 2026-09-03.
+active engineering path after the 2026-09-03 pitch-synchronous held-out listening result.
 """
 
 POLICY_ID = "LYX-POL-001"
-DECISION_VERSION = "owned-vocoder-active-source-decision-v6-pitch-synchronous-awaiting-listening"
+DECISION_VERSION = "owned-vocoder-active-source-decision-v7-phase-continuous-pitch-sync"
 
 ACTIVE_SOURCE_ARCHITECTURE = "lykenox_owned_pitch_synchronous_residual_cycle_source_v1"
 ACTIVE_SOURCE_MODEL = "lykenox_voice_engine/models/vocoder/network_pitch_synchronous_residual_cycle_source_v1.py"
 ACTIVE_SOURCE_TRAINER = "lykenox_voice_engine/training/speech_vocoder_pitch_synchronous_cycle_source_train_v1.py"
-ACTIVE_SOURCE_HELDOUT_RENDERER = "scripts/render_pitch_synchronous_cycle_source_v1.py"
-ACTIVE_ONE_COMMAND_ENTRYPOINT = "scripts/train_pitch_synchronous_cycle_source_v1.py"
+ACTIVE_SOURCE_HELDOUT_RENDERER = "scripts/render_pitch_synchronous_cycle_source_v2_phase_continuous.py"
+ACTIVE_SOURCE_DECODER = "periodic_bandlimited_fourier_with_within_cycle_next_shape_morph"
+ACTIVE_SOURCE_CHECKPOINT = "models/lykenox_identity/training/pitch_synchronous_cycle_source_v1/best.pt"
 
 FIXED_MINIMUM_PHASE_RENDERER_RETAINED = True
 FIXED_MINIMUM_PHASE_RENDERER_MODIFICATION_AUTHORIZED = False
@@ -23,10 +23,9 @@ CONTINUOUS_SOURCE_V1_STATUS = "rejected_for_heldout_amplitude_collapse"
 CONTINUOUS_SOURCE_V1_HELDOUT_PREDICTION_REFERENCE_RMS_RATIOS = (0.098, 0.128, 0.153)
 CONTINUOUS_SOURCE_V1_CHECKPOINT_MAY_BE_USED_FOR_PRODUCT = False
 
-# V2 remains the strongest positive learned source baseline: the owner reports good pronunciation,
-# no gangoso and no final chillido on speech_0024, with the remaining dominant defect being robotic
-# timbre. Its explicit residual-level factorization fixed the prior amplitude collapse.
-CONTINUOUS_SOURCE_V2_STATUS = "best_positive_baseline_rejected_only_for_robotic_naturalness"
+# V2 fixed amplitude collapse and produced clean/intelligible speech without gangoso, but its held-out
+# voice remained audibly robotic. It remains a useful owned unvoiced/transitional baseline only.
+CONTINUOUS_SOURCE_V2_STATUS = "positive_baseline_rejected_for_robotic_naturalness"
 CONTINUOUS_SOURCE_V2_HELDOUT_PREDICTION_REFERENCE_RMS_RATIOS = (0.833, 0.905, 0.949)
 CONTINUOUS_SOURCE_V2_SPEECH_0024_PRONUNCIATION_GOOD = True
 CONTINUOUS_SOURCE_V2_SPEECH_0024_GANGOSO_PRESENT = False
@@ -35,11 +34,8 @@ CONTINUOUS_SOURCE_V2_SPEECH_0024_ROBOTIC_TIMBRE_PRESENT = True
 CONTINUOUS_SOURCE_V2_IDENTITY_ROUNDTRIP_CEILING_CLEAN_AND_REFERENCE_LIKE = True
 CONTINUOUS_SOURCE_V2_CHECKPOINT_MAY_BE_USED_AS_FINAL_PRODUCT = False
 
-# Coherent stochastic innovation was trained for 600 updates from the V2 warm start. Held-out
-# listening on speech_0024 showed only a small reduction in robotization while gangoso returned and
-# output level fell, making the net perceptual result worse than V2. The hypothesis that robotic
-# timbre is primarily missing additive stochastic innovation is therefore rejected. No seed/mix/noise
-# tuning is authorized.
+# Stochastic innovation was a net regression: robotization decreased only slightly while gangoso
+# returned and output level fell. No further noise/seed/mix tuning is authorized.
 COHERENT_INNOVATION_STATUS = "rejected_for_net_perceptual_regression"
 COHERENT_INNOVATION_UPDATES = 600
 COHERENT_INNOVATION_BEST_VAL_TOTAL = 2.5877118905385337
@@ -50,23 +46,16 @@ COHERENT_INNOVATION_NET_PROGRESS_POSITIVE = False
 COHERENT_INNOVATION_CHECKPOINT_MAY_BE_USED_AS_FINAL_PRODUCT = False
 FURTHER_COHERENT_INNOVATION_TUNING_AUTHORIZED = False
 
-# Root interpretation after V2 and coherent-innovation listening:
-# - exact Step3f residual + fixed renderer is clean;
-# - V2 proves the learned source can preserve pronunciation and level without gangoso;
-# - adding stochastic innovation does not solve naturalness;
-# - the remaining learned target is a raw 512-sample vector on a fixed 256-sample frame grid even
-#   though voiced residual fine structure is fundamentally periodic and phase-relative to F0.
-# Regressing absolute sample phase against a frame grid creates a highly multimodal target and
-# encourages phase-averaged/mechanical fine structure. The pitch-synchronous representation removes
-# that ambiguity by learning real Step3f residual cycles in normalized phase coordinates.
-ACTIVE_ROOT_CAUSE_HYPOTHESIS = "fixed_frame_grid_absolute_phase_ambiguity_in_voiced_real_residual_regression"
-ACTIVE_ROOT_FIX = "learn_real_step3f_residual_cycles_in_pitch_synchronous_phase_coordinates"
-PITCH_SYNCHRONOUS_REAL_CYCLE_EXTRACTION_AVAILABLE = True
-PITCH_SYNCHRONOUS_REAL_CYCLE_SOURCE_IS_PARAMETRIC_ROSENBERG = False
-
-PITCH_SYNCHRONOUS_CYCLE_RUN_STATUS = "training_complete_awaiting_full_heldout_listening"
+# Pitch-synchronous real residual cycles are the first learned source to materially outperform V2
+# perceptually. On speech_0021 the owner reports the generated voice is almost like the original;
+# V2 is clean/intelligible but robotic, and the identity roundtrip remains reference-like. The only
+# dominant remaining defect reported for pitch-sync is a residual robotic whistle/chirp.
+PITCH_SYNCHRONOUS_CYCLE_STATUS = "best_positive_learned_source_remaining_whistle"
 PITCH_SYNCHRONOUS_CYCLE_UPDATES = 600
 PITCH_SYNCHRONOUS_CYCLE_BEST_VAL_TOTAL = 2.6395082473754883
+PITCH_SYNCHRONOUS_CYCLE_SPEECH_0021_NEAR_REFERENCE_VOICE = True
+PITCH_SYNCHRONOUS_CYCLE_SPEECH_0021_REMAINING_DEFECT = "robotic_whistle_or_chirp"
+PITCH_SYNCHRONOUS_CYCLE_NET_PROGRESS_POSITIVE = True
 PITCH_SYNCHRONOUS_CYCLE_CODEBOOK_USED = False
 PITCH_SYNCHRONOUS_CYCLE_TEACHER_FORCING_USED = False
 PITCH_SYNCHRONOUS_CYCLE_THIRD_PARTY_MODEL_OR_WEIGHT_USED = False
@@ -75,8 +64,34 @@ PITCH_SYNCHRONOUS_CYCLE_POSTHOC_GAIN_NORMALIZATION_USED = False
 PITCH_SYNCHRONOUS_CYCLE_POSTHOC_EQ_USED = False
 PITCH_SYNCHRONOUS_CYCLE_POSTHOC_DENOISING_USED = False
 PITCH_SYNCHRONOUS_CYCLE_METRICS_ACCEPT_PRODUCT_QUALITY = False
-PITCH_SYNCHRONOUS_CYCLE_PERCEPTUAL_ACCEPTANCE_DECIDED = False
+PITCH_SYNCHRONOUS_CYCLE_CHECKPOINT_RETAINED = True
 
+# V1's renderer decoded every canonical cycle independently with ordinary linear interpolation and
+# hard-assigned it into [left:right]. Training had no cross-cycle seam authority. Any predicted
+# endpoint mismatch is therefore repeated once per F0 period and can form a pitch-synchronous tonal
+# artifact. Linear arbitrary-rate interpolation also has no explicit physical-period Nyquist rule.
+# This is a real synthesis defect independently of whether it explains 100% of the audible whistle.
+PITCH_SYNCHRONOUS_V1_HARD_SPLICE_DECODER_REJECTED = True
+FURTHER_HARD_SPLICE_DECODER_USE_AUTHORIZED = False
+ACTIVE_ROOT_CAUSE_HYPOTHESIS = "pitch_rate_cycle_edge_discontinuity_and_linear_resampling_images"
+ACTIVE_ROOT_FIX = "periodic_bandlimited_cycle_decode_with_continuous_next_cycle_phase_morph"
+ACTIVE_ROOT_FIX_REQUIRES_RETRAINING = False
+ACTIVE_ROOT_FIX_REUSES_EXISTING_BEST_CHECKPOINT = True
+ACTIVE_ROOT_FIX_TRAINING_EXECUTED = False
+ACTIVE_ROOT_FIX_POSTHOC_ENHANCEMENT = False
+
+# The phase-continuous decoder interprets learned cycles as periodic Fourier series, removes
+# harmonics above the physical period's representable Nyquist limit, and morphs cycle i toward
+# cycle i+1 inside the period so a hard endpoint splice is impossible by construction.
+PHASE_CONTINUOUS_DECODER_PERIODIC_FOURIER = True
+PHASE_CONTINUOUS_DECODER_PHYSICAL_PERIOD_BANDLIMIT = True
+PHASE_CONTINUOUS_DECODER_NEXT_CYCLE_MORPH = True
+PHASE_CONTINUOUS_DECODER_GLOBAL_GAIN_NORMALIZATION = False
+PHASE_CONTINUOUS_DECODER_EQ = False
+PHASE_CONTINUOUS_DECODER_DENOISE = False
+
+PITCH_SYNCHRONOUS_REAL_CYCLE_EXTRACTION_AVAILABLE = True
+PITCH_SYNCHRONOUS_REAL_CYCLE_SOURCE_IS_PARAMETRIC_ROSENBERG = False
 DISCRETE_RESIDUAL_CODEBOOK_PRODUCT_PATH_CLOSED = True
 CELP_CODEBOOK_SELECTOR_TRAINING_AUTHORIZED = False
 FURTHER_CODEBOOK_RETENTION_SWEEPS_AUTHORIZED = False
@@ -97,6 +112,4 @@ METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 FULL_HELDOUT_LISTENING_REQUIRED = True
 CPU_REFERENCE_DEVICE = True
 
-# No architecture change or tuning is authorized before the owner compares the complete held-out
-# pitch-synchronous waveform directly against V2, the identity-roundtrip ceiling and reference.
-NEXT_ACTION = "listen_to_pitch_synchronous_cycle_source_vs_v2_ceiling_and_reference_then_decide"
+NEXT_ACTION = "rerender_existing_pitch_sync_best_checkpoint_with_phase_continuous_decoder_then_listen_for_whistle_removal"
