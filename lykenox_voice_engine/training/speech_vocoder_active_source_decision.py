@@ -1,11 +1,12 @@
 """Authoritative active source-path decision for the LYKENOX vocoder.
 
 Historical codebook and continuous-source implementations remain evidence. This file states the
-active engineering path after the 2026-09-02 held-out listening results.
+active engineering path after the 2026-09-02 held-out listening results and the completed
+pitch-synchronous cycle-source training run on 2026-09-03.
 """
 
 POLICY_ID = "LYX-POL-001"
-DECISION_VERSION = "owned-vocoder-active-source-decision-v5-pitch-synchronous-cycle-source"
+DECISION_VERSION = "owned-vocoder-active-source-decision-v6-pitch-synchronous-awaiting-listening"
 
 ACTIVE_SOURCE_ARCHITECTURE = "lykenox_owned_pitch_synchronous_residual_cycle_source_v1"
 ACTIVE_SOURCE_MODEL = "lykenox_voice_engine/models/vocoder/network_pitch_synchronous_residual_cycle_source_v1.py"
@@ -56,11 +57,25 @@ FURTHER_COHERENT_INNOVATION_TUNING_AUTHORIZED = False
 # - the remaining learned target is a raw 512-sample vector on a fixed 256-sample frame grid even
 #   though voiced residual fine structure is fundamentally periodic and phase-relative to F0.
 # Regressing absolute sample phase against a frame grid creates a highly multimodal target and
-# encourages phase-averaged/mechanical fine structure. The next representation removes that ambiguity.
+# encourages phase-averaged/mechanical fine structure. The pitch-synchronous representation removes
+# that ambiguity by learning real Step3f residual cycles in normalized phase coordinates.
 ACTIVE_ROOT_CAUSE_HYPOTHESIS = "fixed_frame_grid_absolute_phase_ambiguity_in_voiced_real_residual_regression"
 ACTIVE_ROOT_FIX = "learn_real_step3f_residual_cycles_in_pitch_synchronous_phase_coordinates"
 PITCH_SYNCHRONOUS_REAL_CYCLE_EXTRACTION_AVAILABLE = True
 PITCH_SYNCHRONOUS_REAL_CYCLE_SOURCE_IS_PARAMETRIC_ROSENBERG = False
+
+PITCH_SYNCHRONOUS_CYCLE_RUN_STATUS = "training_complete_awaiting_full_heldout_listening"
+PITCH_SYNCHRONOUS_CYCLE_UPDATES = 600
+PITCH_SYNCHRONOUS_CYCLE_BEST_VAL_TOTAL = 2.6395082473754883
+PITCH_SYNCHRONOUS_CYCLE_CODEBOOK_USED = False
+PITCH_SYNCHRONOUS_CYCLE_TEACHER_FORCING_USED = False
+PITCH_SYNCHRONOUS_CYCLE_THIRD_PARTY_MODEL_OR_WEIGHT_USED = False
+PITCH_SYNCHRONOUS_CYCLE_REMOTE_SERVICE_USED = False
+PITCH_SYNCHRONOUS_CYCLE_POSTHOC_GAIN_NORMALIZATION_USED = False
+PITCH_SYNCHRONOUS_CYCLE_POSTHOC_EQ_USED = False
+PITCH_SYNCHRONOUS_CYCLE_POSTHOC_DENOISING_USED = False
+PITCH_SYNCHRONOUS_CYCLE_METRICS_ACCEPT_PRODUCT_QUALITY = False
+PITCH_SYNCHRONOUS_CYCLE_PERCEPTUAL_ACCEPTANCE_DECIDED = False
 
 DISCRETE_RESIDUAL_CODEBOOK_PRODUCT_PATH_CLOSED = True
 CELP_CODEBOOK_SELECTOR_TRAINING_AUTHORIZED = False
@@ -82,4 +97,6 @@ METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 FULL_HELDOUT_LISTENING_REQUIRED = True
 CPU_REFERENCE_DEVICE = True
 
-NEXT_ACTION = "implement_and_train_pitch_synchronous_real_residual_cycle_source_then_listen_to_complete_heldout_audio"
+# No architecture change or tuning is authorized before the owner compares the complete held-out
+# pitch-synchronous waveform directly against V2, the identity-roundtrip ceiling and reference.
+NEXT_ACTION = "listen_to_pitch_synchronous_cycle_source_vs_v2_ceiling_and_reference_then_decide"
