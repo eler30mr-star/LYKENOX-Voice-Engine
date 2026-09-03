@@ -1,24 +1,25 @@
 """Authoritative active source-path decision for the LYKENOX vocoder.
 
 Historical codebook and source implementations remain evidence. This file states the active
-engineering gate after the 2026-09-03 unified phase residual source listening failure.
+engineering gate after the 2026-09-03 cross-variant direct reference comparison.
 """
 
 POLICY_ID = "LYX-POL-001"
-DECISION_VERSION = "owned-vocoder-active-source-decision-v11-cross-variant-reference-diagnostic"
+DECISION_VERSION = "owned-vocoder-active-source-decision-v12-shared-conditioning-forensics"
 
 # The most recent learned source is retained only as forensic evidence. Human listening reports that
-# the same unacceptable audible defects remain, so no new source architecture is authorized until the
-# already-generated WAV population is compared directly against reference and the clean identity
-# roundtrip ceiling by one common diagnostic.
+# the same unacceptable audible defects remain, and direct WAV/reference comparison shows strong
+# anomaly timestamps shared across many otherwise different learned-source architectures. No new
+# source architecture or training is authorized until the shared conditioning is audited at those
+# exact timestamps.
 ACTIVE_SOURCE_ARCHITECTURE = "lykenox_owned_unified_phase_residual_source_v1"
 ACTIVE_SOURCE_MODEL = "lykenox_voice_engine/models/vocoder/network_minimum_phase_unified_phase_residual_source_v1.py"
 ACTIVE_SOURCE_TRAINER = "lykenox_voice_engine/training/speech_vocoder_unified_phase_residual_source_train_v1.py"
 ACTIVE_SOURCE_HELDOUT_RENDERER = "scripts/render_unified_phase_residual_source_v1.py"
 ACTIVE_SOURCE_CHECKPOINT = "models/lykenox_identity/training/unified_phase_residual_source_v1/best.pt"
 ACTIVE_SOURCE_STATUS = "rejected_same_audible_defects_persist"
-ACTIVE_ENGINEERING_GATE = "direct_generated_vs_reference_cross_variant_diagnostic"
-ACTIVE_DIAGNOSTIC = "scripts/diagnose_vocoder_generated_vs_reference_v1.py"
+ACTIVE_ENGINEERING_GATE = "shared_conditioning_forensics_at_cross_variant_common_anomaly_times"
+ACTIVE_DIAGNOSTIC = "scripts/diagnose_vocoder_common_conditioning_anomalies_v1.py"
 FURTHER_SOURCE_ARCHITECTURE_CHANGES_AUTHORIZED = False
 FURTHER_SOURCE_TRAINING_AUTHORIZED = False
 
@@ -64,10 +65,6 @@ PHASE_EXCLUSIVE_HANDOFF_OWNER_REPORTED_RESIDUAL_CHIRP = True
 FURTHER_SOURCE_HANDOFF_OR_BRIDGE_TUNING_AUTHORIZED = False
 HYBRID_V2_PLUS_PITCH_SYNC_PRODUCT_PATH_CLOSED = True
 
-# Unified source removed the checkpoint handoff structurally and completed 600 updates, but the owner
-# reports that the same unacceptable audible problem remains. Therefore the prior root hypothesis was
-# insufficient. The run is rejected rather than tuned. Its level deficit is additional rejection
-# evidence, not something to compensate with output gain.
 UNIFIED_SOURCE_RUN_STATUS = "rejected_same_audible_defects_persist"
 UNIFIED_SOURCE_UPDATES = 600
 UNIFIED_SOURCE_BEST_VAL_TOTAL = 4.632137616475423
@@ -85,18 +82,66 @@ UNIFIED_SOURCE_POSTHOC_DENOISING_USED = False
 UNIFIED_SOURCE_METRICS_ACCEPT_PRODUCT_QUALITY = False
 UNIFIED_SOURCE_CHECKPOINT_MAY_BE_USED_AS_FINAL_PRODUCT = False
 
-# New engineering gate: stop inferring the root cause from architecture changes. Compare every
-# already-generated final speech waveform directly against its aligned reference and calibrate each
-# metric against the clean identity-roundtrip ceiling. The diagnostic reports global level/spectral
-# error, band-energy deltas, high-band flatness, tonal prominence, terminal-region anomalies and the
-# strongest anomaly timestamps. It writes JSON/CSV only and synthesizes no audio.
-CROSS_VARIANT_REFERENCE_DIAGNOSTIC_REQUIRED = True
+# Direct generated-vs-reference comparison completed over the already-generated evaluation corpus.
+# This diagnostic generates no audio, executes no training or model inference, and cannot accept
+# product quality. It established that the real-residual and identity-roundtrip ceilings are the
+# closest outputs, while every learned source remains materially separated from reference.
+CROSS_VARIANT_REFERENCE_DIAGNOSTIC_STATUS = "complete"
 CROSS_VARIANT_REFERENCE_DIAGNOSTIC_VERSION = "owned-vocoder-generated-vs-reference-diagnostic-v1"
+CROSS_VARIANT_REFERENCE_COMPARISON_COUNT = 95
 CROSS_VARIANT_REFERENCE_DIAGNOSTIC_GENERATES_AUDIO = False
 CROSS_VARIANT_REFERENCE_DIAGNOSTIC_RUNS_MODEL_INFERENCE = False
 CROSS_VARIANT_REFERENCE_DIAGNOSTIC_WRITES_CHECKPOINT = False
 CROSS_VARIANT_REFERENCE_DIAGNOSTIC_USES_IDENTITY_CEILING_AS_METRIC_FLOOR = True
 CROSS_VARIANT_REFERENCE_DIAGNOSTIC_METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
+
+# Diagnostic ranking is localization evidence only, not acceptance. The real-residual resynthesis and
+# identity-roundtrip resynthesis are nearest to reference, consistent with human listening. Learned
+# source outputs show excess tonal prominence and reduced upper-band energy.
+DIRECT_REFERENCE_CLOSEST_DIAGNOSTIC = "real_residual_resynthesis"
+DIRECT_REFERENCE_REAL_RESIDUAL_SCORE = 3.4813
+DIRECT_REFERENCE_REAL_RESIDUAL_RMS_DELTA_DB = 0.05
+DIRECT_REFERENCE_COHERENT_INNOVATION_SCORE = 4.7646
+DIRECT_REFERENCE_CONTINUOUS_V2_SCORE = 7.3656
+DIRECT_REFERENCE_CONTINUOUS_V2_TONAL_PROMINENCE_EXCESS_P95_DB = 7.62
+DIRECT_REFERENCE_CONTINUOUS_V2_HIGH_BAND_ENERGY_DELTA_DB = -1.33
+
+UNIFIED_SOURCE_DIRECT_REFERENCE_RMS_RATIOS = (0.695, 0.728, 0.740)
+UNIFIED_SOURCE_DIRECT_REFERENCE_RMS_DELTA_DB = (-3.16, -2.76, -2.61)
+UNIFIED_SOURCE_DIRECT_REFERENCE_TONAL_PROMINENCE_EXCESS_P95_DB = (7.88, 6.15, 8.54)
+UNIFIED_SOURCE_DIRECT_REFERENCE_HIGH_BAND_DELTA_DB = (-1.58, -2.05, -1.89)
+UNIFIED_SOURCE_DIRECT_REFERENCE_AIR_BAND_DELTA_DB = (-2.23, -2.36, -2.78)
+
+# Strong anomaly timestamps recur across many independently designed learned source variants. This is
+# the key new localization evidence. It argues against another source-architecture change before the
+# common conditioning contract is inspected at the same frames.
+SHARED_ANOMALY_SPEECH_0021_TIME_SECONDS = 5.80
+SHARED_ANOMALY_SPEECH_0021_VARIANT_COUNT = 10
+SHARED_ANOMALY_SPEECH_0021_MEAN_TONAL_EXCESS_DB = 8.57
+SHARED_ANOMALY_SPEECH_0021_MEAN_AIR_EXCESS_DB = 7.65
+SHARED_ANOMALY_SPEECH_0024_PRIMARY_TIME_SECONDS = 4.00
+SHARED_ANOMALY_SPEECH_0024_PRIMARY_VARIANT_COUNT = 13
+SHARED_ANOMALY_SPEECH_0024_PRIMARY_MEAN_TONAL_EXCESS_DB = 16.57
+SHARED_ANOMALY_SPEECH_0024_SECONDARY_TIME_SECONDS = 5.20
+SHARED_ANOMALY_SPEECH_0024_SECONDARY_VARIANT_COUNT = 12
+SHARED_ANOMALY_SPEECH_0024_SECONDARY_CHARACTER = "rms_drop_and_high_spectral_error"
+
+# All active learned source families consume the same owned mel/F0/voiced/periodicity full-utterance
+# conditioning contract. real_residual_resynthesis and identity_roundtrip do not need to predict the
+# residual source and remain clean. pitch-v1 currently selects the strongest autocorrelation lag in
+# each frame independently and uses an utterance-relative RMS threshold for voiced state. This is a
+# plausible common upstream failure mechanism at low-energy/word-boundary frames, but it is NOT yet
+# accepted as the root cause. The dedicated diagnostic must inspect raw top autocorrelation lags,
+# octave competitors, F0 jumps, periodicity and voiced transitions at the shared anomaly timestamps.
+ACTIVE_ROOT_CAUSE_HYPOTHESIS = "shared_pitch_voicing_conditioning_error_at_common_anomaly_frames"
+ACTIVE_ROOT_CAUSE_HYPOTHESIS_CONFIRMED = False
+ACTIVE_ROOT_CAUSE_HYPOTHESIS_REQUIRES_CONDITIONING_FORENSICS = True
+COMMON_CONDITIONING_PITCH_CACHE_VERSION = "speech-pitch-cache-v1"
+COMMON_CONDITIONING_PITCH_TARGET_VERSION = "lykenox-pitch-v1"
+COMMON_CONDITIONING_DIAGNOSTIC_VERSION = "owned-vocoder-common-conditioning-anomaly-diagnostic-v1"
+COMMON_CONDITIONING_DIAGNOSTIC_GENERATES_AUDIO = False
+COMMON_CONDITIONING_DIAGNOSTIC_RUNS_MODEL_INFERENCE = False
+COMMON_CONDITIONING_DIAGNOSTIC_WRITES_CHECKPOINT = False
 
 PITCH_SYNCHRONOUS_REAL_CYCLE_EXTRACTION_AVAILABLE = True
 PITCH_SYNCHRONOUS_REAL_CYCLE_SOURCE_IS_PARAMETRIC_ROSENBERG = False
@@ -121,4 +166,4 @@ METRICS_CAN_ACCEPT_PRODUCT_QUALITY = False
 FULL_HELDOUT_LISTENING_REQUIRED = True
 CPU_REFERENCE_DEVICE = True
 
-NEXT_ACTION = "run_direct_generated_vs_reference_diagnostic_and_use_cross_variant_common_anomalies_to_select_the_next_root_fix"
+NEXT_ACTION = "run_common_conditioning_anomaly_diagnostic_before_any_new_source_training_or_architecture_change"
