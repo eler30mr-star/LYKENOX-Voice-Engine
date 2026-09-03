@@ -79,6 +79,10 @@ from .network_pitch_synchronous_residual_cycle_source_v1 import (
     PITCH_SYNCHRONOUS_SOURCE_ARCHITECTURE,
     LykenoxPitchSynchronousResidualCycleSourceV1,
 )
+from .network_minimum_phase_unified_phase_residual_source_v1 import (
+    UNIFIED_PHASE_SOURCE_ARCHITECTURE,
+    LykenoxUnifiedPhaseResidualSourceV1,
+)
 
 # The legacy flags on network_v6 describe only whether a waveform is directly bypassed.
 # They were too narrow to justify the former "source-free" claim: V6 injects accumulated
@@ -135,4 +139,6 @@ __all__ = [
     "LykenoxCoherentInnovationResidualSourceV1",
     "PITCH_SYNCHRONOUS_SOURCE_ARCHITECTURE",
     "LykenoxPitchSynchronousResidualCycleSourceV1",
+    "UNIFIED_PHASE_SOURCE_ARCHITECTURE",
+    "LykenoxUnifiedPhaseResidualSourceV1",
 ]
