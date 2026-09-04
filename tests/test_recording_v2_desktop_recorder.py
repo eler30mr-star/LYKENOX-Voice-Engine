@@ -3,10 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 
 
-def test_recording_v2_page_uses_strict_high_resolution_capture() -> None:
+def _page_text() -> str:
     root = Path(__file__).resolve().parents[1]
-    path = root / "lykenox_voice_engine" / "ui" / "recording_v2_page.py"
-    text = path.read_text(encoding="utf-8")
+    return (root / "lykenox_voice_engine" / "ui" / "recording_v2_page.py").read_text(
+        encoding="utf-8"
+    )
+
+
+def test_recording_v2_page_uses_strict_high_resolution_capture() -> None:
+    text = _page_text()
 
     assert "TARGET_SAMPLE_RATE = 48000" in text
     assert "TARGET_CHANNELS = 1" in text
@@ -20,22 +25,46 @@ def test_recording_v2_page_uses_strict_high_resolution_capture() -> None:
     assert 'format="WAV"' in text
 
 
-def test_recording_v2_page_has_no_audio_enhancement_path() -> None:
-    root = Path(__file__).resolve().parents[1]
-    text = (root / "lykenox_voice_engine" / "ui" / "recording_v2_page.py").read_text(
-        encoding="utf-8"
-    )
+def test_recording_v2_requires_full_listen_before_canonical_save() -> None:
+    text = _page_text()
+
+    assert "candidate_listened" in text
+    assert "candidate_technical_ok" in text
+    assert "QMediaPlayer.MediaStatus.EndOfMedia" in text
+    assert "Guardar RAW aprobado" in text
+    assert "Probar / escuchar completa" in text
+    assert "Confirmar toma limpia" in text
+    assert "save_ready = has_candidate and self.candidate_listened and self.candidate_technical_ok" in text
+    assert "recording_v2_raw_dir" in text
+    assert "recording_id" in text
+
+
+def test_recording_v2_environment_meter_does_not_process_raw() -> None:
+    text = _page_text()
     lowered = text.lower()
 
-    assert "recording_v2_raw_dir" in text
-    assert "pilot_manifest.csv" in text
-    assert "recording_id" in text
-    assert "sf.write" in text
+    assert "ENVIRONMENT_SECONDS = 3" in text
+    assert "Medir ambiente" in text
+    assert "environment_rms_dbfs" in text
+    assert "Esta medición no modifica el RAW" in text
+    assert "metrics" not in lowered or "metrics never accept" in lowered
     assert "resample(" not in lowered
     assert "normalize(" not in lowered
     assert "denoise(" not in lowered
     assert "loudnorm" not in lowered
     assert "equalizer" not in lowered
+    assert "deepfilternet" not in lowered
+
+
+def test_recording_v2_preflight_checks_geometry_and_clipping() -> None:
+    text = _page_text()
+
+    assert "_candidate_preflight" in text
+    assert "sample rate != 48000" in text
+    assert "no es mono" in text
+    assert "subtipo != FLOAT" in text
+    assert "clipping excesivo" in text
+    assert "Preflight: PASS técnico. Falta aprobación auditiva completa." in text
 
 
 def test_main_window_exposes_recording_v2_before_legacy_recorder() -> None:
