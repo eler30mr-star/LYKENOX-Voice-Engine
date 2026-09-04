@@ -137,7 +137,7 @@ def _render(ffmpeg: str, source: Path, output: Path, filter_graph: str) -> None:
         "-ac",
         str(int(info.channels)),
         "-c:a",
-        "pcm_s24le",
+        "pcm_f32le",
         str(tmp),
     ]
     subprocess.run(command, check=True)
@@ -252,6 +252,7 @@ def calibrate_clean_v1_ffmpeg_afftdn(
         "external_service_used": False,
         "source_audio_mutated": False,
         "canonical_clean_v1_wav_written": False,
+        "candidate_wav_encoding": "pcm_f32le",
         "gain_normalization_used": False,
         "eq_used": False,
         "dereverb_used": False,
