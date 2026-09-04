@@ -1,5 +1,5 @@
 #define MyAppName "LYKENOX Voice Engine"
-#define MyAppVersion "0.2.0"
+#define MyAppVersion "0.2.1"
 #define MyAppPublisher "LYKENOX"
 #define MyAppExeName "LYKENOX.exe"
 #define RepoRoot "..\.."
