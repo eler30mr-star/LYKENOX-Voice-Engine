@@ -1,0 +1,43 @@
+{
+  "policy_id": "LYX-POL-001",
+  "matrix_version": "1.0",
+  "as_of": "2026-09-04",
+  "overall_status": "COMPLIANT_DEVELOPMENT_WITH_PENDING_RELEASE_GATES",
+  "matrix_document": "docs/LYKENOX_POLICY_COMPLIANCE_MATRIX.md",
+  "active_decision": "lykenox_voice_engine/training/speech_vocoder_active_source_decision.py",
+  "positive_milestone": "docs/LYKENOX_VOCODER_POSITIVE_MILESTONE_2026-09-04.md",
+  "rules": {
+    "R1_no_third_party_pretrained_weights": "PASS",
+    "R2_no_third_party_neural_voice_components": "PASS",
+    "R3_no_remote_inference_dependency": "PASS",
+    "R4_lykenox_trained_weights": "PASS_CURRENT_PENDING_FINAL_RELEASE_ARTIFACTS",
+    "R5_identity_data_provenance": "PENDING",
+    "R6_no_probe_exception": "PASS",
+    "R7_research_may_inform_implementation_remains_owned": "PASS",
+    "R8_no_posthoc_quality_masking": "PASS",
+    "R9_duration_contract_independent": "PASS",
+    "R10_full_heldout_listening_is_final_quality_authority": "PASS_PROCESS_PENDING_FINAL_ACCEPTANCE"
+  },
+  "current_gate": {
+    "name": "construct_and_audibly_validate_clean_v1_before_any_new_vocoder_training",
+    "status": "PENDING",
+    "blocks_further_source_training": true,
+    "blocks_new_source_architecture": true
+  },
+  "blocked_actions": {
+    "third_party_pretrained_denoiser_for_clean_v1": true,
+    "third_party_pretrained_source_separator_for_clean_v1": true,
+    "target_phase_copy_at_inference": true,
+    "posthoc_denoise_to_accept_vocoder": true,
+    "posthoc_eq_to_accept_vocoder": true,
+    "silent_predicted_duration_modification": true
+  },
+  "release_gates": {
+    "final_checkpoint_provenance_and_hashes": "PENDING",
+    "identity_data_manifest": "PENDING",
+    "generic_dependency_license_audit": "PENDING",
+    "offline_inference_revalidation": "PENDING",
+    "release_reproducibility": "PENDING",
+    "final_full_heldout_auditory_acceptance": "PENDING"
+  }
+}
