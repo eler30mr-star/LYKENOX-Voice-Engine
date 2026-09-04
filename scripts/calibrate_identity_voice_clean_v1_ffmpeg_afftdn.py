@@ -208,9 +208,7 @@ def calibrate_clean_v1_ffmpeg_afftdn(
     selected = select_trial_rows(root, rows, items=items)
 
     trial_root = clean_v1_root(root) / "trials" / "ffmpeg_afftdn_v1"
-    source_dir = trial_root / "source"
     audition_dir = trial_root / "audition"
-    source_dir.mkdir(parents=True, exist_ok=True)
     audition_dir.mkdir(parents=True, exist_ok=True)
 
     report_rows: list[dict[str, object]] = []
@@ -221,7 +219,7 @@ def calibrate_clean_v1_ffmpeg_afftdn(
             raise RuntimeError(f"source immutability violation during calibration: {utterance_id}")
         noise_floor_proxy = _frame_rms_noise_floor_dbfs(source)
 
-        source_copy = source_dir / f"{utterance_id}__SOURCE.wav"
+        source_copy = audition_dir / f"{utterance_id}__SOURCE.wav"
         shutil.copy2(source, source_copy)
         outputs: dict[str, str] = {}
         for profile_name, filter_graph in PROFILES.items():
@@ -267,6 +265,7 @@ def calibrate_clean_v1_ffmpeg_afftdn(
             "selection_metric_is_acceptance_evidence": False,
         },
         "trial_root": str(trial_root),
+        "audition_dir": str(audition_dir),
         "items": report_rows,
         "next_action": (
             "listen to SOURCE vs CONSERVATIVE vs MODERATE; choose one profile only if denoise improves "
