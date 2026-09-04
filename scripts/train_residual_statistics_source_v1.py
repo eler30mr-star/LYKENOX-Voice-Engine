@@ -1,4 +1,9 @@
-"""One-command train-and-render entrypoint for residual-statistics source V1."""
+"""One-command train-and-render entrypoint for residual-statistics source V1.
+
+Persistent source training is policy-blocked until CLEAN_V1 is active, every stale acoustic
+feature/target/cache has been regenerated from the clean WAVs, and the post-clean GOLD oracle gate
+has passed. Policy: LYX-POL-001.
+"""
 
 from __future__ import annotations
 
@@ -10,6 +15,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from lykenox_voice_engine.training.identity_voice_clean_v1 import require_clean_v1_training_ready
 from lykenox_voice_engine.training.speech_vocoder_residual_statistics_source_train_v1 import (
     DEFAULT_LEARNING_RATE,
     DEFAULT_MAX_UPDATES,
@@ -33,6 +39,11 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--no-resume", action="store_true")
     args = parser.parse_args()
+
+    require_clean_v1_training_ready(
+        args.root,
+        purpose="residual-statistics source persistent training",
+    )
 
     training = train_residual_statistics_source_v1(
         args.root,
