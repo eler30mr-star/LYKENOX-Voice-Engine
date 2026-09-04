@@ -1,11 +1,11 @@
 """Authoritative active engineering decision for the LYKENOX vocoder source path.
 
-This file records the direct-reference, conditioning and residual-domain evidence reached on
-2026-09-03. Policy: LYX-POL-001.
+This file records the direct-reference, conditioning, residual-domain, phase-isolation and dataset
+quality evidence reached through 2026-09-04. Policy: LYX-POL-001.
 """
 
 POLICY_ID = "LYX-POL-001"
-DECISION_VERSION = "owned-vocoder-active-source-decision-v19-statistics-source-structural-pass"
+DECISION_VERSION = "owned-vocoder-active-source-decision-v20-phase-isolated-clean-v1-gate"
 
 FIXED_MINIMUM_PHASE_RENDERER_RETAINED = True
 FIXED_MINIMUM_PHASE_RENDERER_MODIFICATION_AUTHORIZED = False
@@ -67,10 +67,9 @@ LEARNED_512_256_OVERLAPPING_VECTOR_SOURCE_REPRESENTATION_REJECTED = True
 FURTHER_LEARNED_512_256_SOURCE_TRAINING_AUTHORIZED = False
 FURTHER_OVERLAP_CONSISTENCY_LOSS_PATCHING_AUTHORIZED = False
 
-# The non-overlapping 256-sample stream source removed duplicated sample authority but failed its first
-# structural gate. With no overlap at all, the deterministic frame waveform head still converged to an
-# almost repeated 256-sample template, proving that per-frame deterministic waveform regression itself
-# is structurally invalid for the aperiodic residual phase.
+# The non-overlapping 256-sample stream source removed duplicated sample authority but still collapsed
+# to an almost repeated deterministic 256-sample template. Deterministic per-frame waveform regression
+# is therefore closed for the aperiodic residual phase.
 CONTINUOUS_STREAM_SOURCE_STATUS = "rejected_first_structural_gate_frame_template_repetition_persists"
 CONTINUOUS_STREAM_SOURCE_UPDATES = 600
 CONTINUOUS_STREAM_SOURCE_BEST_VAL_TOTAL = 2.8932310740152993
@@ -96,11 +95,9 @@ WAVEFORM_SAMPLE_L1_AS_PRIMARY_SOURCE_TARGET_AUTHORIZED = False
 WAVEFORM_BLOCK_COSINE_AS_PRIMARY_SOURCE_TARGET_AUTHORIZED = False
 OLD_COHERENT_INNOVATION_REOPEN_AUTHORIZED = False
 
-# Active root correction: predict only identifiable residual statistics at frame rate. No neural head
-# emits waveform samples. Predicted source cepstrum, explicit log-RMS and residual periodicity drive a
-# single continuous full-utterance source carrier. F0 phase and deterministic owned noise use absolute
-# sample position and never reset per frame. The source carrier is shaped by a time-varying
-# minimum-phase source filter; the fixed vocal-tract renderer remains unchanged.
+# Statistics-source architecture retained as the forensic candidate. It fixed the old hop-grid defect
+# but is NOT accepted as final product quality. It remains useful for controlled magnitude/phase
+# experiments and for future retraining after CLEAN_V1.
 ACTIVE_SOURCE_ARCHITECTURE = "lykenox_owned_residual_statistics_source_v1"
 ACTIVE_SOURCE_MODEL = "lykenox_voice_engine/models/vocoder/network_minimum_phase_residual_statistics_source_v1.py"
 ACTIVE_SOURCE_TRAINER = "lykenox_voice_engine/training/speech_vocoder_residual_statistics_source_train_v1.py"
@@ -116,11 +113,7 @@ ACTIVE_SOURCE_CARRIER_PHASE_RESETS_PER_FRAME = False
 ACTIVE_SOURCE_CARRIER_NOISE_RESETS_PER_FRAME = False
 ACTIVE_SOURCE_CONDITIONING_CONTRACT = "lykenox-pitch-conditioning-v2-continuous-strength"
 
-# Completed statistics-source run. The structural gate passes strongly on speech_0024: the candidate
-# collapses the 93.75 Hz frame-grid signature and restores high-band flatness close to the real Step-3f
-# residual before the final vocal-tract renderer. These metrics can authorize listening but cannot
-# accept production quality.
-RESIDUAL_STATISTICS_SOURCE_STATUS = "structural_gate_passed_awaiting_complete_heldout_listening"
+RESIDUAL_STATISTICS_SOURCE_STATUS = "structural_pass_but_not_product_accepted_phase_and_spectral_shape_failures_isolated"
 RESIDUAL_STATISTICS_SOURCE_UPDATES = 600
 RESIDUAL_STATISTICS_SOURCE_BEST_VAL_TOTAL = 1.2665389776229858
 RESIDUAL_STATISTICS_SOURCE_CHECKPOINT = "models/lykenox_identity/training/residual_statistics_source_v1/best.pt"
@@ -135,14 +128,60 @@ RESIDUAL_STATISTICS_SOURCE_SPEECH_0024_CANDIDATE_GRID_POWER_FRACTION = 0.1219424
 RESIDUAL_STATISTICS_SOURCE_SPEECH_0024_V2_GRID_POWER_FRACTION = 0.9967344403266907
 RESIDUAL_STATISTICS_SOURCE_STRUCTURAL_GATE_PASSED = True
 RESIDUAL_STATISTICS_SOURCE_PRODUCTION_ACCEPTED_BY_METRICS = False
-RESIDUAL_STATISTICS_SOURCE_FULL_HELDOUT_LISTENING_REQUIRED = True
-
-# The trainer's high-band-flatness STFT indexing bug was corrected after the owner encountered it:
-# frequency is the penultimate STFT axis and is now selected explicitly with index_select(dim=-2).
+RESIDUAL_STATISTICS_SOURCE_FULL_HELDOUT_LISTENING_REQUIRED = False
 RESIDUAL_STATISTICS_HIGH_BAND_FLATNESS_INDEXING_BUG_FIXED = True
 
-ACTIVE_SOURCE_STATUS = "structural_gate_passed_awaiting_human_heldout_listening"
-ACTIVE_ENGINEERING_GATE = "listen_complete_heldout_statistics_source_against_v2_baseline_identity_ceiling_and_reference"
+# Positive oracle evidence. Real residual + oracle cepstrum + the unchanged renderer is clean/natural.
+REAL_RESIDUAL_ORACLE_IS_GOLD = True
+IDENTITY_ROUNDTRIP_CEILING_IS_GOLD = True
+FIXED_RENDERER_EXONERATED_BY_CONTROLLED_ORACLE = True
+
+# Phase-isolation evidence from owner listening.
+SPEECH_0021_CANDIDATE_MAG_TARGET_PHASE_STATUS = "natural_correct_positive_control"
+SPEECH_0021_PHASE_ALIGNMENT_SCORE_TARGET_VS_CANDIDATE = -0.000497
+SPEECH_0021_LOG_MAGNITUDE_L1_TARGET_VS_CANDIDATE = 0.9904
+PHASE_TEMPORAL_COHERENCE_IS_PRIMARY_AUDIBLE_FAILURE = True
+GRIFFIN_LIM_64_STATUS = "intelligible_but_mildly_robotic_not_pass"
+TARGET_TEMPORAL_DPHASE_CANDIDATE_ANCHOR_STATUS = "major_improvement_near_clean_minor_wind_phone_texture"
+TARGET_TEMPORAL_DPHASE_ZERO_ANCHOR_STATUS = "thinner_more_robotic"
+TEMPORAL_PHASE_INCREMENT_INFORMATION_IS_CRITICAL = True
+INITIAL_PER_FREQUENCY_PHASE_ANCHOR_MATTERS = True
+SMOOTH_GROUP_DELAY_ANCHOR_STATUS = "rejected_audibly_worse_than_candidate_anchor_baseline"
+TARGET_FULL_PHASE_ANCHOR_CEILING_STATUS = "very_good"
+INFERENCE_TIME_TARGET_PHASE_COPY_AUTHORIZED = False
+INFERENCE_TIME_PHASE_SOLUTION_STATUS = "not_yet_solved"
+
+# Magnitude cleanup evidence under full target phase.
+SPEECH_0021_TARGET_PHASE_CANDIDATE_MAG_STATUS = "natural_correct"
+SPEECH_0021_SINGLE_BAND_MAGNITUDE_CORRECTION_REQUIRED = False
+SPEECH_0022_REFERENCE_STATUS = "clean"
+SPEECH_0022_IDENTITY_ROUNDTRIP_STATUS = "clean"
+SPEECH_0022_CANDIDATE_MAG_TARGET_PHASE_STATUS = "natural_voice_with_low_intermittent_grinder_artifact"
+SPEECH_0022_SINGLE_LOW_MID_HIGH_BAND_SWAP_REMOVED_GRINDER = False
+SPEECH_0022_CANDIDATE_SHAPE_TARGET_LEVEL_STATUS = "grinder_more_obvious"
+SPEECH_0022_TARGET_SHAPE_CANDIDATE_LEVEL_STATUS = "good_grinder_removed"
+SPEECH_0022_PRIMARY_REMAINING_MAGNITUDE_FAILURE = "time_varying_candidate_spectral_shape"
+SPEECH_0022_FRAME_LOG_LEVEL_TARGET_CANDIDATE_PEARSON = -0.0825
+SPEECH_0022_FRAME_LOG_LEVEL_MAE = 1.0243
+SPEECH_0022_FRAME_LOG_LEVEL_DELTA_MAE = 0.1663
+SPEECH_0022_SPECTRAL_SHAPE_LOG_L1 = 0.9861
+SPEECH_0022_NONVOICE_TRANSIENT_CONTAMINATION_HYPOTHESIS = "plausible_chicken_call_near_start_but_not_required_to_resolve_before_clean_v1"
+TRANSIENT_SPECTRAL_SHAPE_LOCALIZATION_DIAGNOSTIC_STATUS = "implemented_preserved_not_current_blocker"
+
+# Dataset-quality decision. Future training/reference targets must come from a cleaned, versioned
+# corpus. Original RAW audio remains immutable. Generated vocoder RAW output remains un-denoised for
+# model-quality evaluation so dataset cleaning cannot become a post-hoc product patch.
+CLEAN_V1_REQUIRED_BEFORE_FURTHER_SOURCE_TRAINING = True
+RAW_CORPUS_MUST_REMAIN_IMMUTABLE = True
+CLEAN_V1_MUST_REMOVE_OR_REJECT_EXTERNAL_NONVOICE_CONTAMINATION = True
+CLEAN_V1_MUST_PRESERVE_TIMBRE_FORMANTS_CONSONANTS_BREATH_AND_ATTACKS = True
+CLEAN_V1_OVERLAPPED_NOISE_SEGMENTS_MAY_BE_REJECTED_INSTEAD_OF_OVERPROCESSED = True
+CLEAN_V1_ALL_ACOUSTIC_TARGETS_AND_CACHES_MUST_BE_REGENERATED = True
+DIRTY_WAV_DERIVED_TARGETS_MAY_BE_REUSED_AFTER_CLEAN_V1 = False
+VOCODER_EVALUATION_OUTPUT_DENOISE_AUTHORIZED = False
+
+ACTIVE_SOURCE_STATUS = "forensic_candidate_frozen_pending_clean_v1_dataset_rebuild"
+ACTIVE_ENGINEERING_GATE = "build_validate_clean_v1_then_regenerate_all_acoustic_targets_and_rerun_gold_oracles"
 FURTHER_SOURCE_ARCHITECTURE_CHANGES_AUTHORIZED = False
 FURTHER_SOURCE_TRAINING_AUTHORIZED = False
 POSTHOC_GAIN_NORMALIZATION_AUTHORIZED = False
@@ -152,4 +191,5 @@ PREDICTED_DURATION_MODIFICATION_AUTHORIZED = False
 THIRD_PARTY_MODEL_OR_CHECKPOINT_AUTHORIZED = False
 REMOTE_MODEL_OR_TTS_SERVICE_AUTHORIZED = False
 
-NEXT_ACTION = "listen_to_all_three_complete_heldout_residual_statistics_source_v1_files_and_accept_source_only_if_identity_naturalness_and_transitions_are_audibly_clean"
+MILESTONE_DOCUMENT = "docs/LYKENOX_VOCODER_POSITIVE_MILESTONE_2026-09-04.md"
+NEXT_ACTION = "construct_and_audibly_validate_clean_v1_before_any_new_vocoder_training"
