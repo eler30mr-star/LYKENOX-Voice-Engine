@@ -43,3 +43,8 @@ datasets/*/identity_voice/recording_v2/raw_history/*
 datasets/*/identity_voice/features/
 profiles/*/voicebank/wav/*
 !profiles/lykenox/voicebank/wav/.gitkeep
+
+# Windows desktop packaging outputs
+build/
+dist/
+packaging/windows/output/
