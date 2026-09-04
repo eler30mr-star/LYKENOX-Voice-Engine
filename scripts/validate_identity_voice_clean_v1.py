@@ -12,17 +12,20 @@ import csv
 import json
 import math
 import os
+import sys
 from pathlib import Path
 
 import numpy as np
 import soundfile as sf
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 from lykenox_voice_engine.training.identity_voice_clean_v1 import (
     CLEAN_V1_STATE_SCHEMA,
     CLEAN_V1_VERSION,
     POLICY_ID,
     clean_v1_review_path,
-    clean_v1_root,
     clean_v1_state_path,
     clean_v1_technical_report_path,
     clean_v1_work_manifest_path,
@@ -36,6 +39,19 @@ def _atomic_json(path: Path, payload: dict[str, object]) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     os.replace(tmp, path)
+
+
+def _resolve(root: Path, value: str) -> Path:
+    path = Path(value)
+    return path.resolve() if path.is_absolute() else (root / path).resolve()
+
+
+def _portable(root: Path, path: Path) -> str:
+    path = path.resolve()
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def _rms(value: np.ndarray) -> float:
@@ -106,8 +122,8 @@ def validate_clean_v1(
     for row in work_rows:
         utterance_id = str(row["utterance_id"])
         split = str(row["split"])
-        source_path = Path(str(row["source_wav_path"]))
-        clean_path = Path(str(row["clean_wav_path"]))
+        source_path = _resolve(root, str(row["source_wav_path"]))
+        clean_path = _resolve(root, str(row["clean_wav_path"]))
         expected_source_hash = str(row["source_sha256"])
 
         if not source_path.exists():
@@ -125,14 +141,14 @@ def validate_clean_v1(
                     "split": split,
                     "technical_status": "REJECTED_BY_CURATOR",
                     "source_sha256": actual_source_hash,
-                    "clean_wav_path": str(clean_path),
+                    "clean_wav_path": _portable(root, clean_path),
                 }
             )
             review_rows.append(
                 {
                     "utterance_id": utterance_id,
                     "split": split,
-                    "clean_wav_path": str(clean_path),
+                    "clean_wav_path": _portable(root, clean_path),
                     "technical_status": "REJECTED_BY_CURATOR",
                     "auditory_decision": "REJECT",
                     "auditory_notes": "Rejected before CLEAN_V1 activation",
@@ -159,7 +175,6 @@ def validate_clean_v1(
 
         source_info = sf.info(str(source_path))
         source_duration = float(source_info.frames) / float(source_info.samplerate)
-        source_peak = None
         clean_duration = None
         clean_peak = None
         clean_rms = None
@@ -195,7 +210,7 @@ def validate_clean_v1(
                 {
                     "utterance_id": utterance_id,
                     "split": split,
-                    "clean_wav_path": str(clean_path),
+                    "clean_wav_path": _portable(root, clean_path),
                     "technical_status": status,
                     "auditory_decision": previous_decision,
                     "auditory_notes": previous_notes,
@@ -209,8 +224,8 @@ def validate_clean_v1(
                 "technical_status": status,
                 "failures": failures,
                 "warnings": warnings,
-                "source_wav_path": str(source_path),
-                "clean_wav_path": str(clean_path),
+                "source_wav_path": _portable(root, source_path),
+                "clean_wav_path": _portable(root, clean_path),
                 "source_sha256": actual_source_hash,
                 "clean_sha256": sha256_file(clean_path) if clean_path.exists() else None,
                 "source_sample_rate": int(source_info.samplerate),
@@ -268,7 +283,7 @@ def validate_clean_v1(
         "technical_failures": technical_failures,
         "technical_validation_passed": technical_passed,
         "human_auditory_review_complete": False,
-        "listening_review_csv": str(review_path),
+        "listening_review_csv": _portable(root, review_path),
         "items": items,
         "next_action": (
             "complete listening_review.csv with ACCEPT/REJECT then run activate_identity_voice_clean_v1.py"
@@ -289,8 +304,8 @@ def validate_clean_v1(
             "human_auditory_review_complete": False,
             "training_authorized": False,
             "external_tool": report["external_tool"],
-            "technical_validation_report": str(clean_v1_technical_report_path(root)),
-            "listening_review_csv": str(review_path),
+            "technical_validation_report": _portable(root, clean_v1_technical_report_path(root)),
+            "listening_review_csv": _portable(root, review_path),
             "next_action": report["next_action"],
         }
     )
