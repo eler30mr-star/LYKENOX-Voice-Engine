@@ -29,6 +29,21 @@ def test_external_deepfilternet_calibration_boundary() -> None:
     assert "clean_v1_state_path" not in text
 
 
+def test_external_tool_setup_stays_outside_project_venv() -> None:
+    root = Path(__file__).resolve().parents[1]
+    path = root / "scripts" / "setup_external_deepfilternet_rs.ps1"
+    text = path.read_text(encoding="utf-8")
+    assert "LYKENOX-external-tools" in text
+    assert 'deepfilternet-rs-$Version' in text
+    assert '"deepfilternet-rs"' in text
+    assert '"0.1.1"' in text
+    assert "lykenox_project_venv_modified=false" in text
+    assert "-m pip install" in text
+    assert ".venv\\Scripts\\python.exe" in text
+    # The project venv may bootstrap creation, but package installation targets ToolPython only.
+    assert '& $ToolPython -m pip install' in text
+
+
 def test_afftdn_rejection_is_documented() -> None:
     root = Path(__file__).resolve().parents[1]
     path = root / "docs" / "LYKENOX_CLEAN_V1_AFFTDN_REJECTION_2026-09-04.md"
