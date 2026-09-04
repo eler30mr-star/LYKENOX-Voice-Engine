@@ -2,6 +2,10 @@
 
 Reads the engine-neutral prepared CSV manifests owned by LYKENOX and creates
 reproducible mel features. No trainer-specific metadata becomes canonical.
+
+After CLEAN_V1 is explicitly activated, legacy identity-voice manifests are transparently redirected
+to the human-approved CLEAN_V1 train/val manifests so new consumers cannot silently keep reading the
+contaminated WAV paths. Historical forensics remain available before activation.
 """
 
 from __future__ import annotations
@@ -19,6 +23,10 @@ from torch.utils.data import Dataset
 from lykenox_voice_engine.audio.io import load_audio
 from lykenox_voice_engine.core.spanish_text_frontend import SpanishTextFrontend
 from lykenox_voice_engine.models.speech import LykenoxSpeechConfig
+from lykenox_voice_engine.training.identity_voice_clean_v1 import (
+    clean_v1_is_active,
+    resolve_identity_speech_manifest,
+)
 
 
 @dataclass(frozen=True)
@@ -26,6 +34,37 @@ class SpeechRow:
     utterance_id: str
     wav_path: Path
     text: str
+
+
+def _redirect_active_identity_manifest(csv_path: Path) -> Path:
+    """Redirect a legacy identity manifest to CLEAN_V1 after activation.
+
+    This intentionally does nothing for arbitrary/non-identity datasets and for CLEAN_V1 manifests
+    themselves. The repository root is inferred from the manifest's ancestors.
+    """
+    path = Path(csv_path)
+    parts_lower = {part.lower() for part in path.parts}
+    if "identity_voice" not in parts_lower or "clean_v1" in parts_lower:
+        return path
+
+    split: str | None = None
+    lower_name = path.name.lower()
+    if "train" in lower_name:
+        split = "train"
+    elif "val" in lower_name:
+        split = "val"
+    if split is None:
+        return path
+
+    resolved = path.resolve()
+    for parent in resolved.parents:
+        identity_root = parent / "datasets" / "lykenox" / "identity_voice"
+        if not identity_root.exists():
+            continue
+        if clean_v1_is_active(parent):
+            return resolve_identity_speech_manifest(parent, split, allow_legacy_forensics=False)
+        break
+    return path
 
 
 class MelFeatureExtractor:
@@ -60,7 +99,7 @@ class LykenoxSpeechDataset(Dataset[dict[str, object]]):
     CACHE_VERSION = "mel-v1"
 
     def __init__(self, csv_path: Path, cache_dir: Path, config: LykenoxSpeechConfig | None = None) -> None:
-        self.csv_path = Path(csv_path)
+        self.csv_path = _redirect_active_identity_manifest(Path(csv_path))
         self.cache_dir = Path(cache_dir)
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.config = config or LykenoxSpeechConfig()
@@ -96,7 +135,8 @@ class LykenoxSpeechDataset(Dataset[dict[str, object]]):
     def _load_or_create_mel(self, row: SpeechRow) -> torch.Tensor:
         # mel-v1 predates frame-context architecture fields. Keep the exact historical
         # config payload so accepted feature caches remain reusable across acoustic model
-        # revisions that do not change the audio frontend itself.
+        # revisions that do not change the audio frontend itself. CLEAN_V1 paths differ from
+        # legacy paths, so the cache key naturally forces clean-audio feature regeneration.
         key_payload = {
             "version": self.CACHE_VERSION,
             "wav": str(row.wav_path),
