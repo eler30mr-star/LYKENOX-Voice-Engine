@@ -1,18 +1,29 @@
 {
   "policy_id": "LYX-POL-001",
-  "matrix_version": "1.0",
+  "policy_version": "1.1",
+  "matrix_version": "1.1",
   "as_of": "2026-09-04",
   "overall_status": "COMPLIANT_DEVELOPMENT_WITH_PENDING_RELEASE_GATES",
   "matrix_document": "docs/LYKENOX_POLICY_COMPLIANCE_MATRIX.md",
   "active_decision": "lykenox_voice_engine/training/speech_vocoder_active_source_decision.py",
   "positive_milestone": "docs/LYKENOX_VOCODER_POSITIVE_MILESTONE_2026-09-04.md",
+  "product_boundary": {
+    "third_party_model_implementation_in_lykenox_allowed": false,
+    "third_party_pretrained_weights_in_lykenox_allowed": false,
+    "remote_service_required_for_lykenox_inference_allowed": false,
+    "external_offline_tools_outside_project_allowed": true,
+    "external_offline_learned_tools_outside_project_allowed": true,
+    "external_tool_outputs_may_enter_as_authorized_data": true,
+    "external_tool_weights_may_enter_project": false,
+    "external_tool_may_initialize_or_distill_lykenox_weights": false
+  },
   "rules": {
-    "R1_no_third_party_pretrained_weights": "PASS",
-    "R2_no_third_party_neural_voice_components": "PASS",
+    "R1_no_third_party_pretrained_weights_inside_lykenox": "PASS",
+    "R2_no_third_party_neural_voice_components_in_product": "PASS",
     "R3_no_remote_inference_dependency": "PASS",
     "R4_lykenox_trained_weights": "PASS_CURRENT_PENDING_FINAL_RELEASE_ARTIFACTS",
     "R5_identity_data_provenance": "PENDING",
-    "R6_no_probe_exception": "PASS",
+    "R6_external_offline_tools_allowed_without_integration": "PASS_POLICY_PENDING_PER_TOOL_RIGHTS_REVIEW",
     "R7_research_may_inform_implementation_remains_owned": "PASS",
     "R8_no_posthoc_quality_masking": "PASS",
     "R9_duration_contract_independent": "PASS",
@@ -25,16 +36,34 @@
     "blocks_new_source_architecture": true
   },
   "blocked_actions": {
-    "third_party_pretrained_denoiser_for_clean_v1": true,
-    "third_party_pretrained_source_separator_for_clean_v1": true,
+    "integrate_third_party_pretrained_denoiser_into_lykenox": true,
+    "integrate_third_party_pretrained_source_separator_into_lykenox": true,
+    "import_external_model_weights_or_embeddings": true,
+    "distill_or_initialize_lykenox_from_external_weights": true,
     "target_phase_copy_at_inference": true,
     "posthoc_denoise_to_accept_vocoder": true,
     "posthoc_eq_to_accept_vocoder": true,
     "silent_predicted_duration_modification": true
   },
+  "permitted_external_offline_actions": {
+    "clean_audio_outside_project": true,
+    "restore_or_reduce_noise_outside_project": true,
+    "inspect_or_label_data_outside_project": true,
+    "use_learned_third_party_tool_outside_project": true,
+    "import_only_validated_authorized_output_data": true
+  },
+  "external_offline_tool_conditions": {
+    "must_remain_outside_repo_build_runtime_and_inference": true,
+    "must_not_supply_weights_embeddings_or_initialization": true,
+    "input_data_must_be_owned_or_authorized": true,
+    "license_or_tos_must_allow_intended_output_use": true,
+    "material_transformations_must_be_documented": true,
+    "identity_audio_output_must_receive_human_auditory_validation": true
+  },
   "release_gates": {
     "final_checkpoint_provenance_and_hashes": "PENDING",
     "identity_data_manifest": "PENDING",
+    "external_offline_tool_rights_manifest_if_used": "PENDING_IF_APPLICABLE",
     "generic_dependency_license_audit": "PENDING",
     "offline_inference_revalidation": "PENDING",
     "release_reproducibility": "PENDING",
