@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from lykenox_voice_engine.ui.identity_dataset_page import IdentityDatasetPage
+from lykenox_voice_engine.ui.recording_v2_bootstrap import ensure_recording_v2_pilot
 from lykenox_voice_engine.ui.recording_v2_page import RecordingV2Page
 from lykenox_voice_engine.ui.synthesis_page import SynthesisPage
 from lykenox_voice_engine.ui.voicebank_page import VoicebankPage
@@ -27,6 +28,11 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("LYKENOX Voice Engine")
         self.resize(1180, 760)
+
+        # Desktop-first contract: metadata needed by the active RECORDING_V2 gate is prepared
+        # automatically. This never modifies audio and removes the need to run PowerShell helpers.
+        ensure_recording_v2_pilot(root)
+
         nav = QListWidget()
         stack = QStackedWidget()
         nav.addItems(
