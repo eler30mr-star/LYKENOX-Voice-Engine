@@ -1,8 +1,8 @@
 """Prepare the LYKENOX CLEAN_V1 workset without modifying source audio.
 
 This script does not clean audio. It inventories the currently owned segmented speech corpus,
-freezes source hashes, creates the CLEAN_V1 output directory and writes a work manifest for an
-external offline cleaning tool. External tooling remains outside the LYKENOX implementation under
+freezes source hashes, creates the CLEAN_V1 output directory and writes a portable work manifest for
+an external offline cleaning tool. External tooling remains outside the LYKENOX implementation under
 LYX-POL-001 v1.1.
 """
 
@@ -12,7 +12,11 @@ import argparse
 import csv
 import json
 import os
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 from lykenox_voice_engine.training.identity_voice_clean_v1 import (
     CLEAN_V1_STATE_SCHEMA,
@@ -32,6 +36,14 @@ def _atomic_json(path: Path, payload: dict[str, object]) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
     os.replace(tmp, path)
+
+
+def _portable(root: Path, path: Path) -> str:
+    path = path.resolve()
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def prepare_clean_v1(root: Path, *, overwrite: bool = False) -> dict[str, object]:
@@ -76,9 +88,9 @@ def prepare_clean_v1(root: Path, *, overwrite: bool = False) -> dict[str, object
                 {
                     "utterance_id": utterance_id,
                     "split": split,
-                    "source_wav_path": str(source_wav),
+                    "source_wav_path": _portable(root, source_wav),
                     "source_sha256": sha256_file(source_wav),
-                    "clean_wav_path": str(clean_wav),
+                    "clean_wav_path": _portable(root, clean_wav),
                     "text": row["text"],
                     "preparation_status": "PENDING_EXTERNAL_CLEANING",
                     "notes": "",
@@ -117,11 +129,12 @@ def prepare_clean_v1(root: Path, *, overwrite: bool = False) -> dict[str, object
         "items_train": sum(1 for row in rows if row["split"] == "train"),
         "items_val": sum(1 for row in rows if row["split"] == "val"),
         "source_manifest_sha256": source_manifest_hashes,
-        "work_manifest": str(work_path),
-        "clean_wav_directory": str(wav_dir),
+        "work_manifest": _portable(root, work_path),
+        "clean_wav_directory": _portable(root, wav_dir),
         "technical_validation_passed": False,
         "human_auditory_review_complete": False,
         "all_acoustic_targets_and_caches_regenerated": False,
+        "gold_oracles_rerun_after_clean_v1": False,
         "training_authorized": False,
         "next_action": "clean_or_reject_each_work_manifest_item_offline_then_run_validate_identity_voice_clean_v1.py",
     }
