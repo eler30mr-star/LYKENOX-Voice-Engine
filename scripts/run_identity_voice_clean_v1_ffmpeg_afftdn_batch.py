@@ -93,7 +93,7 @@ def _render(ffmpeg: str, source: Path, output: Path, filter_graph: str) -> dict[
         "-ac",
         str(int(source_info.channels)),
         "-c:a",
-        "pcm_s24le",
+        "pcm_f32le",
         str(tmp),
     ]
     subprocess.run(command, check=True)
@@ -214,6 +214,7 @@ def run_clean_v1_ffmpeg_afftdn_batch(
         "external_model_or_checkpoint_used": False,
         "external_service_used": False,
         "source_audio_mutated": False,
+        "candidate_wav_encoding": "pcm_f32le",
         "gain_normalization_used": False,
         "eq_used": False,
         "dereverb_used": False,
