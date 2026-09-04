@@ -15,39 +15,39 @@ from PySide6.QtWidgets import (
 )
 
 from lykenox_voice_engine.ui.identity_dataset_page import IdentityDatasetPage
-from lykenox_voice_engine.ui.recording_v2_bootstrap import ensure_recording_v2_pilot
-from lykenox_voice_engine.ui.recording_v2_page import RecordingV2Page
 from lykenox_voice_engine.ui.synthesis_page import SynthesisPage
 from lykenox_voice_engine.ui.voicebank_page import VoicebankPage
 
 
 class MainWindow(QMainWindow):
-    """Main native desktop window."""
+    """Main native desktop window.
+
+    Audio capture is intentionally not implemented here. RECORDING_V2 capture lives in the
+    separate RecVoice application; this repository keeps only the LYKENOX dataset/training
+    contracts and consumers of the resulting authorized WAV artifacts.
+    """
 
     def __init__(self, root: Path) -> None:
         super().__init__()
         self.setWindowTitle("LYKENOX Voice Engine")
         self.resize(1180, 760)
 
-        # Desktop-first contract: metadata needed by the active RECORDING_V2 gate is prepared
-        # automatically. This never modifies audio and removes the need to run PowerShell helpers.
-        ensure_recording_v2_pilot(root)
-
         nav = QListWidget()
         stack = QStackedWidget()
         nav.addItems(
             [
                 "Perfil",
-                "Grabar RECORDING_V2",
                 "Grabar Identidad Legacy",
                 "Cantar Legacy",
                 "Voicebank Legacy",
             ]
         )
         stack.addWidget(
-            QLabel("Perfil: LYKENOX Identity Voice | Objetivo: speech + singing directo con mi voz")
+            QLabel(
+                "Perfil: LYKENOX Identity Voice | Objetivo: speech + singing directo con mi voz | "
+                "Captura RECORDING_V2: aplicación separada RecVoice"
+            )
         )
-        stack.addWidget(RecordingV2Page(root))
         stack.addWidget(IdentityDatasetPage(root))
         stack.addWidget(SynthesisPage(root))
         stack.addWidget(VoicebankPage(root))
