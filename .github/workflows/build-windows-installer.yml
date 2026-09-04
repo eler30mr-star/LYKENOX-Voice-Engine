@@ -1,0 +1,64 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - "lykenox_voice_engine/ui/installed_entry.py"
+      - "lykenox_voice_engine/ui/main_window.py"
+      - "lykenox_voice_engine/ui/recording_v2_page.py"
+      - "packaging/windows/**"
+      - ".github/workflows/build-windows-installer.yml"
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: packaging/windows/requirements-desktop.txt
+
+      - name: Install desktop build dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r packaging/windows/requirements-desktop.txt
+
+      - name: Build desktop bundle
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm --clean packaging/windows/LYKENOX.spec
+          if (-not (Test-Path "dist/LYKENOX/LYKENOX.exe")) { throw "LYKENOX.exe was not built" }
+
+      - name: Smoke launch import contract
+        shell: pwsh
+        run: |
+          python -c "from lykenox_voice_engine.ui.installed_entry import APP_NAME; print(APP_NAME)"
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build setup EXE
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "packaging/windows/LYKENOX.iss"
+          if (-not (Test-Path "packaging/windows/output/LYKENOX-Setup.exe")) { throw "Installer was not built" }
+          Get-FileHash "packaging/windows/output/LYKENOX-Setup.exe" -Algorithm SHA256 | Format-List
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: LYKENOX-Windows-Installer
+          path: packaging/windows/output/LYKENOX-Setup.exe
+          if-no-files-found: error
+          retention-days: 30
