@@ -7,7 +7,7 @@ on:
     paths:
       - "lykenox_voice_engine/ui/installed_entry.py"
       - "lykenox_voice_engine/ui/main_window.py"
-      - "lykenox_voice_engine/ui/recording_v2_page.py"
+      - "tests/test_recording_v2_external_recorder_boundary.py"
       - "packaging/windows/**"
       - ".github/workflows/build-windows-installer.yml"
 
@@ -32,6 +32,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r packaging/windows/requirements-desktop.txt
+
+      - name: Verify external recorder boundary
+        shell: pwsh
+        run: |
+          python -m pytest tests/test_recording_v2_external_recorder_boundary.py -q
 
       - name: Build desktop bundle
         shell: pwsh
