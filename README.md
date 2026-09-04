@@ -71,7 +71,20 @@ generates checkpoint-bound duration caches plus an outlier audit:
 Do not start long acoustic-model training until the duration audit is reviewed and the
 aligned acoustic smoke gate passes.
 
-## Run
+## Windows installer
+
+The `Build Windows Installer` GitHub Actions workflow builds a one-click `LYKENOX-Setup.exe`.
+The installer creates Desktop and Start Menu shortcuts and installs the application code under the
+current user's LocalAppData directory, so normal use does not require PowerShell or a Python virtual
+environment.
+
+On first launch only, select the writable LYKENOX workspace root. The selected workspace is remembered
+under `%LOCALAPPDATA%\LYKENOX Voice Engine\workspace.json`; datasets, manifests, models and recordings
+remain in that workspace instead of being copied into the application installation directory.
+
+See `packaging/windows/README.md` for the packaging contract.
+
+## Run from source
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
