@@ -1,0 +1,73 @@
+"""RECORDING_V2 clean recapture contract for LYKENOX identity voice.
+
+This module records the active dataset-quality gate after cleanup trials showed that contaminated
+source recordings are lower-value to rescue than to recapture cleanly. It does not train or process
+voice audio. Policy: LYX-POL-001 v1.1.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+
+POLICY_ID = "LYX-POL-001"
+RECORDING_V2_VERSION = "lykenox-identity-voice-recording-v2"
+RECORDING_V2_DIR = Path("datasets/lykenox/identity_voice/recording_v2")
+RECORDING_V2_RAW_DIR = RECORDING_V2_DIR / "raw"
+RECORDING_V2_ACCEPTED_DIR = RECORDING_V2_DIR / "accepted"
+RECORDING_V2_METADATA_DIR = RECORDING_V2_DIR / "metadata"
+RECORDING_V2_SESSION_MANIFEST = RECORDING_V2_METADATA_DIR / "session_manifest.csv"
+
+OLD_132_CORPUS_PRIMARY_TRAINING_AUTHORIZED = False
+AFFTDN_BATCH_AUTHORIZED = False
+DEEPFILTERNET_132_BATCH_AUTHORIZED = False
+RECORDING_V2_REQUIRED_BEFORE_NEW_PERSISTENT_TRAINING = True
+RAW_RECORDING_V2_MUST_REMAIN_IMMUTABLE = True
+EXTERNAL_EVENT_OVERLAP_REQUIRES_RETAKE_WHEN_PRACTICAL = True
+HUMAN_AUDITORY_ACCEPTANCE_REQUIRED = True
+ALL_DERIVED_TARGETS_MUST_BE_REGENERATED = True
+GOLD_ORACLES_MUST_BE_RERUN = True
+FURTHER_SOURCE_TRAINING_AUTHORIZED = False
+FURTHER_SOURCE_ARCHITECTURE_CHANGES_AUTHORIZED = False
+
+
+def recording_v2_root(root: Path) -> Path:
+    return Path(root).resolve() / RECORDING_V2_DIR
+
+
+def recording_v2_raw_dir(root: Path) -> Path:
+    return Path(root).resolve() / RECORDING_V2_RAW_DIR
+
+
+def recording_v2_accepted_dir(root: Path) -> Path:
+    return Path(root).resolve() / RECORDING_V2_ACCEPTED_DIR
+
+
+def recording_v2_session_manifest(root: Path) -> Path:
+    return Path(root).resolve() / RECORDING_V2_SESSION_MANIFEST
+
+
+__all__ = [
+    "POLICY_ID",
+    "RECORDING_V2_VERSION",
+    "RECORDING_V2_DIR",
+    "RECORDING_V2_RAW_DIR",
+    "RECORDING_V2_ACCEPTED_DIR",
+    "RECORDING_V2_METADATA_DIR",
+    "RECORDING_V2_SESSION_MANIFEST",
+    "OLD_132_CORPUS_PRIMARY_TRAINING_AUTHORIZED",
+    "AFFTDN_BATCH_AUTHORIZED",
+    "DEEPFILTERNET_132_BATCH_AUTHORIZED",
+    "RECORDING_V2_REQUIRED_BEFORE_NEW_PERSISTENT_TRAINING",
+    "RAW_RECORDING_V2_MUST_REMAIN_IMMUTABLE",
+    "EXTERNAL_EVENT_OVERLAP_REQUIRES_RETAKE_WHEN_PRACTICAL",
+    "HUMAN_AUDITORY_ACCEPTANCE_REQUIRED",
+    "ALL_DERIVED_TARGETS_MUST_BE_REGENERATED",
+    "GOLD_ORACLES_MUST_BE_RERUN",
+    "FURTHER_SOURCE_TRAINING_AUTHORIZED",
+    "FURTHER_SOURCE_ARCHITECTURE_CHANGES_AUTHORIZED",
+    "recording_v2_root",
+    "recording_v2_raw_dir",
+    "recording_v2_accepted_dir",
+    "recording_v2_session_manifest",
+]
