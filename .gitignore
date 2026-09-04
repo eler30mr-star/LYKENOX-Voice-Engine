@@ -37,6 +37,7 @@ datasets/*/identity_voice/*/rejected/*
 datasets/*/identity_voice/prepared/*/wav/*
 datasets/*/identity_voice/clean_v1/wav/*
 !datasets/lykenox/identity_voice/clean_v1/wav/.gitkeep
+datasets/*/identity_voice/clean_v1/trials/*
 datasets/*/identity_voice/features/
 profiles/*/voicebank/wav/*
 !profiles/lykenox/voicebank/wav/.gitkeep
