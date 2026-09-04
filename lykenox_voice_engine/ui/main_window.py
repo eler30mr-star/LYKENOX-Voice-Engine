@@ -4,9 +4,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication, QHBoxLayout, QLabel, QListWidget, QMainWindow, QStackedWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QMainWindow,
+    QStackedWidget,
+    QWidget,
+)
 
 from lykenox_voice_engine.ui.identity_dataset_page import IdentityDatasetPage
+from lykenox_voice_engine.ui.recording_v2_page import RecordingV2Page
 from lykenox_voice_engine.ui.synthesis_page import SynthesisPage
 from lykenox_voice_engine.ui.voicebank_page import VoicebankPage
 
@@ -20,8 +29,19 @@ class MainWindow(QMainWindow):
         self.resize(1180, 760)
         nav = QListWidget()
         stack = QStackedWidget()
-        nav.addItems(["Perfil", "Grabar Identidad", "Cantar Legacy", "Voicebank Legacy"])
-        stack.addWidget(QLabel("Perfil: LYKENOX Identity Voice | Objetivo: speech + singing directo con mi voz"))
+        nav.addItems(
+            [
+                "Perfil",
+                "Grabar RECORDING_V2",
+                "Grabar Identidad Legacy",
+                "Cantar Legacy",
+                "Voicebank Legacy",
+            ]
+        )
+        stack.addWidget(
+            QLabel("Perfil: LYKENOX Identity Voice | Objetivo: speech + singing directo con mi voz")
+        )
+        stack.addWidget(RecordingV2Page(root))
         stack.addWidget(IdentityDatasetPage(root))
         stack.addWidget(SynthesisPage(root))
         stack.addWidget(VoicebankPage(root))
