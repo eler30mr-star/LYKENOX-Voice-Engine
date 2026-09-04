@@ -11,7 +11,11 @@ import argparse
 import csv
 import json
 import os
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 from lykenox_voice_engine.training.identity_voice_clean_v1 import (
     CLEAN_V1_STATE_SCHEMA,
@@ -37,6 +41,11 @@ def _atomic_json(path: Path, payload: dict[str, object]) -> None:
 def _read_csv(path: Path) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle))
+
+
+def _resolve(root: Path, value: str) -> Path:
+    path = Path(value)
+    return path.resolve() if path.is_absolute() else (root / path).resolve()
 
 
 def activate_clean_v1(root: Path) -> dict[str, object]:
@@ -75,6 +84,7 @@ def activate_clean_v1(root: Path) -> dict[str, object]:
 
     accepted: dict[str, list[dict[str, str]]] = {"train": [], "val": []}
     rejected: list[str] = []
+    source_hashes: dict[str, str] = {}
     clean_hashes: dict[str, str] = {}
 
     for utterance_id, work in work_by_id.items():
@@ -86,9 +96,11 @@ def activate_clean_v1(root: Path) -> dict[str, object]:
             )
         tech = technical_items[utterance_id]
         tech_status = str(tech.get("technical_status", ""))
-        source_path = Path(work["source_wav_path"])
-        if not source_path.exists() or sha256_file(source_path) != work["source_sha256"]:
+        source_path = _resolve(root, work["source_wav_path"])
+        expected_source_hash = work["source_sha256"]
+        if not source_path.exists() or sha256_file(source_path) != expected_source_hash:
             raise RuntimeError(f"source immutability check failed at activation for {utterance_id}")
+        source_hashes[utterance_id] = expected_source_hash
 
         if decision == "REJECT":
             rejected.append(utterance_id)
@@ -96,7 +108,7 @@ def activate_clean_v1(root: Path) -> dict[str, object]:
         if tech_status != "PASS":
             raise RuntimeError(f"cannot ACCEPT technically invalid CLEAN_V1 item {utterance_id}: {tech_status}")
 
-        clean_path = Path(work["clean_wav_path"])
+        clean_path = _resolve(root, work["clean_wav_path"])
         if not clean_path.exists():
             raise FileNotFoundError(f"accepted CLEAN_V1 WAV missing: {clean_path}")
         current_clean_hash = sha256_file(clean_path)
@@ -145,11 +157,16 @@ def activate_clean_v1(root: Path) -> dict[str, object]:
         "accepted_val": len(accepted["val"]),
         "rejected_total": len(rejected),
         "rejected_utterance_ids": rejected,
+        "source_manifest_sha256": state.get("source_manifest_sha256"),
+        "source_wav_sha256": source_hashes,
         "manifest_sha256": manifest_hashes,
         "accepted_clean_wav_sha256": clean_hashes,
         "external_tool": technical.get("external_tool"),
         "source_audio_mutated": False,
+        "raw_or_prepared_source_must_remain_immutable": True,
         "external_tool_integrated_into_lykenox": False,
+        "external_model_or_checkpoint_imported_into_lykenox": False,
+        "external_tool_required_for_product_inference": False,
         "all_acoustic_targets_and_caches_regenerated": False,
         "gold_oracles_rerun_after_clean_v1": False,
         "training_authorized": False,
