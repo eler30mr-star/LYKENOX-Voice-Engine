@@ -5,7 +5,9 @@ CLEAN_V1 is the only dataset authorized for new persistent speech/vocoder traini
 but no external model, checkpoint or service becomes a LYKENOX runtime/training dependency.
 
 The original prepared speech_segmented corpus remains immutable historical input. CLEAN_V1 is
-activated only after technical validation and explicit human auditory review.
+activated only after technical validation and explicit human auditory review. Activation switches
+dataset reads to the clean WAVs; persistent source training remains blocked until every stale
+acoustic derivative has been regenerated and the post-clean GOLD oracle gate has passed.
 """
 
 from __future__ import annotations
@@ -106,6 +108,23 @@ def require_clean_v1_active(root: Path, *, purpose: str) -> dict[str, object]:
     return payload
 
 
+def require_clean_v1_training_ready(root: Path, *, purpose: str) -> dict[str, object]:
+    """Require the stronger gate used by new persistent source/acoustic training."""
+    payload = require_clean_v1_active(root, purpose=purpose)
+    missing: list[str] = []
+    if payload.get("all_acoustic_targets_and_caches_regenerated") is not True:
+        missing.append("all_acoustic_targets_and_caches_regenerated")
+    if payload.get("gold_oracles_rerun_after_clean_v1") is not True:
+        missing.append("gold_oracles_rerun_after_clean_v1")
+    if payload.get("training_authorized") is not True:
+        missing.append("training_authorized")
+    if missing:
+        raise RuntimeError(
+            f"{purpose} remains blocked after CLEAN_V1 activation; pending gates: " + ", ".join(missing)
+        )
+    return payload
+
+
 def resolve_identity_speech_manifest(
     root: Path,
     split: str,
@@ -116,7 +135,7 @@ def resolve_identity_speech_manifest(
 
     Once CLEAN_V1 is active, every consumer is switched to CLEAN_V1. Before activation, historical
     diagnostics may still read the legacy prepared corpus when explicitly allowed. Persistent new
-    training must call require_clean_v1_active() before constructing datasets.
+    training must enforce the appropriate CLEAN_V1 gate before constructing datasets.
     """
     if clean_v1_is_active(root):
         return clean_v1_manifest_path(root, split)
@@ -166,6 +185,7 @@ __all__ = [
     "load_clean_v1_state",
     "clean_v1_is_active",
     "require_clean_v1_active",
+    "require_clean_v1_training_ready",
     "resolve_identity_speech_manifest",
     "read_csv_rows",
 ]
